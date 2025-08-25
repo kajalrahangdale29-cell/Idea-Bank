@@ -8,7 +8,7 @@ export default function SplashScreen({ navigation }) {
   const textAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animate sequence
+    
     Animated.sequence([
       Animated.timing(logoAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
       Animated.spring(bulbAnim, { toValue: 0, friction: 4, useNativeDriver: true }),
@@ -27,7 +27,7 @@ export default function SplashScreen({ navigation }) {
       colors={['#E0F7FA', '#FFFFFF']}
       style={styles.container}
     >
-      {/* Logo */}
+      
       <Animated.View style={{ opacity: logoAnim }}>
         <Image
           source={require('../assets/ideabank_logo.png')}
@@ -35,7 +35,7 @@ export default function SplashScreen({ navigation }) {
         />
       </Animated.View>
 
-      {/* Main Bulb Illustration */}
+      
       <Animated.View style={{ transform: [{ translateY: bulbAnim }] }}>
         <Image
           source={require('../assets/IdeaBank_Bulb.png')}
@@ -43,7 +43,7 @@ export default function SplashScreen({ navigation }) {
         />
       </Animated.View>
 
-      {/* Welcome Text */}
+      
       <Animated.Text style={[styles.welcomeText, { opacity: textAnim }]}>
       Your Ideas, Our Platform.
       </Animated.Text>

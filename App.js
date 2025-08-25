@@ -1,4 +1,3 @@
-// App.js
 import React from 'react';
 import { UserProvider } from './src/context/UserContext';
 import Navigation from './Navigation';

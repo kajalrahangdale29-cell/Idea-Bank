@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 const cardData = [
   { title: 'Total Ideas', icon: 'bulb-outline', count: 0, color: '#d6f1f5', iconColor: '#004d61' },
   { title: 'In Progress', icon: 'refresh-circle-outline', count: 0, color: '#f0e6f9', iconColor: '#6a1b9a' },
+  { title: 'Completed', icon: 'checkmark-circle-outline', count: 0, color: '#e8f5e9', iconColor: '#2e7d32' },
   { title: 'On Hold', icon: 'pause-circle-outline', count: 0, color: '#ffefd8', iconColor: '#f57c00' },
   { title: 'Rejected', icon: 'close-circle-outline', count: 0, color: '#ffe4e6', iconColor: '#d32f2f' },
 ];
@@ -25,49 +26,41 @@ const DashboardScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      
       <View style={styles.header}>
-        {/* Left: Menu */}
-        <TouchableOpacity
-          onPress={() => navigation.openDrawer()}
-          style={{ marginRight: 15 }}
-        >
+        <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ marginRight: 15 }}>
           <Ionicons name="menu" size={28} color="#fff" />
         </TouchableOpacity>
 
-        {/* Right: Employee Info + Notification */}
         <View style={styles.empInfo}>
-          <Ionicons
-            name="person-circle-outline"
-            size={35}
-            color="#fff"
-            style={{ marginRight: 8 }}
-          />
+          <Ionicons name="person-circle-outline" size={35} color="#fff" style={{ marginRight: 8 }} />
           <View>
             <Text style={styles.name}>{employeeName}</Text>
             <Text style={styles.id}>{employeeId}</Text>
           </View>
           <TouchableOpacity onPress={() => alert('Notifications clicked!')}>
-            <Ionicons
-              name="notifications-outline"
-              size={22}
-              color="#fff"
-              style={{ marginLeft: 12 }}
-            />
+            <Ionicons name="notifications-outline" size={22} color="#fff" style={{ marginLeft: 12 }} />
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        
         <View style={styles.cardsContainer}>
           {cardData.map((card, index) => (
             <DashboardCard key={index} {...card} />
           ))}
         </View>
 
-        <Text style={styles.sectionTitle}>Ideas Overview</Text>
-        <View style={styles.chartPlaceholder}>
-          <Text style={{ color: '#777' }}>[Bar Chart Placeholder]</Text>
+        
+        <View style={styles.overviewCard}>
+          <Text style={styles.sectionTitle}>Ideas Overview</Text>
+          <Ionicons name="bulb-outline" size={40} color="#fbc02d" style={{ marginVertical: 10 }} />
+          <Text style={styles.readyTitle}>Ready to Innovate?</Text>
+          <Text style={styles.readySubtitle}>
+            You have created any ideas yet. Start your innovation journey by sharing your first brilliant idea!
+          </Text>
+          {}
         </View>
       </ScrollView>
     </View>
@@ -143,18 +136,33 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#004d61',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  overviewCard: {
+    backgroundColor: '#fff',
     marginHorizontal: 20,
-    marginBottom: 10,
+    padding: 20,
+    borderRadius: 15,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 30,
+  },
+  readyTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 8,
     color: '#000',
   },
-  chartPlaceholder: {
-    height: 180,
-    marginHorizontal: 20,
-    backgroundColor: '#ddd',
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 30,
+  readySubtitle: {
+    fontSize: 13,
+    color: '#555',
+    textAlign: 'center',
+    marginTop: 6,
   },
   scrollContent: {
     paddingBottom: 30,

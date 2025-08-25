@@ -15,27 +15,18 @@ import {
   Keyboard,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-
-// Correct the relative path according to your folder structure
 import { UserContext } from '../src/context/UserContext';  
-
 const { height } = Dimensions.get('window');
-
 export default function LoginScreen({ navigation }) {
   const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
   const [secureTextEntry, setSecureTextEntry] = useState(true);
-
   const { setUser } = useContext(UserContext);
-
   const handleLogin = () => {
     if (employeeId.length !== 8) {
       Alert.alert('Error', 'Employee ID must be exactly 8 digits');
       return;
     }
-
-    // You may want to add password validation here as well
-
     setUser({
       name: 'Kajal',
       id: employeeId,

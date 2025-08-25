@@ -8,9 +8,13 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Image,
+  Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { MaterialIcons, Ionicons, FontAwesome } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function CreateIdeaScreen() {
   const navigation = useNavigation();
@@ -22,6 +26,37 @@ export default function CreateIdeaScreen() {
   const [benefit, setBenefit] = useState('');
   const [teamMembers, setTeamMembers] = useState('');
 
+  
+  const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  
+  const [image, setImage] = useState(null);
+
+  const pickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      alert('Permission required!');
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
+  const onChangeDate = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
+    setShowDatePicker(Platform.OS === 'ios');
+    setDate(currentDate);
+  };
+
   const handleSaveDraft = () => {
     const draft = {
       title,
@@ -30,7 +65,8 @@ export default function CreateIdeaScreen() {
       category,
       benefit,
       teamMembers,
-      date: new Date().toDateString(),
+      date: date.toISOString().split('T')[0],
+      image,
       status: 'draft',
     };
     navigation.navigate('My Ideas', { newIdea: draft });
@@ -49,7 +85,8 @@ export default function CreateIdeaScreen() {
       category,
       benefit,
       teamMembers,
-      date: new Date().toDateString(),
+      date: date.toISOString().split('T')[0],
+      image,
       status: 'Submitted',
     };
 
@@ -136,6 +173,37 @@ export default function CreateIdeaScreen() {
           ]}
         />
 
+        
+        <View style={styles.inputBlock}>
+          <Text style={styles.label}>Upload Image</Text>
+          <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
+            <Feather name="image" size={20} color="#fff" />
+            <Text style={styles.uploadText}> Choose Image</Text>
+          </TouchableOpacity>
+          {image && (
+            <Image
+              source={{ uri: image }}
+              style={{ width: '100%', height: 200, marginTop: 10, borderRadius: 10 }}
+            />
+          )}
+        </View>
+
+        
+        <View style={styles.inputBlock}>
+          <Text style={styles.label}>Completion Date</Text>
+          <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
+            <Feather name="calendar" size={20} color="#fff" />
+            <Text style={styles.uploadText}> Select Date</Text>
+          </TouchableOpacity>
+          <Text style={styles.dateText}>
+            Selected Date: {date.toLocaleDateString('en-GB')}
+          </Text>
+        </View>
+
+        {showDatePicker && (
+          <DateTimePicker value={date} mode="date" display="default" onChange={onChangeDate} />
+        )}
+
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.draftButton} onPress={handleSaveDraft}>
             <FontAwesome name="save" size={16} color="#555" />
@@ -151,7 +219,6 @@ export default function CreateIdeaScreen() {
   );
 }
 
-// Reusable Input Field component
 const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, maxLength }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>{label}</Text>
@@ -175,7 +242,6 @@ const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, 
   </View>
 );
 
-// Custom PickerField component
 const PickerField = ({ label, icon, selectedValue, onValueChange, options }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>{label}</Text>
@@ -259,6 +325,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     marginTop: 4,
+  },
+  uploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 10,
+    justifyContent: 'center',
+  },
+  dateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2196F3',
+    padding: 12,
+    borderRadius: 10,
+    justifyContent: 'center',
+  },
+  uploadText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  dateText: {
+    fontSize: 16,
+    marginTop: 8,
+    color: '#555',
   },
   buttonRow: {
     flexDirection: 'row',

@@ -1,30 +1,3 @@
-// import React, { useState } from 'react';
-// import { createNativeStackNavigator } from '@react-navigation/native-stack';
-// import CreateIdeaScreen from './CreateIdeaScreen';
-// import MyIdeasScreen from './MyIdeasScreen';
-// import TeamIdeasScreen from './TeamIdeasScreen';
-
-// const Stack = createNativeStackNavigator();
-
-// export default function ManageIdeaStack() {
-//   const [ideas, setIdeas] = useState([]);
-
-//   const addIdea = (idea) => {
-//     setIdeas(prev => [idea, ...prev]);
-//   };
-
-//   return (
-//     <Stack.Navigator>
-//       <Stack.Screen name="Create Idea">
-//         {props => <CreateIdeaScreen {...props} addIdea={addIdea} />}
-//       </Stack.Screen>
-//       <Stack.Screen name="My Ideas">
-//         {props => <MyIdeasScreen {...props} ideas={ideas} />}
-//       </Stack.Screen>
-//       <Stack.Screen name="Team Ideas" component={TeamIdeasScreen} />
-//     </Stack.Navigator>
-//   );
-// }
 import React, { useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import CreateIdeaScreen from './CreateIdeaScreen';
