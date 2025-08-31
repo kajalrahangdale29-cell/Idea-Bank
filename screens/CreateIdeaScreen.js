@@ -7,9 +7,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
+  Alert,  
   Image,
-  Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
@@ -26,12 +25,16 @@ export default function CreateIdeaScreen() {
   const [benefit, setBenefit] = useState('');
   const [teamMembers, setTeamMembers] = useState('');
 
-  
-  const [date, setDate] = useState(new Date());
+  const [mobileNumber, setMobileNumber] = useState('');
+
+  const [date, setDate] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  
   const [image, setImage] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const [beSupportNeeded, setBeSupportNeeded] = useState(null);
+  const [canImplementOtherLocation, setCanImplementOtherLocation] = useState(null);
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -52,9 +55,10 @@ export default function CreateIdeaScreen() {
   };
 
   const onChangeDate = (event, selectedDate) => {
-    const currentDate = selectedDate || date;
-    setShowDatePicker(Platform.OS === 'ios');
-    setDate(currentDate);
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
   };
 
   const handleSaveDraft = () => {
@@ -65,8 +69,11 @@ export default function CreateIdeaScreen() {
       category,
       benefit,
       teamMembers,
-      date: date.toISOString().split('T')[0],
+      mobileNumber,
+      date: date ? date.toISOString().split('T')[0] : null,
       image,
+      beSupportNeeded,
+      canImplementOtherLocation,
       status: 'draft',
     };
     navigation.navigate('My Ideas', { newIdea: draft });
@@ -74,10 +81,19 @@ export default function CreateIdeaScreen() {
   };
 
   const handleSubmit = () => {
-    if (!title || !description || !solution) {
-      Alert.alert('Required Fields', 'Please fill all required fields.');
+    if (!title || !description || !solution || !image || !date || !mobileNumber) {
+      Alert.alert(
+        'Required Fields',
+        'Please fill all required fields .'
+      );
       return;
     }
+
+    if (!/^\d{10}$/.test(mobileNumber)) {
+      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10 digit mobile number.');
+      return;
+    }
+
     const idea = {
       title,
       description,
@@ -85,143 +101,215 @@ export default function CreateIdeaScreen() {
       category,
       benefit,
       teamMembers,
+      mobileNumber,
       date: date.toISOString().split('T')[0],
       image,
+      beSupportNeeded,
+      canImplementOtherLocation,
       status: 'Submitted',
     };
 
     navigation.navigate('My Ideas', { newIdea: idea });
-    Alert.alert('Success', 'Your idea has been submitted successfully.');
+    Alert.alert(
+      'Success',
+      'Your idea has been submitted successfully.',
+      [], 
+      { cancelable: true }
+    );
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.heading}>Idea Creation Form</Text>
+    <View style={{ flex: 1 }}>
+      {/* Sticky Header */}
+      <View style={styles.stickyHeader}>
+        <Text style={styles.heading}>Idea Creation Form</Text>
+      </View>
 
-      <View style={styles.card}>
-        <InputField
-          label="Idea/Opportunity Description *"
-          icon={<MaterialIcons name="title" size={20} color="#666" />}
-          placeholder="Enter idea description..."
-          value={title}
-          onChangeText={setTitle}
-          maxLength={100}
-        />
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={{ height: 70 }} />
 
-        <InputField
-          label="Proposed Solution *"
-          icon={<MaterialIcons name="description" size={20} color="#666" />}
-          placeholder="Enter proposed solution...."
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          maxLength={300}
-        />
+        <View style={styles.card}>
+          <InputField
+            label="Idea/Opportunity Description"
+            required
+            icon={<MaterialIcons name="title" size={20} color="#666" />}
+            placeholder="Enter idea description..."
+            value={title}
+            onChangeText={setTitle}
+            maxLength={100}
+          />
 
-        <InputField
-          label="Process Improvement/Cost Benefit *"
-          icon={<FontAwesome name="money" size={20} color="#666" />}
-          placeholder="Enter tentative Benefit....."
-          value={solution}
-          onChangeText={setSolution}
-          multiline
-          maxLength={300}
-        />
+          <InputField
+            label="Proposed Solution"
+            required
+            icon={<MaterialIcons name="description" size={20} color="#666" />}
+            placeholder="Enter proposed solution...."
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            maxLength={300}
+          />
 
-        <InputField
-          label="Team Members"
-          icon={<MaterialIcons name="group" size={20} color="#666" />}
-          placeholder="Enter team Members...."
-          value={category}
-          onChangeText={setCategory}
-          maxLength={30}
-        />
+          <InputField
+            label="Process Improvement/Cost Benefit"
+            required
+            icon={<FontAwesome name="money" size={20} color="#666" />}
+            placeholder="Enter tentative Benefit....."
+            value={solution}
+            onChangeText={setSolution}
+            multiline
+            maxLength={300}
+          />
 
-        <PickerField
-          label="Solution Category"
-          icon={<Ionicons name="bulb-outline" size={20} color="#666" />}
-          selectedValue={benefit}
-          onValueChange={setBenefit}
-          options={[
-            'Quick Win',
-            'Kaizen',
-            'Lean',
-            'Six Sigma Yellow Belt',
-            'Six Sigma Green Belt',
-            'WorkPlace Management',
-            'Automation',
-            'Cost Saving',
-            'Busniness Improvement',
-            'Efficiency Improvement',
-            'Others',
-          ]}
-        />
+          <InputField
+            label="Team Members"
+            icon={<MaterialIcons name="group" size={20} color="#666" />}
+            placeholder="Enter team Members...."
+            value={category}
+            onChangeText={setCategory}
+            maxLength={30}
+          />
 
-        <PickerField
-          label="Idea Theme"
-          icon={<MaterialIcons name="category" size={20} color="#666" />}
-          selectedValue={teamMembers}
-          onValueChange={setTeamMembers}
-          options={[
-            'Productivity',
-            'Quality',
-            'Cost',
-            'Delivery',
-            'Safety',
-            'Morale',
-            'Environment',
-          ]}
-        />
+          <PickerField
+            label="Solution Category"
+            icon={<Ionicons name="bulb-outline" size={20} color="#666" />}
+            selectedValue={benefit}
+            onValueChange={setBenefit}
+            options={[
+              'Quick Win',
+              'Kaizen',
+              'Lean',
+              'Six Sigma Yellow Belt',
+              'Six Sigma Green Belt',
+              'WorkPlace Management',
+              'Automation',
+              'Cost Saving',
+              'Busniness Improvement',
+              'Efficiency Improvement',
+              'Others',
+            ]}
+          />
 
-        
-        <View style={styles.inputBlock}>
-          <Text style={styles.label}>Upload Image</Text>
-          <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
-            <Feather name="image" size={20} color="#fff" />
-            <Text style={styles.uploadText}> Choose Image</Text>
-          </TouchableOpacity>
-          {image && (
-            <Image
-              source={{ uri: image }}
-              style={{ width: '100%', height: 200, marginTop: 10, borderRadius: 10 }}
+          <PickerField
+            label="Idea Theme"
+            icon={<MaterialIcons name="category" size={20} color="#666" />}
+            selectedValue={teamMembers}
+            onValueChange={setTeamMembers}
+            options={[
+              'Productivity',
+              'Quality',
+              'Cost',
+              'Delivery',
+              'Safety',
+              'Morale',
+              'Environment',
+            ]}
+          />
+
+          <InputField
+            label="Mobile Number"
+            required
+            icon={<Feather name="phone" size={20} color="#666" />}
+            placeholder="Enter your number..."
+            value={mobileNumber}
+            onChangeText={setMobileNumber}
+            maxLength={10}
+          />
+
+          <RadioField
+            label="Is BE Team Support Needed?"
+            value={beSupportNeeded}
+            setValue={setBeSupportNeeded}
+          />
+          <RadioField
+            label="Can Be Implemented To Other Location?"
+            value={canImplementOtherLocation}
+            setValue={setCanImplementOtherLocation}
+          />
+
+          {/* Image Upload Section */}
+          <View style={styles.inputBlock}>
+            <Text style={styles.label}>
+              Upload Image <Text style={styles.required}>*</Text>
+            </Text>
+            <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
+              <Feather name="image" size={20} color="#fff" />
+              <Text style={styles.uploadText}> Choose Image</Text>
+            </TouchableOpacity>
+            {image && (
+              <TouchableOpacity
+                onPress={() => setShowPreview(!showPreview)}
+                style={{ marginTop: 8, alignSelf: 'flex-start' }}
+              >
+                <Feather name="eye" size={20} color="#000" />
+              </TouchableOpacity>
+            )}
+            {image && showPreview && (
+              <Image
+                source={{ uri: image }}
+                style={{ width: '100%', height: 200, marginTop: 10, borderRadius: 10 }}
+              />
+            )}
+          </View>
+
+          {/* Completion Date */}
+          <View style={styles.inputBlock}>
+            <Text style={styles.label}>
+              Completion Date <Text style={styles.required}>*</Text>
+            </Text>
+            <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
+              <Feather name="calendar" size={20} color="#fff" />
+              <Text style={styles.uploadText}> Select Date</Text>
+            </TouchableOpacity>
+
+            {date && (
+              <Text style={styles.dateText}>
+                {Math.ceil(
+                  (date.setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) /
+                    (1000 * 60 * 60 * 24)
+                ) > 0
+                  ? `Total: ${Math.ceil(
+                      (date.setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) /
+                        (1000 * 60 * 60 * 24)
+                    )} days`
+                  : ''}
+              </Text>
+            )}
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={date || new Date()}
+              mode="date"
+              display="default"
+              minimumDate={new Date()}
+              onChange={onChangeDate}
             />
           )}
+
+          {/* Buttons */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.draftButton} onPress={handleSaveDraft}>
+              <FontAwesome name="save" size={16} color="#555" />
+              <Text style={styles.draftText}>Save as Draft</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+              <Text style={styles.submitText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-
-        
-        <View style={styles.inputBlock}>
-          <Text style={styles.label}>Completion Date</Text>
-          <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
-            <Feather name="calendar" size={20} color="#fff" />
-            <Text style={styles.uploadText}> Select Date</Text>
-          </TouchableOpacity>
-          <Text style={styles.dateText}>
-            Selected Date: {date.toLocaleDateString('en-GB')}
-          </Text>
-        </View>
-
-        {showDatePicker && (
-          <DateTimePicker value={date} mode="date" display="default" onChange={onChangeDate} />
-        )}
-
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.draftButton} onPress={handleSaveDraft}>
-            <FontAwesome name="save" size={16} color="#555" />
-            <Text style={styles.draftText}>Save as Draft</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitText}>Submit</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
-const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, maxLength }) => (
+// InputField, PickerField, RadioField, and styles remain exactly as in your original code.
+const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, maxLength, required }) => (
   <View style={styles.inputBlock}>
-    <Text style={styles.label}>{label}</Text>
+    <Text style={styles.label}>
+      {label} {required && <Text style={styles.required}>*</Text>}
+    </Text>
     <View style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline]}>
       {icon}
       <TextInput
@@ -231,6 +319,7 @@ const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, 
         onChangeText={onChangeText}
         multiline={multiline}
         placeholderTextColor="#999"
+        keyboardType={label === "Mobile Number" ? "numeric" : "default"}
         maxLength={maxLength}
       />
     </View>
@@ -262,18 +351,50 @@ const PickerField = ({ label, icon, selectedValue, onValueChange, options }) => 
   </View>
 );
 
+const RadioField = ({ label, value, setValue }) => (
+  <View style={styles.inputBlock}>
+    <Text style={styles.label}>{label}</Text>
+    <View style={styles.radioRow}>
+      <TouchableOpacity
+        style={styles.radioOption}
+        onPress={() => setValue(value === "Yes" ? null : "Yes")}
+      >
+        <View style={[styles.radioCircle, value === "Yes" && styles.radioSelected]} />
+        <Text style={styles.radioText}>Yes</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.radioOption}
+        onPress={() => setValue(value === "No" ? null : "No")}
+      >
+        <View style={[styles.radioCircle, value === "No" && styles.radioSelected]} />
+        <Text style={styles.radioText}>No</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#F5F8FF',
     padding: 20,
     paddingBottom: 50,
   },
+  stickyHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#F5F8FF',
+    paddingVertical: 15,
+    zIndex: 10,
+    elevation: 5,
+  },
   heading: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#2c3e50',
     textAlign: 'center',
-    marginBottom: 20,
   },
   card: {
     backgroundColor: '#fff',
@@ -293,6 +414,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 6,
     color: '#333',
+  },
+  required: {
+    color: 'red',
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -381,5 +505,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  radioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  radioCircle: {
+    height: 18,
+    width: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#666',
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioSelected: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  radioText: {
+    fontSize: 14,
+    color: '#333',
   },
 });
