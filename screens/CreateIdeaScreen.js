@@ -372,6 +372,7 @@ const RadioField = ({ label, value, setValue }) => (
       </TouchableOpacity>
     </View>
   </View>
+  
 );
 
 const styles = StyleSheet.create({
