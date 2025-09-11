@@ -12,7 +12,8 @@
           },
           "imageWidth": 200
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

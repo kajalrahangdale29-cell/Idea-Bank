@@ -21,6 +21,7 @@ import {
 } from "@expo/vector-icons";
 
 import DashboardScreen from "./DashboardScreen";
+import { Linking, Alert } from "react-native";
 import CreateIdeaScreen from "./CreateIdeaScreen";
 import MyIdeasScreen from "./MyIdeasScreen";
 import TeamIdeasScreen from "./TeamIdeasScreen";
@@ -194,22 +195,54 @@ function CustomDrawerContent(props) {
       )}
 
       {/* Help */}
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={{ flexDirection: "row", alignItems: "center", padding: 15 }}
         onPress={() => props.navigation.navigate("Help")}
       >
         <Entypo name="help-with-circle" size={20} color="#fff" style={{ marginRight: 15 }} />
         <Text style={{ fontSize: 16, color: "#fff" }}>Help</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
+      <TouchableOpacity
+  style={{ flexDirection: "row", alignItems: "center", padding: 15 }}
+  onPress={() => Linking.openURL("https://ideabank.abisaio.com/manuals/User_Manuals.pdf")}
+>
+  <FontAwesome5
+    name="question-circle"
+    size={20}
+    color="#fff"
+    style={{ marginRight: 15 }}
+  />
+  <Text style={{ fontSize: 16, color: "#fff" }}>Help</Text>
+</TouchableOpacity>
+
 
       {/* Study Material */}
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={{ flexDirection: "row", alignItems: "center", padding: 15 }}
         onPress={() => props.navigation.navigate("Study Material")}
       >
         <FontAwesome5 name="book-reader" size={20} color="#fff" style={{ marginRight: 15 }} />
         <Text style={{ fontSize: 16, color: "#fff" }}>Study Material</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
+      <TouchableOpacity
+  style={{ flexDirection: "row", alignItems: "center", padding: 15 }}
+  onPress={() => {
+    const url = "https://lms.abisaio.com/";
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Alert.alert("Error", "Cannot open the URL");
+        }
+      })
+      .catch((err) => console.error("An error occurred", err));
+  }}
+>
+  <FontAwesome5 name="book-reader" size={20} color="#fff" style={{ marginRight: 15 }} />
+  <Text style={{ fontSize: 16, color: "#fff" }}>Study Material</Text>
+</TouchableOpacity>
+
 
       {/* Logout */}
       <TouchableOpacity
@@ -274,7 +307,6 @@ export default function MainApp() {
         drawerActiveBackgroundColor: "#4aa3c0",
         drawerInactiveTintColor: "#fff",
         drawerActiveTintColor: "#fff",
-        // Back button only for non-dashboard screens
         headerLeft: () =>
           route.name !== "Dashboard" ? (
             <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 10 }}>
@@ -293,7 +325,6 @@ export default function MainApp() {
       <Drawer.Screen name="Team Ideas" component={TeamIdeasScreen} />
       <Drawer.Screen name="All Ideas" component={AllIdeasScreen} />
       <Drawer.Screen name="Approval" component={ApprovalScreen} />
-      <Drawer.Screen name="Help" component={HelpScreen} />
       <Drawer.Screen name="Study Material" component={StudyMaterialScreen} />
     </Drawer.Navigator>
   );

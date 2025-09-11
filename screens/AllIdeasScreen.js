@@ -1,4 +1,3 @@
-// screens/AllIdeasScreen.js
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
@@ -9,7 +8,6 @@ export default function AllIdeasScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
