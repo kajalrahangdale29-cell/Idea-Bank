@@ -59,7 +59,6 @@
 //       }
 
 //       if (response.ok && jsonData.success) {
-//         // Map API response statistics to cardData
 //         const stats = jsonData.data.statistics || {};
 //         const updatedCards = [...cardData];
 //         updatedCards[0].count = stats.totalIdeas || 0;
@@ -120,9 +119,20 @@
 
 //       <ScrollView contentContainerStyle={styles.scrollContent}>
 //         <View style={styles.cardsContainer}>
-//           {cardData.map((card, index) => (
-//             <DashboardCard key={index} {...card} />
-//           ))}
+//           {cardData.map((card, index) => {
+//             const isRejected = card.title === 'Rejected';
+//             return (
+//               <View
+//                 key={index}
+//                 style={[
+//                   styles.cardWrapper,
+//                   isRejected && styles.rejectedWrapper,
+//                 ]}
+//               >
+//                 <DashboardCard {...card} />
+//               </View>
+//             );
+//           })}
 //         </View>
 
 //         <View style={styles.overviewCard}>
@@ -166,31 +176,109 @@
 //   empInfo: { flexDirection: 'row', alignItems: 'center' },
 //   name: { color: '#fff', fontSize: isSmallDevice ? 15 : 16, fontWeight: 'bold' },
 //   id: { color: '#ddd', fontSize: isSmallDevice ? 12 : 12 },
-//   cardsContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 20, marginVertical: 25 },
-//   card: { width: '48%', borderRadius: 15, alignItems: 'center', paddingVertical: 30, marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2, alignSelf: 'center' },
-//   cardTitle: { marginTop: 8, fontSize: 14, color: '#333', fontWeight: '500', textAlign: 'center' },
-//   cardCount: { fontSize: 22, fontWeight: 'bold', color: '#004d61', marginTop: 4 },
-//   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#004d61', marginBottom: 6, textAlign: 'center' },
-//   overviewCard: { backgroundColor: '#fff', marginHorizontal: 20, padding: 20, borderRadius: 15, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2, marginBottom: 30 },
-//   readyTitle: { fontSize: 16, fontWeight: 'bold', marginTop: 8, color: '#000' },
-//   readySubtitle: { fontSize: 13, color: '#555', textAlign: 'center', marginTop: 6 },
+//   cardsContainer: {
+//     flexDirection: 'row',
+//     flexWrap: 'wrap',
+//     justifyContent: 'space-between',
+//     paddingHorizontal: 20,
+//     marginVertical: 25,
+//   },
+//   cardWrapper: {
+//     width: '47%', // Slightly reduced to create gap
+//     marginBottom: 15, // Added consistent spacing
+//   },
+//   rejectedWrapper: {
+//     width: '47%', // Same width as other cards
+//     marginBottom: 15,
+//     // Center the rejected card by making it take full width and centering content
+//     alignSelf: 'center',
+//   },
+//   card: {
+//     width: '100%',
+//     borderRadius: 15,
+//     alignItems: 'center',
+//     paddingVertical: 25, // Slightly reduced padding
+//     shadowColor: '#000',
+//     shadowOpacity: 0.08,
+//     shadowRadius: 6,
+//     shadowOffset: { width: 0, height: 3 },
+//     elevation: 4,
+//     // Add subtle border for better definition
+//     borderWidth: 0.5,
+//     borderColor: 'rgba(0,0,0,0.05)',
+//   },
+//   cardTitle: {
+//     marginTop: 10,
+//     fontSize: 14,
+//     color: '#333',
+//     fontWeight: '600',
+//     textAlign: 'center',
+//     lineHeight: 18,
+//   },
+//   cardCount: {
+//     fontSize: 24,
+//     fontWeight: 'bold',
+//     color: '#004d61',
+//     marginTop: 6,
+//   },
+//   sectionTitle: {
+//     fontSize: 18,
+//     fontWeight: 'bold',
+//     color: '#004d61',
+//     marginBottom: 6,
+//     textAlign: 'center',
+//   },
+//   overviewCard: {
+//     backgroundColor: '#fff',
+//     marginHorizontal: 20,
+//     marginTop: 10, // Added top margin for better separation
+//     padding: 20,
+//     borderRadius: 15,
+//     alignItems: 'center',
+//     shadowColor: '#000',
+//     shadowOpacity: 0.08,
+//     shadowRadius: 6,
+//     shadowOffset: { width: 0, height: 3 },
+//     elevation: 4,
+//     marginBottom: 30,
+//     // Add subtle border for consistency
+//     borderWidth: 0.5,
+//     borderColor: 'rgba(0,0,0,0.05)',
+//   },
+//   readyTitle: {
+//     fontSize: 16,
+//     fontWeight: 'bold',
+//     marginTop: 8,
+//     color: '#000',
+//   },
+//   readySubtitle: {
+//     fontSize: 13,
+//     color: '#555',
+//     textAlign: 'center',
+//     marginTop: 6,
+//     lineHeight: 18,
+//   },
 //   createButton: {
 //     marginTop: 15,
 //     backgroundColor: '#0f4c5c',
 //     paddingVertical: 12,
 //     paddingHorizontal: 20,
 //     borderRadius: 10,
+//     shadowColor: '#0f4c5c',
+//     shadowOpacity: 0.3,
+//     shadowRadius: 4,
+//     shadowOffset: { width: 0, height: 2 },
+//     elevation: 3,
 //   },
 //   createButtonText: {
 //     color: '#fff',
 //     fontSize: 16,
 //     fontWeight: '600',
 //   },
-//   scrollContent: { paddingBottom: 30 },
+//   scrollContent: {
+//     paddingBottom: 30,
+//   },
 // });
-
-
-
 
 
 import React, { useEffect, useState } from 'react';
@@ -314,20 +402,32 @@ const DashboardScreen = () => {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.cardsContainer}>
-          {cardData.map((card, index) => {
-            const isRejected = card.title === 'Rejected';
-            return (
-              <View
-                key={index}
-                style={[
-                  styles.cardWrapper,
-                  isRejected && styles.rejectedWrapper,
-                ]}
-              >
-                <DashboardCard {...card} />
-              </View>
-            );
-          })}
+          {/* First Row: Total Ideas and In Progress */}
+          <View style={styles.row}>
+            <View style={styles.cardWrapper}>
+              <DashboardCard {...cardData[0]} />
+            </View>
+            <View style={styles.cardWrapper}>
+              <DashboardCard {...cardData[1]} />
+            </View>
+          </View>
+
+          {/* Second Row: Completed and On Hold */}
+          <View style={styles.row}>
+            <View style={styles.cardWrapper}>
+              <DashboardCard {...cardData[2]} />
+            </View>
+            <View style={styles.cardWrapper}>
+              <DashboardCard {...cardData[3]} />
+            </View>
+          </View>
+
+          {/* Third Row: Rejected (centered) */}
+          <View style={styles.rejectedRow}>
+            <View style={styles.rejectedWrapper}>
+              <DashboardCard {...cardData[4]} />
+            </View>
+          </View>
         </View>
 
         <View style={styles.overviewCard}>
@@ -372,46 +472,52 @@ const styles = StyleSheet.create({
   name: { color: '#fff', fontSize: isSmallDevice ? 15 : 16, fontWeight: 'bold' },
   id: { color: '#ddd', fontSize: isSmallDevice ? 12 : 12 },
   cardsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
     paddingHorizontal: 20,
     marginVertical: 25,
   },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  rejectedRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
   cardWrapper: {
-    width: '48%',
-    marginBottom: 20,
+    width: '47%', // Two cards per row with gap
   },
   rejectedWrapper: {
-    width: '48%',
-    alignItems: 'center',
-    // to push it centered in a new row, give marginLeft auto and marginRight auto
-    marginLeft: 'auto',
-    marginRight: 'auto',
+    width: '47%', // Same width as other cards but centered
   },
   card: {
-    width: '100%',  // Now card fills its wrapper entirely
+    width: '100%',
     borderRadius: 15,
     alignItems: 'center',
-    paddingVertical: 30,
-    // marginBottom: 20,  // remove marginBottom here, it's on wrapper
+    paddingVertical: 25, // Slightly reduced padding
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+    // Add subtle border for better definition
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   cardTitle: {
-    marginTop: 8,
+    marginTop: 10,
     fontSize: 14,
     color: '#333',
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
+    lineHeight: 18,
   },
   cardCount: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#004d61',
-    marginTop: 4,
+    marginTop: 6,
   },
   sectionTitle: {
     fontSize: 18,
@@ -423,14 +529,19 @@ const styles = StyleSheet.create({
   overviewCard: {
     backgroundColor: '#fff',
     marginHorizontal: 20,
+    marginTop: 10, // Added top margin for better separation
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
     marginBottom: 30,
+    // Add subtle border for consistency
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   readyTitle: {
     fontSize: 16,
@@ -443,6 +554,7 @@ const styles = StyleSheet.create({
     color: '#555',
     textAlign: 'center',
     marginTop: 6,
+    lineHeight: 18,
   },
   createButton: {
     marginTop: 15,
@@ -450,6 +562,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 10,
+    shadowColor: '#0f4c5c',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   createButtonText: {
     color: '#fff',
@@ -460,4 +577,3 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
 });
-
