@@ -1,5 +1,5 @@
 // import React, { useState, useEffect } from 'react';
-// import { useNavigation, useRoute } from '@react-navigation/native';
+// import { useNavigation } from '@react-navigation/native';
 // import {
 //   View,
 //   Text,
@@ -10,8 +10,10 @@
 //   Alert,
 //   Image,
 //   Modal,
+//   ActivityIndicator,
 // } from 'react-native';
-// import { CREATE_IDEA_POST_URL, EMPLOYEE_GET_URL } from '../src/context/api';
+// import { CREATE_IDEA_POST_URL  } from '../src/context/api';
+// import {EMPLOYEE_GET_URL} from '../src/context/api';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 // import { Picker } from '@react-native-picker/picker';
 // import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
@@ -20,12 +22,9 @@
 
 // export default function CreateIdeaScreen() {
 //   const navigation = useNavigation();
-//   const route = useRoute();
-//   const { idea, isEditing } = route.params || {}; 
 
 //   const [activeTab, setActiveTab] = useState('idea');
 //   const [userDetails, setUserDetails] = useState(null);
-//   const [ideaNumber, setIdeaNumber] = useState(''); 
 //   const [ideaDescription, setIdeaDescription] = useState('');
 //   const [proposedSolution, setProposedSolution] = useState('');
 //   const [solutionCategory, setSolutionCategory] = useState('');
@@ -36,33 +35,18 @@
 //   const [date, setDate] = useState(null);
 //   const [showDatePicker, setShowDatePicker] = useState(false);
 //   const [image, setImage] = useState(null);
+//   const [imageName, setImageName] = useState('');
 //   const [showPreview, setShowPreview] = useState(false);
 //   const [fullScreen, setFullScreen] = useState(false);
+//   const [imageScale, setImageScale] = useState(1);
 //   const [beSupportNeeded, setBeSupportNeeded] = useState(null);
 //   const [canImplementOtherLocation, setCanImplementOtherLocation] = useState(null);
 //   const [duration, setDuration] = useState('');
 //   const [showConfirm, setShowConfirm] = useState(false);
+//   const [showImageOptions, setShowImageOptions] = useState(false);
+//   const [isSubmitting, setIsSubmitting] = useState(false);
 
-
-//   useEffect(() => {
-//     if (isEditing && idea) {
-//       setIdeaNumber(idea.ideaNumber || '');
-//       setIdeaDescription(idea.ideaDescription || '');
-//       setProposedSolution(idea.proposedSolution || '');
-//       setSolutionCategory(idea.solutionCategory || '');
-//       setIdeaTheme(idea.ideaTheme || '');
-//       setBenefit(idea.tentativeBenefit || '');
-//       setTeamMembers(idea.teamMembers || '');
-//       setMobileNumber(idea.mobileNumber || '');
-//       setDate(idea.ideaCreationDate ? new Date(idea.ideaCreationDate) : null);
-//       setImage(idea.imagePath || null);
-//       setBeSupportNeeded(idea.isBETeamSupportNeeded || null);
-//       setCanImplementOtherLocation(idea.canBeImplementedToOtherLocations || null);
-//       setDuration(idea.plannedImplementationDuration || '');
-//     }
-//   }, [isEditing, idea]);
-
-//   const pickImage = async () => {
+//   const pickImageFromGallery = async () => {
 //     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 //     if (!permissionResult.granted) {
 //       alert('Permission required!');
@@ -75,12 +59,53 @@
 //     });
 //     if (!result.canceled) {
 //       setImage(result.assets[0].uri);
+//       const uriParts = result.assets[0].uri.split('/');
+//       setImageName(uriParts[uriParts.length - 1]);
+//       setShowImageOptions(false);
+//     }
+//   };
+
+//   const pickImageFromCamera = async () => {
+//     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+//     if (!permissionResult.granted) {
+//       alert('Camera permission required!');
+//       return;
+//     }
+//     let result = await ImagePicker.launchCameraAsync({
+//       allowsEditing: true,
+//       quality: 1,
+//     });
+//     if (!result.canceled) {
+//       setImage(result.assets[0].uri);
+//       const uriParts = result.assets[0].uri.split('/');
+//       setImageName(uriParts[uriParts.length - 1]);
+//       setShowImageOptions(false);
 //     }
 //   };
 
 //   const onChangeDate = (event, selectedDate) => {
 //     setShowDatePicker(false);
 //     if (selectedDate) setDate(selectedDate);
+//   };
+
+//   const formatDate = (dateObj) => {
+//     if (!dateObj) return '';
+//     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+//     const day = String(dateObj.getDate()).padStart(2, '0');
+//     const year = dateObj.getFullYear();
+//     return `${month}/${day}/${year}`;
+//   };
+
+//   // Calculate remaining days
+//   const getRemainingDays = (targetDate) => {
+//     if (!targetDate) return null;
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0);
+//     const target = new Date(targetDate);
+//     target.setHours(0, 0, 0, 0);
+//     const diffTime = target - today;
+//     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+//     return diffDays;
 //   };
 
 //   useEffect(() => {
@@ -96,8 +121,11 @@
 //             Authorization: `Bearer ${token}`,
 //           },
 //         });
-//         if (!response.ok) throw new Error('Failed to fetch employee details');
+//         if (!response.ok) {
+//           throw new Error('Failed to fetch employee details');
+//         }
 //         const data = await response.json();
+//         console.log('Employee Data:', data);
 
 //         setUserDetails({
 //           employeeNo: data.data.ideaOwnerEmployeeNo || '',
@@ -119,7 +147,6 @@
 //   // SAVE DRAFT
 //   const handleSaveDraft = () => {
 //     const draft = {
-//       ideaNumber,
 //       ideaDescription,
 //       proposedSolution,
 //       solutionCategory,
@@ -136,7 +163,6 @@
 //     Alert.alert('Draft Saved', 'Your idea has been saved as a draft.');
 //   };
 
-//   // VALIDATE BEFORE SUBMIT
 //   const handleBeforeSubmit = () => {
 //     if (!proposedSolution || !solutionCategory || !image || !date || !mobileNumber) {
 //       Alert.alert('Required Fields', 'Please fill all required fields.');
@@ -151,11 +177,17 @@
 
 //   const handleFinalSubmit = async () => {
 //     try {
+//       setIsSubmitting(true);
 //       const token = await AsyncStorage.getItem('token');
 //       if (!token) {
 //         Alert.alert('Error', 'User token missing. Please login again.');
+//         setIsSubmitting(false);
 //         return;
 //       }
+
+//       console.log("Idea Description", ideaDescription);
+//       console.log("ProposedSolution", proposedSolution);
+//       console.log("date", date); 
 
 //       const formData = new FormData();
 //       formData.append('IdeaDescription', ideaDescription);
@@ -167,46 +199,65 @@
 //       formData.append('IdeaTheme', ideaTheme);
 //       formData.append('PlannedImplementationDuration', date ? date.toISOString().split('T')[0] : null);
 //       formData.append('IsBETeamSupportNeeded', beSupportNeeded);
-//       formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation);
-//       formData.append('SubmitType', 'publish');
+//       formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation);   
+//       formData.append('SubmitType', 'publish');    
 
 //       if (image) {
-//         formData.append('image', { uri: image, type: 'image/jpeg', name: 'idea.jpg' });
+//         formData.append('image', {
+//           uri: image,
+//           type: 'image/jpeg', 
+//           name: 'idea.jpg',
+//         });
 //       }
 
-//       const url = isEditing && idea?.ideaNumber
-//         ? `${CREATE_IDEA_POST_URL}/${idea.ideaNumber}`
-//         : CREATE_IDEA_POST_URL;
+//       console.log("Payload sending:", formData);
 
-//       const response = await fetch(url, {
-//         method: isEditing ? 'PUT' : 'POST',
-//         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+//       const response = await fetch(CREATE_IDEA_POST_URL, {
+//         method: 'POST',
+//         headers: {
+//           'Authorization': `Bearer ${token}`,
+//           'Content-Type': 'multipart/form-data',
+//         },
 //         body: formData,
 //       });
 
 //       const text = await response.text();
 //       let data = {};
-//       try { data = JSON.parse(text); } catch { data = {}; }
+//       try { data = JSON.parse(text); } catch (e) { data = {}; }
+
+//       console.log("API Response Status:", response.status);
+//       console.log("API Raw Response:", text);
 
 //       if (response.ok && data.success) {
-//         Alert.alert('Success', isEditing ? 'Idea updated successfully!' : 'Idea submitted successfully!');
-//         navigation.navigate('My Ideas', { updatedIdea: data.data });
+//         // Direct navigation without success alert
+//         navigation.navigate('My Ideas', { 
+//           newIdea: data.data,
+//           refreshIdeas: true 
+//         });
 //       } else {
-//         Alert.alert('Error', data?.message || 'Failed to submit idea.');
+//         Alert.alert('Error', data?.message || 'Failed to create idea.');
 //       }
 
 //     } catch (error) {
 //       console.log("Error submitting idea:", error);
 //       Alert.alert('Network error, please try again.');
+//     } finally {
+//       setIsSubmitting(false);
 //     }
+//   };
+
+//   const handleZoomIn = () => {
+//     setImageScale(prev => Math.min(prev + 0.5, 3));
+//   };
+
+//   const handleZoomOut = () => {
+//     setImageScale(prev => Math.max(prev - 0.5, 0.5));
 //   };
 
 //   return (
 //     <View style={{ flex: 1 }}>
 //       <View style={styles.stickyHeader}>
-//         <Text style={styles.heading}>
-//           {isEditing ? `Edit Idea #${ideaNumber}` : 'Idea Creation Form'}
-//         </Text>
+//         <Text style={styles.heading}>Idea Creation Form</Text>
 //       </View>
 
 //       <ScrollView contentContainerStyle={styles.container}>
@@ -232,12 +283,12 @@
 //           <View style={styles.card}>
 //             {userDetails ? (
 //               <>
-//                 <FieldRow label=" Idea Owner Employee No:" value={userDetails.employeeNo} />
-//                 <FieldRow label=" Owner Name:" value={userDetails.name} />
-//                 <FieldRow label=" Owner Email:" value={userDetails.email} />
-//                 <FieldRow label=" Owner Department:" value={userDetails.department} />
-//                 <FieldRow label=" Owner Sub Department:" value={userDetails.subDepartment} />
-//                 <FieldRow label=" Owner Location:" value={userDetails.location} />
+//                 <FieldRow label="Idea Owner Employee No:" value={userDetails.employeeNo} />
+//                 <FieldRow label="Owner Name:" value={userDetails.name} />
+//                 <FieldRow label="Owner Email:" value={userDetails.email} />
+//                 <FieldRow label="Owner Department:" value={userDetails.department} />
+//                 <FieldRow label="Owner Sub Department:" value={userDetails.subDepartment} />
+//                 <FieldRow label="Owner Location:" value={userDetails.location} />
 //                 <FieldRow label="Reporting Manager Name:" value={userDetails.reportingManagerName} />
 //                 <FieldRow label="Reporting Manager Email:" value={userDetails.reportingManagerEmail} />
 //               </>
@@ -277,7 +328,6 @@
 //               required
 //               icon={<FontAwesome name="lightbulb-o" size={20} color="#666" />}
 //               placeholder="Enter tentative Benefit..."
-//               //value={solution}
 //               value={benefit}
 //               onChangeText={setBenefit}
 //               multiline
@@ -332,6 +382,110 @@
 //               ]}
 //             />
 
+//             {/* Image Upload - Web Style */}
+//             <View style={styles.inputBlock}>
+//               <Text style={styles.label}>Before Implementation (JPG, PNG, PDF) <Text style={styles.required}>*</Text></Text>
+//               <View style={styles.fileInputRow}>
+//                 <TouchableOpacity style={styles.chooseFileButton} onPress={() => setShowImageOptions(true)}>
+//                   <Text style={styles.chooseFileText}>Choose File</Text>
+//                 </TouchableOpacity>
+//                 <Text style={styles.fileNameDisplay}>{imageName || 'No file chosen'}</Text>
+//               </View>
+
+//               {image && (
+//                 <TouchableOpacity onPress={() => setFullScreen(true)} style={styles.eyeIconContainer}>
+//                   <Feather name="eye" size={20} color="#2196F3" />
+//                 </TouchableOpacity>
+//               )}
+
+//               {/* Full Screen Image Modal with Zoom */}
+//               <Modal visible={fullScreen} transparent={true}>
+//                 <View style={styles.fullScreenContainer}>
+//                   <TouchableOpacity style={styles.closeButton} onPress={() => {
+//                     setFullScreen(false);
+//                     setImageScale(1);
+//                   }}>
+//                     <Feather name="x" size={30} color="#fff" />
+//                   </TouchableOpacity>
+                  
+//                   {/* Zoom controls */}
+//                   <View style={styles.zoomControls}>
+//                     <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut}>
+//                       <Feather name="minus" size={24} color="#fff" />
+//                     </TouchableOpacity>
+//                     <Text style={styles.zoomText}>{Math.round(imageScale * 100)}%</Text>
+//                     <TouchableOpacity style={styles.zoomButton} onPress={handleZoomIn}>
+//                       <Feather name="plus" size={24} color="#fff" />
+//                     </TouchableOpacity>
+//                   </View>
+
+//                   <ScrollView
+//                     contentContainerStyle={styles.scrollContent}
+//                     maximumZoomScale={3}
+//                     minimumZoomScale={0.5}
+//                     showsHorizontalScrollIndicator={false}
+//                     showsVerticalScrollIndicator={false}
+//                   >
+//                     <Image 
+//                       source={{ uri: image }} 
+//                       style={[styles.fullScreenImage, { transform: [{ scale: imageScale }] }]} 
+//                       resizeMode="contain" 
+//                     />
+//                   </ScrollView>
+//                 </View>
+//               </Modal>
+
+//               {/* Image Options Modal (Camera/Gallery) */}
+//               <Modal visible={showImageOptions} transparent={true} animationType="slide">
+//                 <View style={styles.imageOptionsContainer}>
+//                   <View style={styles.imageOptionsContent}>
+//                     <Text style={styles.imageOptionsTitle}>Choose Image Source</Text>
+                    
+//                     <TouchableOpacity style={styles.imageOptionButton} onPress={pickImageFromCamera}>
+//                       <Feather name="camera" size={24} color="#2196F3" />
+//                       <Text style={styles.imageOptionText}>Take Photo</Text>
+//                     </TouchableOpacity>
+
+//                     <TouchableOpacity style={styles.imageOptionButton} onPress={pickImageFromGallery}>
+//                       <Feather name="image" size={24} color="#4CAF50" />
+//                       <Text style={styles.imageOptionText}>Choose from Gallery</Text>
+//                     </TouchableOpacity>
+
+//                     <TouchableOpacity 
+//                       style={[styles.imageOptionButton, styles.cancelButton]} 
+//                       onPress={() => setShowImageOptions(false)}
+//                     >
+//                       <Text style={styles.cancelButtonText}>Cancel</Text>
+//                     </TouchableOpacity>
+//                   </View>
+//                 </View>
+//               </Modal>
+//             </View>
+
+//             {/* Completion Date - Web Style */}
+//             <View style={styles.inputBlock}>
+//               <Text style={styles.label}>Planned Completion Date <Text style={styles.required}>*</Text></Text>
+//               <TouchableOpacity style={styles.dateInputWeb} onPress={() => setShowDatePicker(true)}>
+//                 <Text style={styles.dateDisplayText}>{date ? formatDate(date) : 'Select Date'}</Text>
+//                 <Feather name="calendar" size={18} color="#666" />
+//               </TouchableOpacity>
+//               {date && getRemainingDays(date) !== null && (
+//                 <Text style={styles.daysRemainingText}>
+//                   ({getRemainingDays(date)} days)
+//                 </Text>
+//               )}
+//             </View>
+
+//             {showDatePicker && (
+//               <DateTimePicker
+//                 value={date || new Date()}
+//                 mode="date"
+//                 display="default"
+//                 minimumDate={new Date()}
+//                 onChange={onChangeDate}
+//               />
+//             )}
+
 //             {/* Mobile Number */}
 //             <InputField
 //               label="Mobile Number"
@@ -347,57 +501,7 @@
 //             <RadioField label="Is BE Team Support Needed?" value={beSupportNeeded} setValue={setBeSupportNeeded} />
 //             <RadioField label="Can Be Implemented To Other Location?" value={canImplementOtherLocation} setValue={setCanImplementOtherLocation} />
 
-//             {/* Image Upload */}
-//             <View style={styles.inputBlock}>
-//               <Text style={styles.label}>Upload Image <Text style={styles.required}>*</Text></Text>
-//               <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
-//                 <Feather name="image" size={20} color="#fff" />
-//                 <Text style={styles.uploadText}> Choose Image</Text>
-//               </TouchableOpacity>
-
-//               {image && (
-//                 <TouchableOpacity onPress={() => setShowPreview(!showPreview)} style={{ marginTop: 8, alignSelf: 'flex-start' }}>
-//                   <Feather name="eye" size={20} color="#000" />
-//                 </TouchableOpacity>
-//               )}
-
-//               {image && showPreview && (
-//                 <TouchableOpacity onPress={() => setFullScreen(true)}>
-//                   <Image source={{ uri: image }} style={{ width: '100%', height: 200, marginTop: 10, borderRadius: 10 }} />
-//                 </TouchableOpacity>
-//               )}
-
-//               <Modal visible={fullScreen} transparent={true}>
-//                 <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' }}>
-//                   <TouchableOpacity style={{ position: 'absolute', top: 40, right: 20, zIndex: 1 }} onPress={() => setFullScreen(false)}>
-//                     <Feather name="x" size={30} color="#fff" />
-//                   </TouchableOpacity>
-//                   <Image source={{ uri: image }} style={{ width: '90%', height: '80%', borderRadius: 10 }} resizeMode="contain" />
-//                 </View>
-//               </Modal>
-//             </View>
-
-//             {/* Completion Date */}
-//             <View style={styles.inputBlock}>
-//               <Text style={styles.label}>Completion Date <Text style={styles.required}>*</Text></Text>
-//               <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
-//                 <Feather name="calendar" size={20} color="#fff" />
-//                 <Text style={styles.uploadText}> Select Date</Text>
-//               </TouchableOpacity>
-//               {date && <Text style={styles.dateText}>{date.toDateString()}</Text>}
-//             </View>
-
-//             {showDatePicker && (
-//               <DateTimePicker
-//                 value={date || new Date()}
-//                 mode="date"
-//                 display="default"
-//                 minimumDate={new Date()}
-//                 onChange={onChangeDate}
-//               />
-//             )}
-
-//             {/* Buttons */}
+//             {/* Buttons - Inside Card */}
 //             <View style={styles.buttonRow}>
 //               <TouchableOpacity style={styles.draftButton} onPress={handleSaveDraft}>
 //                 <FontAwesome name="save" size={16} color="#555" />
@@ -405,12 +509,22 @@
 //               </TouchableOpacity>
 
 //               <TouchableOpacity style={styles.submitButton} onPress={handleBeforeSubmit}>
-//                 <Text style={styles.submitText}>Submit</Text>
+//                 <Text style={styles.submitText}>Save & Publish</Text>
 //               </TouchableOpacity>
 //             </View>
 //           </View>
 //         )}
 //       </ScrollView>
+
+//       {/* Loading Overlay */}
+//       {isSubmitting && (
+//         <View style={styles.loadingOverlay}>
+//           <View style={styles.loadingCard}>
+//             <ActivityIndicator size="large" color="#00B894" />
+//             <Text style={styles.loadingText}>Submitting your idea...</Text>
+//           </View>
+//         </View>
+//       )}
 
 //       {/* Confirm Modal */}
 //       <Modal visible={showConfirm} transparent={true} animationType="fade">
@@ -420,11 +534,22 @@
 //             <Text style={{ fontSize: 18, fontWeight: 'bold', marginVertical: 10 }}>Save & Publish</Text>
 //             <Text style={{ fontSize: 14, textAlign: 'center', color: '#333' }}>Are you sure you want to save and publish this record?</Text>
 //             <View style={{ flexDirection: 'row', marginTop: 20 }}>
-//               <TouchableOpacity style={{ backgroundColor: '#ddd', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, marginRight: 10 }} onPress={() => setShowConfirm(false)}>
+//               <TouchableOpacity 
+//                 style={{ backgroundColor: '#ddd', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, marginRight: 10 }} 
+//                 onPress={() => setShowConfirm(false)}
+//                 disabled={isSubmitting}
+//               >
 //                 <Text style={{ color: '#333', fontWeight: '600' }}>Cancel</Text>
 //               </TouchableOpacity>
-//               <TouchableOpacity style={{ backgroundColor: '#00B894', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 }} onPress={() => { setShowConfirm(false); handleFinalSubmit(); }}>
-//                 <Text style={{ color: '#fff', fontWeight: '600' }}>Done</Text>
+//               <TouchableOpacity 
+//                 style={{ backgroundColor: '#00B894', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 }} 
+//                 onPress={() => { 
+//                   setShowConfirm(false); 
+//                   handleFinalSubmit(); 
+//                 }}
+//                 disabled={isSubmitting}
+//               >
+//                 <Text style={{ color: '#fff', fontWeight: '600' }}>Save & Publish</Text>
 //               </TouchableOpacity>
 //             </View>
 //           </View>
@@ -491,7 +616,7 @@
 //   </View>
 // );
 
-// // STYLES - moved outside the component
+// // STYLES
 // const styles = StyleSheet.create({
 //   container: { backgroundColor: '#F5F8FF', padding: 20, paddingBottom: 50 },
 //   stickyHeader: {
@@ -535,25 +660,68 @@
 //   picker: { flex: 1, marginLeft: 10, color: '#333' },
 //   textArea: { height: 100, textAlignVertical: 'top' },
 //   charCount: { alignSelf: 'flex-end', fontSize: 12, color: '#888', marginTop: 4 },
-//   uploadBtn: {
+  
+//   // Web-style file input
+//   fileInputRow: {
 //     flexDirection: 'row',
 //     alignItems: 'center',
-//     backgroundColor: '#4CAF50',
-//     padding: 12,
-//     borderRadius: 10,
-//     justifyContent: 'center'
+//     backgroundColor: '#F0F2F5',
+//     borderRadius: 8,
+//     borderWidth: 1,
+//     borderColor: '#ddd',
+//     overflow: 'hidden',
 //   },
-//   dateBtn: {
+//   chooseFileButton: {
+//     backgroundColor: '#e0e0e0',
+//     paddingHorizontal: 16,
+//     paddingVertical: 12,
+//     borderRightWidth: 1,
+//     borderRightColor: '#ccc',
+//   },
+//   chooseFileText: {
+//     color: '#333',
+//     fontSize: 14,
+//     fontWeight: '500',
+//   },
+//   fileNameDisplay: {
+//     flex: 1,
+//     paddingHorizontal: 12,
+//     color: '#666',
+//     fontSize: 14,
+//   },
+//   eyeIconContainer: {
+//     marginTop: 8,
+//     alignSelf: 'flex-start',
+//   },
+
+//   // Web-style date input
+//   dateInputWeb: {
 //     flexDirection: 'row',
+//     justifyContent: 'space-between',
 //     alignItems: 'center',
-//     backgroundColor: '#2196F3',
-//     padding: 12,
-//     borderRadius: 10,
-//     justifyContent: 'center'
+//     backgroundColor: '#F0F2F5',
+//     borderRadius: 8,
+//     borderWidth: 1,
+//     borderColor: '#ddd',
+//     paddingHorizontal: 12,
+//     paddingVertical: 12,
 //   },
-//   uploadText: { color: '#fff', fontSize: 16, marginLeft: 8 },
-//   dateText: { fontSize: 16, marginTop: 8, color: '#555' },
-//   buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 30 },
+//   dateDisplayText: {
+//     color: '#333',
+//     fontSize: 14,
+//   },
+//   daysRemainingText: {
+//     fontSize: 13,
+//     color: '#666',
+//     marginTop: 6,
+//     fontStyle: 'italic',
+//   },
+
+//   buttonRow: { 
+//     flexDirection: 'row', 
+//     justifyContent: 'space-between', 
+//     marginTop: 25,
+//   },
 //   draftButton: {
 //     flexDirection: 'row',
 //     alignItems: 'center',
@@ -565,6 +733,7 @@
 //   draftText: { marginLeft: 8, fontSize: 16, color: '#333', fontWeight: '600' },
 //   submitButton: { backgroundColor: '#00B894', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 10 },
 //   submitText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  
 //   radioRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
 //   radioOption: { flexDirection: 'row', alignItems: 'center', marginRight: 20 },
 //   radioCircle: {
@@ -579,8 +748,6 @@
 //   },
 //   radioSelected: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
 //   radioText: { fontSize: 14, color: '#333' },
-
-//   // Tabs
 //   tabButton: {
 //     flex: 1,
 //     paddingVertical: 12,
@@ -596,8 +763,6 @@
 //     color: '#fff',
 //     fontWeight: '600',
 //   },
-
-//   // Employee details
 //   fieldRow: {
 //     flexDirection: 'row',
 //     marginBottom: 12,
@@ -622,8 +787,99 @@
 //     marginTop: 20,
 //     fontSize: 16,
 //   },
+//   // Full Screen Image Styles
+//   fullScreenContainer: {
+//     flex: 1,
+//     backgroundColor: 'rgba(0,0,0,0.95)',
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//   },
+//   closeButton: {
+//     position: 'absolute',
+//     top: 40,
+//     right: 20,
+//     zIndex: 3,
+//     padding:10,
+//   },
+//   zoomControls: {
+//     position: 'absolute',
+//     bottom: 40,
+//     flexDirection: 'row',
+//     backgroundColor: 'rgba(0,0,0,0.7)',
+//     borderRadius: 25,
+//     padding: 10,
+//     zIndex: 2,
+//     alignItems: 'center',
+//   },
+//   zoomButton: {
+//     width: 44,
+//     height: 44,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     marginHorizontal: 5,
+//   },
+//   zoomText: {
+//     color: '#fff',
+//     fontSize: 16,
+//     fontWeight: '600',
+//     marginHorizontal: 10,
+//   },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     padding: 20,
+//   },
+//   fullScreenImage: {
+//     width: 350,
+//     height: 600,
+//   },
+//   // Image Options Modal Styles
+//   imageOptionsContainer: {
+//     flex: 1,
+//     backgroundColor: 'rgba(0,0,0,0.5)',
+//     justifyContent: 'flex-end',
+//   },
+//   imageOptionsContent: {
+//     backgroundColor: '#fff',
+//     borderTopLeftRadius: 20,
+//     borderTopRightRadius: 20,
+//     padding: 20,
+//     paddingBottom: 40,
+//   },
+//   imageOptionsTitle: {
+//     fontSize: 18,
+//     fontWeight: 'bold',
+//     color: '#333',
+//     marginBottom: 20,
+//     textAlign: 'center',
+//   },
+//   imageOptionButton: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     backgroundColor: '#F0F2F5',
+//     padding: 16,
+//     borderRadius: 12,
+//     marginBottom: 12,
+//   },
+//   imageOptionText: {
+//     fontSize: 16,
+//     color: '#333',
+//     fontWeight: '600',
+//     marginLeft: 15,
+//   },
+//   cancelButton: {
+//     backgroundColor: '#FFE5E5',
+//     marginTop: 10,
+//     justifyContent: 'center',
+//   },
+//   cancelButtonText: {
+//     fontSize: 16,
+//     color: '#FF3B30',
+//     fontWeight: '600',
+//     textAlign: 'center',
+//   },
 // });
-
 
 
 import React, { useState, useEffect } from 'react';
@@ -638,6 +894,7 @@ import {
   Alert,
   Image,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { CREATE_IDEA_POST_URL  } from '../src/context/api';
 import {EMPLOYEE_GET_URL} from '../src/context/api';
@@ -646,6 +903,7 @@ import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
 export default function CreateIdeaScreen() {
   const navigation = useNavigation();
@@ -661,15 +919,38 @@ export default function CreateIdeaScreen() {
   const [mobileNumber, setMobileNumber] = useState('');
   const [date, setDate] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [image, setImage] = useState(null);
+  const [file, setFile] = useState(null);
+  const [fileName, setFileName] = useState('');
+  const [fileType, setFileType] = useState(''); // 'image' or 'pdf'
   const [showPreview, setShowPreview] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
+  const [imageScale, setImageScale] = useState(1);
   const [beSupportNeeded, setBeSupportNeeded] = useState(null);
   const [canImplementOtherLocation, setCanImplementOtherLocation] = useState(null);
   const [duration, setDuration] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showFileOptions, setShowFileOptions] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const pickImage = async () => {
+  // Reset all form fields
+  const resetForm = () => {
+    setIdeaDescription('');
+    setProposedSolution('');
+    setSolutionCategory('');
+    setIdeaTheme('');
+    setBenefit('');
+    setTeamMembers('');
+    setMobileNumber('');
+    setDate(null);
+    setFile(null);
+    setFileName('');
+    setFileType('');
+    setBeSupportNeeded(null);
+    setCanImplementOtherLocation(null);
+    setImageScale(1);
+  };
+
+  const pickImageFromGallery = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       alert('Permission required!');
@@ -681,13 +962,75 @@ export default function CreateIdeaScreen() {
       quality: 1,
     });
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setFile(result.assets[0].uri);
+      setFileType('image');
+      const uriParts = result.assets[0].uri.split('/');
+      setFileName(uriParts[uriParts.length - 1]);
+      setShowFileOptions(false);
+    }
+  };
+
+  const pickImageFromCamera = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissionResult.granted) {
+      alert('Camera permission required!');
+      return;
+    }
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 1,
+    });
+    if (!result.canceled) {
+      setFile(result.assets[0].uri);
+      setFileType('image');
+      const uriParts = result.assets[0].uri.split('/');
+      setFileName(uriParts[uriParts.length - 1]);
+      setShowFileOptions(false);
+    }
+  };
+
+  const pickPDF = async () => {
+    try {
+      let result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+      
+      if (result.type === 'success' || !result.canceled) {
+        const selectedFile = result.assets ? result.assets[0] : result;
+        setFile(selectedFile.uri);
+        setFileType('pdf');
+        setFileName(selectedFile.name);
+        setShowFileOptions(false);
+      }
+    } catch (error) {
+      console.log('Error picking PDF:', error);
+      Alert.alert('Error', 'Failed to pick PDF file');
     }
   };
 
   const onChangeDate = (event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) setDate(selectedDate);
+  };
+
+  const formatDate = (dateObj) => {
+    if (!dateObj) return '';
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const year = dateObj.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+
+  const getRemainingDays = (targetDate) => {
+    if (!targetDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(targetDate);
+    target.setHours(0, 0, 0, 0);
+    const diffTime = target - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
   };
 
   useEffect(() => {
@@ -708,49 +1051,105 @@ export default function CreateIdeaScreen() {
         }
         const data = await response.json();
         console.log('Employee Data:', data);
-        //console.log("Manager Email from API:", data.data.managerEmail);
-        //console.log("Reporting Manager Email from API:", data.data.reportingManagerEmail);
 
-
-   setUserDetails({
-  employeeNo: data.data.ideaOwnerEmployeeNo || '',
-  name: data.data.ideaOwnerName || '',
-  email: data.data.ideaOwnerEmail || '',
-  department: data.data.ideaOwnerDepartment || '',
-  subDepartment: data.data.ideaOwnerSubDepartment || '',
-  location: data.data.location || '',
-  reportingManagerName: data.data.reportingManagerName || '',
-  reportingManagerEmail: data.data.reportingManagerEmail || '',
-});
-   } catch (error) {
+        setUserDetails({
+          employeeNo: data.data.ideaOwnerEmployeeNo || '',
+          name: data.data.ideaOwnerName || '',
+          email: data.data.ideaOwnerEmail || '',
+          department: data.data.ideaOwnerDepartment || '',
+          subDepartment: data.data.ideaOwnerSubDepartment || '',
+          location: data.data.location || '',
+          reportingManagerName: data.data.reportingManagerName || '',
+          reportingManagerEmail: data.data.reportingManagerEmail || '',
+        });
+      } catch (error) {
         console.error('Error fetching employee details:', error);
       }
     };
     fetchEmployeeDetails();
   }, [activeTab]);
 
-  // SAVE DRAFT
-  const handleSaveDraft = () => {
-    const draft = {
-      ideaDescription,
-      proposedSolution,
-      solutionCategory,
-      benefit,
-      teamMembers,
-      mobileNumber,
-      date: date ? date.toISOString().split('T')[0] : null,
-      image,
-      beSupportNeeded,
-      canImplementOtherLocation,
-      status: 'Pending',
-    };
-    navigation.navigate('My Ideas', { newIdea: draft });
-    Alert.alert('Draft Saved', 'Your idea has been saved as a draft.');
+  const handleSaveDraft = async () => {
+    if (!proposedSolution || !solutionCategory || !file || !date || !mobileNumber) {
+      Alert.alert('Required Fields', 'Please fill all required fields to save draft.');
+      return;
+    }
+    if (!/^\d{10}$/.test(mobileNumber)) {
+      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10 digit mobile number.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        Alert.alert('Error', 'User token missing. Please login again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('IdeaDescription', ideaDescription);
+      formData.append('ProposedSolution', proposedSolution);
+      formData.append('TentativeBenefit', benefit);
+      formData.append('TeamMembers', teamMembers);
+      formData.append('MobileNumber', mobileNumber);
+      formData.append('SolutionCategory', solutionCategory);
+      formData.append('IdeaTheme', ideaTheme);
+      formData.append('PlannedImplementationDuration', date ? date.toISOString().split('T')[0] : null);
+      formData.append('IsBETeamSupportNeeded', beSupportNeeded);
+      formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation);   
+      formData.append('SubmitType', 'draft');
+
+      if (file) {
+        if (fileType === 'pdf') {
+          formData.append('image', {
+            uri: file,
+            type: 'application/pdf',
+            name: fileName || 'document.pdf',
+          });
+        } else {
+          formData.append('image', {
+            uri: file,
+            type: 'image/jpeg',
+            name: fileName || 'idea.jpg',
+          });
+        }
+      }
+
+      const response = await fetch(CREATE_IDEA_POST_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+
+      const text = await response.text();
+      let data = {};
+      try { data = JSON.parse(text); } catch (e) { data = {}; }
+
+      if (response.ok && data.success) {
+        resetForm();
+        navigation.navigate('My Ideas', { 
+          newIdea: { ...data.data, status: 'Draft' },
+          refreshIdeas: true,
+          showDraftMessage: true
+        });
+      } else {
+        Alert.alert('Error', data?.message || 'Failed to save draft.');
+      }
+    } catch (error) {
+      console.log('Error saving draft:', error);
+      Alert.alert('Error', 'Network error, please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // VALIDATE BEFORE SUBMIT
   const handleBeforeSubmit = () => {
-    if (  !proposedSolution ||!solutionCategory|| !image || !date || !mobileNumber) {
+    if (!proposedSolution || !solutionCategory || !file || !date || !mobileNumber) {
       Alert.alert('Required Fields', 'Please fill all required fields.');
       return;
     }
@@ -761,89 +1160,83 @@ export default function CreateIdeaScreen() {
     setShowConfirm(true);
   };
 
-const handleFinalSubmit = async () => {
-  try {
-    const token = await AsyncStorage.getItem('token');
-    if (!token) {
-      Alert.alert('Error', 'User token missing. Please login again.');
-      return;
-    }
+  const handleFinalSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        Alert.alert('Error', 'User token missing. Please login again.');
+        setIsSubmitting(false);
+        return;
+      }
 
-    console.log("Idea Description", ideaDescription);
-    console.log("ProposedSolution", proposedSolution);
-    console.log("date", date); 
-    
+      const formData = new FormData();
+      formData.append('IdeaDescription', ideaDescription);
+      formData.append('ProposedSolution', proposedSolution);
+      formData.append('TentativeBenefit', benefit);
+      formData.append('TeamMembers', teamMembers);
+      formData.append('MobileNumber', mobileNumber);
+      formData.append('SolutionCategory', solutionCategory);
+      formData.append('IdeaTheme', ideaTheme);
+      formData.append('PlannedImplementationDuration', date ? date.toISOString().split('T')[0] : null);
+      formData.append('IsBETeamSupportNeeded', beSupportNeeded);
+      formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation);   
+      formData.append('SubmitType', 'publish');    
 
-    const formData = new FormData();
-    formData.append('IdeaDescription', ideaDescription);
-    formData.append('ProposedSolution', proposedSolution);
-    formData.append('TentativeBenefit', benefit);
-    formData.append('TeamMembers', teamMembers);
-    formData.append('MobileNumber', mobileNumber);
-    formData.append('SolutionCategory', solutionCategory);
-    formData.append('IdeaTheme',ideaTheme );
-    formData.append('PlannedImplementationDuration', date ? date.toISOString().split('T')[0] : null);
-    formData.append('IsBETeamSupportNeeded', beSupportNeeded);
-    formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation);   
-    formData.append('SubmitType', 'publish');    
-  
+      if (file) {
+        if (fileType === 'pdf') {
+          formData.append('image', {
+            uri: file,
+            type: 'application/pdf',
+            name: fileName || 'document.pdf',
+          });
+        } else {
+          formData.append('image', {
+            uri: file,
+            type: 'image/jpeg',
+            name: fileName || 'idea.jpg',
+          });
+        }
+      }
 
-    if (image) {
-      formData.append('image', {
-        uri: image,
-        type: 'image/jpeg', 
-        name: 'idea.jpg',
+      const response = await fetch(CREATE_IDEA_POST_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
       });
+
+      const text = await response.text();
+      let data = {};
+      try { data = JSON.parse(text); } catch (e) { data = {}; }
+
+      if (response.ok && data.success) {
+        resetForm();
+        navigation.navigate('My Ideas', { 
+          newIdea: data.data,
+          refreshIdeas: true 
+        });
+      } else {
+        Alert.alert('Error', data?.message || 'Failed to create idea.');
+      }
+
+    } catch (error) {
+      console.log("Error submitting idea:", error);
+      Alert.alert('Network error, please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    console.log("Payload sending:", formData);
+  const handleZoomIn = () => {
+    setImageScale(prev => Math.min(prev + 0.5, 3));
+  };
 
-    const response = await fetch(CREATE_IDEA_POST_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
-      },
-      body: formData,
-    });
-
-    const text = await response.text();
-    let data = {};
-    try { data = JSON.parse(text); } catch (e) { data = {}; }
-
-    console.log("API Response Status:", response.status);
-    console.log("API Raw Response:", text);
-
-    if (response.ok && data.success) {
-      const newIdea = {
-        ideaNumber: data.data.ideaNumber || `SUB-${new Date().getTime()}`,
-        ideaDescription,
-        proposedSolution,
-        solutionCategory,
-        ideaTheme,
-        tentativeBenefit: benefit,
-        teamMembers,
-        mobileNumber,
-        ideaCreationDate: date ? date.toISOString() : new Date().toISOString(),
-        imagePath: image,
-        isBETeamSupportNeeded: beSupportNeeded,
-        canBeImplementedToOtherLocations: canImplementOtherLocation,
-        ideaStatus: 'Pending',
-      };
-
-      Alert.alert('Success', 'Your idea has been submitted successfully!');
-      // Navigate to My Ideas page
-      navigation.navigate('My Ideas', { newIdea: data.data }); 
-    } else {
-      Alert.alert('Error', data?.message || 'Failed to create idea.');
-    }
-
-  } catch (error) {
-    console.log("Error submitting idea:", error);
-    Alert.alert('Network error, please try again.');
-  }
-};
-
+  const handleZoomOut = () => {
+    setImageScale(prev => Math.max(prev - 0.5, 0.5));
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -854,7 +1247,6 @@ const handleFinalSubmit = async () => {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={{ height: 70 }} />
 
-        {/* Tabs */}
         <View style={{ flexDirection: 'row', marginBottom: 20 }}>
           <TouchableOpacity
             style={[styles.tabButton, activeTab === 'idea' && styles.tabActive]}
@@ -874,12 +1266,12 @@ const handleFinalSubmit = async () => {
           <View style={styles.card}>
             {userDetails ? (
               <>
-                <FieldRow label=" Idea Owner Employee No:" value={userDetails.employeeNo} />
-                <FieldRow label=" Owner Name:" value={userDetails.name} />
-                <FieldRow label=" Owner Email:" value={userDetails.email} />
-                <FieldRow label=" Owner Department:" value={userDetails.department} />
-                <FieldRow label=" Owner Sub Department:" value={userDetails.subDepartment} />
-                <FieldRow label=" Owner Location:" value={userDetails.location} />
+                <FieldRow label="Idea Owner Employee No:" value={userDetails.employeeNo} />
+                <FieldRow label="Owner Name:" value={userDetails.name} />
+                <FieldRow label="Owner Email:" value={userDetails.email} />
+                <FieldRow label="Owner Department:" value={userDetails.department} />
+                <FieldRow label="Owner Sub Department:" value={userDetails.subDepartment} />
+                <FieldRow label="Owner Location:" value={userDetails.location} />
                 <FieldRow label="Reporting Manager Name:" value={userDetails.reportingManagerName} />
                 <FieldRow label="Reporting Manager Email:" value={userDetails.reportingManagerEmail} />
               </>
@@ -888,9 +1280,7 @@ const handleFinalSubmit = async () => {
             )}
           </View>
         ) : (
-          // Idea Form Tab
           <View style={styles.card}>
-            {/* Idea/Opportunity Description */}
             <InputField
               label="Idea/Opportunity Description"
               required
@@ -901,7 +1291,6 @@ const handleFinalSubmit = async () => {
               maxLength={100}
             />
 
-            {/* Proposed Solution */}
             <InputField
               label="Proposed Solution"
               required
@@ -913,20 +1302,17 @@ const handleFinalSubmit = async () => {
               maxLength={300}
             />
 
-            {/* Process Improvement / Cost Benefit */}
             <InputField
               label="Process Improvement/Cost Benefit"
               required
               icon={<FontAwesome name="lightbulb-o" size={20} color="#666" />}
               placeholder="Enter tentative Benefit..."
-              //value={solution}
               value={benefit}
               onChangeText={setBenefit}
               multiline
               maxLength={300}
             />
 
-            {/* Team Members */}
             <InputField
               label="Team Members"
               icon={<MaterialIcons name="group" size={20} color="#666" />}
@@ -936,7 +1322,6 @@ const handleFinalSubmit = async () => {
               maxLength={30}
             />
 
-            {/* Solution Category */}
             <PickerField
               label="Solution Category"
               icon={<Ionicons name="bulb-outline" size={20} color="#666" />}
@@ -957,7 +1342,6 @@ const handleFinalSubmit = async () => {
               ]}
             />
 
-            {/* Idea Theme */}
             <PickerField
               label="Idea Theme"
               icon={<MaterialIcons name="category" size={20} color="#666" />}
@@ -974,59 +1358,106 @@ const handleFinalSubmit = async () => {
               ]}
             />
 
-            {/* Mobile Number */}
-            <InputField
-              label="Mobile Number"
-              required
-              icon={<Feather name="phone" size={20} color="#666" />}
-              placeholder="Enter your number..."
-              value={mobileNumber}
-              onChangeText={setMobileNumber}
-              maxLength={10}
-            />
-
-            {/* Radio fields */}
-            <RadioField label="Is BE Team Support Needed?" value={beSupportNeeded} setValue={setBeSupportNeeded} />
-            <RadioField label="Can Be Implemented To Other Location?" value={canImplementOtherLocation} setValue={setCanImplementOtherLocation} />
-
-            {/* Image Upload */}
             <View style={styles.inputBlock}>
-              <Text style={styles.label}>Upload Image <Text style={styles.required}>*</Text></Text>
-              <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
-                <Feather name="image" size={20} color="#fff" />
-                <Text style={styles.uploadText}> Choose Image</Text>
-              </TouchableOpacity>
+              <Text style={styles.label}>Before Implementation (JPG, PNG, PDF) <Text style={styles.required}>*</Text></Text>
+              <View style={styles.fileInputRow}>
+                <TouchableOpacity style={styles.chooseFileButton} onPress={() => setShowFileOptions(true)}>
+                  <Text style={styles.chooseFileText}>Choose File</Text>
+                </TouchableOpacity>
+                <Text style={styles.fileNameDisplay}>{fileName || 'No file chosen'}</Text>
+              </View>
 
-              {image && (
-                <TouchableOpacity onPress={() => setShowPreview(!showPreview)} style={{ marginTop: 8, alignSelf: 'flex-start' }}>
-                  <Feather name="eye" size={20} color="#000" />
+              {file && fileType === 'image' && (
+                <TouchableOpacity onPress={() => setFullScreen(true)} style={styles.eyeIconContainer}>
+                  <Feather name="eye" size={20} color="#2196F3" />
+                  <Text style={styles.previewText}>Preview Image</Text>
                 </TouchableOpacity>
               )}
 
-              {image && showPreview && (
-                <TouchableOpacity onPress={() => setFullScreen(true)}>
-                  <Image source={{ uri: image }} style={{ width: '100%', height: 200, marginTop: 10, borderRadius: 10 }} />
-                </TouchableOpacity>
+              {file && fileType === 'pdf' && (
+                <View style={styles.pdfInfoContainer}>
+                  <Feather name="file-text" size={20} color="#FF5722" />
+                  <Text style={styles.pdfInfoText}>PDF Selected</Text>
+                </View>
               )}
 
               <Modal visible={fullScreen} transparent={true}>
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' }}>
-                  <TouchableOpacity style={{ position: 'absolute', top: 40, right: 20, zIndex: 1 }} onPress={() => setFullScreen(false)}>
+                <View style={styles.fullScreenContainer}>
+                  <TouchableOpacity style={styles.closeButton} onPress={() => {
+                    setFullScreen(false);
+                    setImageScale(1);
+                  }}>
                     <Feather name="x" size={30} color="#fff" />
                   </TouchableOpacity>
-                  <Image source={{ uri: image }} style={{ width: '90%', height: '80%', borderRadius: 10 }} resizeMode="contain" />
+                  
+                  <View style={styles.zoomControls}>
+                    <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut}>
+                      <Feather name="minus" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <Text style={styles.zoomText}>{Math.round(imageScale * 100)}%</Text>
+                    <TouchableOpacity style={styles.zoomButton} onPress={handleZoomIn}>
+                      <Feather name="plus" size={24} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    maximumZoomScale={3}
+                    minimumZoomScale={0.5}
+                    showsHorizontalScrollIndicator={false}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <Image 
+                      source={{ uri: file }} 
+                      style={[styles.fullScreenImage, { transform: [{ scale: imageScale }] }]} 
+                      resizeMode="contain" 
+                    />
+                  </ScrollView>
+                </View>
+              </Modal>
+
+              <Modal visible={showFileOptions} transparent={true} animationType="slide">
+                <View style={styles.imageOptionsContainer}>
+                  <View style={styles.imageOptionsContent}>
+                    <Text style={styles.imageOptionsTitle}>Choose File Source</Text>
+                    
+                    <TouchableOpacity style={styles.imageOptionButton} onPress={pickImageFromCamera}>
+                      <Feather name="camera" size={24} color="#2196F3" />
+                      <Text style={styles.imageOptionText}>Take Photo</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.imageOptionButton} onPress={pickImageFromGallery}>
+                      <Feather name="image" size={24} color="#4CAF50" />
+                      <Text style={styles.imageOptionText}>Choose Image from Gallery</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.imageOptionButton} onPress={pickPDF}>
+                      <Feather name="file-text" size={24} color="#FF5722" />
+                      <Text style={styles.imageOptionText}>Choose PDF Document</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      style={[styles.imageOptionButton, styles.cancelButton]} 
+                      onPress={() => setShowFileOptions(false)}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </Modal>
             </View>
 
-            {/* Completion Date */}
             <View style={styles.inputBlock}>
-              <Text style={styles.label}>Completion Date <Text style={styles.required}>*</Text></Text>
-              <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Feather name="calendar" size={20} color="#fff" />
-                <Text style={styles.uploadText}> Select Date</Text>
+              <Text style={styles.label}>Planned Completion Date <Text style={styles.required}>*</Text></Text>
+              <TouchableOpacity style={styles.dateInputWeb} onPress={() => setShowDatePicker(true)}>
+                <Text style={styles.dateDisplayText}>{date ? formatDate(date) : 'Select Date'}</Text>
+                <Feather name="calendar" size={18} color="#666" />
               </TouchableOpacity>
-              {date && <Text style={styles.dateText}>{date.toDateString()}</Text>}
+              {date && getRemainingDays(date) !== null && (
+                <Text style={styles.daysRemainingText}>
+                  ({getRemainingDays(date)} days)
+                </Text>
+              )}
             </View>
 
             {showDatePicker && (
@@ -1039,22 +1470,42 @@ const handleFinalSubmit = async () => {
               />
             )}
 
-            {/* Buttons */}
+            <InputField
+              label="Mobile Number"
+              required
+              icon={<Feather name="phone" size={20} color="#666" />}
+              placeholder="Enter your number..."
+              value={mobileNumber}
+              onChangeText={setMobileNumber}
+              maxLength={10}
+            />
+
+            <RadioField label="Is BE Team Support Needed?" value={beSupportNeeded} setValue={setBeSupportNeeded} />
+            <RadioField label="Can Be Implemented To Other Location?" value={canImplementOtherLocation} setValue={setCanImplementOtherLocation} />
+
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.draftButton} onPress={handleSaveDraft}>
+              <TouchableOpacity style={styles.draftButton} onPress={handleSaveDraft} disabled={isSubmitting}>
                 <FontAwesome name="save" size={16} color="#555" />
                 <Text style={styles.draftText}>Save as Draft</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.submitButton} onPress={handleBeforeSubmit}>
-                <Text style={styles.submitText}>Submit</Text>
+              <TouchableOpacity style={styles.submitButton} onPress={handleBeforeSubmit} disabled={isSubmitting}>
+                <Text style={styles.submitText}>Save & Publish</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
       </ScrollView>
 
-      {/* Confirm Modal */}
+      {isSubmitting && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#00B894" />
+            <Text style={styles.loadingOverlayText}>Submitting your idea...</Text>
+          </View>
+        </View>
+      )}
+
       <Modal visible={showConfirm} transparent={true} animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ backgroundColor: '#fff', width: '80%', padding: 20, borderRadius: 10, alignItems: 'center' }}>
@@ -1062,11 +1513,22 @@ const handleFinalSubmit = async () => {
             <Text style={{ fontSize: 18, fontWeight: 'bold', marginVertical: 10 }}>Save & Publish</Text>
             <Text style={{ fontSize: 14, textAlign: 'center', color: '#333' }}>Are you sure you want to save and publish this record?</Text>
             <View style={{ flexDirection: 'row', marginTop: 20 }}>
-              <TouchableOpacity style={{ backgroundColor: '#ddd', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, marginRight: 10 }} onPress={() => setShowConfirm(false)}>
+              <TouchableOpacity 
+                style={{ backgroundColor: '#ddd', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, marginRight: 10 }} 
+                onPress={() => setShowConfirm(false)}
+                disabled={isSubmitting}
+              >
                 <Text style={{ color: '#333', fontWeight: '600' }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={{ backgroundColor: '#00B894', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 }} onPress={() => { setShowConfirm(false); handleFinalSubmit(); }}>
-                <Text style={{ color: '#fff', fontWeight: '600' }}>Done</Text>
+              <TouchableOpacity 
+                style={{ backgroundColor: '#00B894', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 }} 
+                onPress={() => { 
+                  setShowConfirm(false); 
+                  handleFinalSubmit(); 
+                }}
+                disabled={isSubmitting}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Save & Publish</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1076,7 +1538,6 @@ const handleFinalSubmit = async () => {
   );
 }
 
-// INPUT, PICKER, RADIO FIELDS
 const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, maxLength, required }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>{label} {required && <Text style={styles.required}>*</Text>}</Text>
@@ -1133,7 +1594,6 @@ const FieldRow = ({ label, value }) => (
   </View>
 );
 
-// STYLES - moved outside the component
 const styles = StyleSheet.create({
   container: { backgroundColor: '#F5F8FF', padding: 20, paddingBottom: 50 },
   stickyHeader: {
@@ -1177,25 +1637,90 @@ const styles = StyleSheet.create({
   picker: { flex: 1, marginLeft: 10, color: '#333' },
   textArea: { height: 100, textAlignVertical: 'top' },
   charCount: { alignSelf: 'flex-end', fontSize: 12, color: '#888', marginTop: 4 },
-  uploadBtn: {
+  
+  fileInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4CAF50',
-    padding: 12,
-    borderRadius: 10,
-    justifyContent: 'center'
+    backgroundColor: '#F0F2F5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    overflow: 'hidden',
   },
-  dateBtn: {
+  chooseFileButton: {
+    backgroundColor: '#e0e0e0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#ccc',
+  },
+  chooseFileText: {
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  fileNameDisplay: {
+    flex: 1,
+    paddingHorizontal: 12,
+    color: '#666',
+    fontSize: 14,
+  },
+  eyeIconContainer: {
+    marginTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2196F3',
-    padding: 12,
-    borderRadius: 10,
-    justifyContent: 'center'
+    alignSelf: 'flex-start',
   },
-  uploadText: { color: '#fff', fontSize: 16, marginLeft: 8 },
-  dateText: { fontSize: 16, marginTop: 8, color: '#555' },
-  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 30 },
+  previewText: {
+    marginLeft: 6,
+    color: '#2196F3',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  pdfInfoContainer: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  pdfInfoText: {
+    marginLeft: 8,
+    color: '#FF5722',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  dateInputWeb: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F0F2F5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  dateDisplayText: {
+    color: '#333',
+    fontSize: 14,
+  },
+  daysRemainingText: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 6,
+    fontStyle: 'italic',
+  },
+
+  buttonRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginTop: 25,
+  },
   draftButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1207,6 +1732,7 @@ const styles = StyleSheet.create({
   draftText: { marginLeft: 8, fontSize: 16, color: '#333', fontWeight: '600' },
   submitButton: { backgroundColor: '#00B894', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 10 },
   submitText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  
   radioRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   radioOption: { flexDirection: 'row', alignItems: 'center', marginRight: 20 },
   radioCircle: {
@@ -1221,8 +1747,6 @@ const styles = StyleSheet.create({
   },
   radioSelected: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
   radioText: { fontSize: 14, color: '#333' },
-
-  // Tabs
   tabButton: {
     flex: 1,
     paddingVertical: 12,
@@ -1238,8 +1762,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-
-  // Employee details
   fieldRow: {
     flexDirection: 'row',
     marginBottom: 12,
@@ -1264,4 +1786,122 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 16,
   },
-}); 
+  fullScreenContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 3,
+    padding: 10,
+  },
+  zoomControls: {
+    position: 'absolute',
+    bottom: 40,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 25,
+    padding: 10,
+    zIndex: 2,
+    alignItems: 'center',
+  },
+  zoomButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  zoomText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginHorizontal: 10,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  fullScreenImage: {
+    width: 350,
+    height: 600,
+  },
+  imageOptionsContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  imageOptionsContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  imageOptionsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  imageOptionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F2F5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  imageOptionText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '600',
+    marginLeft: 15,
+  },
+  cancelButton: {
+    backgroundColor: '#FFE5E5',
+    marginTop: 10,
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#FF3B30',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingCard: {
+    backgroundColor: '#fff',
+    padding: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  loadingOverlayText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '600',
+  },
+});

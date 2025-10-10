@@ -1,5 +1,4 @@
 const BASE_URL = "https://ideabank-api-dev.abisaio.com";
-
 export const LOGIN_URL = BASE_URL + "/api/Auth/login";
 export const CREATE_IDEA_POST_URL = BASE_URL + "/create";
 export const EMPLOYEE_GET_URL = BASE_URL + "/EmployeeInfo";
@@ -13,3 +12,14 @@ export const REJECTED_BY_ME_URL = BASE_URL + "/rejected-by-me?sortOrder=desc&pag
 export const EDIT_IDEA_URL = (id) => `${BASE_URL}/edit/${id}`;
 export const PUBLISH_IDEA_URL = (id) => `${BASE_URL}/edit/${id}?SubmitType=publish`;
 export const ALL_TEAM_IDEAS_URL = `${BASE_URL}/allIdeas?page=1&pageSize=10`;
+export const TEAM_IDEAS_URL = `${BASE_URL}/teamIdeas`;
+
+export const NOTIFICATION_USER_URL = (userId) => `${BASE_URL}/user/${userId}`;
+export const NOTIFICATION_COUNT_URL = (userId) => `${BASE_URL}/unread/count/${userId}`;
+export const MARK_READ_URL = (notificationId) => `${BASE_URL}/markread/${notificationId}`;
+export const CLEAR_ALL_URL = (userId) => `${BASE_URL}/clearall/${userId}`;
+export const REDIRECT_NOTIFICATION_URL = (notificationId) => `${BASE_URL}/redirect/${notificationId}`;
+export const GET_PENDING_COUNT_URL = BASE_URL + "/GetPendingApprovalsCount";
+
+export const UPDATE_STATUS_URL = BASE_URL + "/UpdateStatus";
+export const DELETE_IDEA_URL = (id) => `${BASE_URL}/delete/${id}`;

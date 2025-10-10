@@ -1,300 +1,21 @@
-// import React, { useEffect, useState } from 'react';
-// import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Dimensions } from 'react-native';
-// import { Ionicons } from '@expo/vector-icons';
-// import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-// import Toast from 'react-native-root-toast';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { DASHBOARD_URL } from '../src/context/api'; 
-
-// const DashboardScreen = () => {
-//   const navigation = useNavigation();
-//   const route = useRoute();
-
-//   const [employeeName, setEmployeeName] = useState('');
-//   const [employeeId, setEmployeeId] = useState('');
-//   const [cardData, setCardData] = useState([
-//     { title: 'Total Ideas', icon: 'bulb-outline', count: 0, color: '#d6f1f5', iconColor: '#004d61' },
-//     { title: 'In Progress', icon: 'refresh-circle-outline', count: 0, color: '#f0e6f9', iconColor: '#6a1b9a' },
-//     { title: 'Completed', icon: 'checkmark-circle-outline', count: 0, color: '#e8f5e9', iconColor: '#2e7d32' },
-//     { title: 'On Hold', icon: 'pause-circle-outline', count: 0, color: '#ffefd8', iconColor: '#f57c00' },
-//     { title: 'Rejected', icon: 'close-circle-outline', count: 0, color: '#ffe4e6', iconColor: '#d32f2f' },
-//   ]);
-
-//   useEffect(() => {
-//     const loadUserData = async () => {
-//       try {
-//         const storedData = await AsyncStorage.getItem("userData");
-//         if (storedData) {
-//           const parsed = JSON.parse(storedData);
-//           setEmployeeName(parsed.employee.name);
-//           setEmployeeId(parsed.employee.username);
-
-//           // Call Dashboard API after getting token
-//           fetchDashboard(parsed.token); // token stored in parsed.token
-//         }
-//       } catch (error) {
-//         console.log("Error loading user data:", error);
-//       }
-//     };
-//     loadUserData();
-//   }, []);
-
-//   const fetchDashboard = async (token) => {
-//     try {
-//       console.log("Fetching dashboard with token:", token);
-//       const response = await fetch(DASHBOARD_URL, {
-//         method: 'GET',
-//         headers: {
-//           'Content-Type': 'application/json',
-//           Authorization: `Bearer ${token}`,
-//         },
-//       });
-
-//       const text = await response.text();
-//       let jsonData = {};
-//       try {
-//         jsonData = JSON.parse(text);
-//       } catch (e) {
-//         console.log('Dashboard API response is not JSON:', e, text);
-//       }
-
-//       if (response.ok && jsonData.success) {
-//         const stats = jsonData.data.statistics || {};
-//         const updatedCards = [...cardData];
-//         updatedCards[0].count = stats.totalIdeas || 0;
-//         updatedCards[1].count = stats.inProgress || 0;
-//         updatedCards[2].count = stats.approved || 0;  
-//         updatedCards[3].count = stats.hold || 0;      
-//         updatedCards[4].count = stats.cancelled || 0; 
-//         setCardData(updatedCards);
-//       } else {
-//         console.log('Dashboard API error:', jsonData.message || 'Unknown error');
-//       }
-//     } catch (err) {
-//       console.log('Dashboard fetch error:', err);
-//     }
-//   };
-
-//   useFocusEffect(
-//     React.useCallback(() => {
-//       if (route.params?.showToast) {
-//         Toast.show('Login Successful!', {
-//           duration: Toast.durations.SHORT,
-//           position: Toast.positions.BOTTOM,
-//           shadow: true,
-//           animation: true,
-//           hideOnPress: true,
-//         });
-//         route.params.showToast = false;
-//       }
-//     }, [route.params])
-//   );
-
-//   const DashboardCard = ({ title, icon, count, color, iconColor }) => (
-//     <View style={[styles.card, { backgroundColor: color }]}>
-//       <Ionicons name={icon} size={28} color={iconColor} />
-//       <Text style={styles.cardTitle}>{title}</Text>
-//       <Text style={styles.cardCount}>{count}</Text>
-//     </View>
-//   );
-
-//   return (
-//     <View style={styles.container}>
-//       <View style={styles.header}>
-//         <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ marginRight: 15 }}>
-//           <Ionicons name="menu" size={28} color="#fff" />
-//         </TouchableOpacity>
-
-//         <View style={styles.empInfo}>
-//           <Ionicons name="person-circle-outline" size={35} color="#fff" style={{ marginRight: 8 }} />
-//           <View>
-//             <Text style={styles.name}>{employeeName}</Text>
-//             <Text style={styles.id}>{employeeId}</Text>
-//           </View>
-//           <TouchableOpacity onPress={() => alert('Notifications clicked!')}>
-//             <Ionicons name="notifications-outline" size={22} color="#fff" style={{ marginLeft: 12 }} />
-//           </TouchableOpacity>
-//         </View>
-//       </View>
-
-//       <ScrollView contentContainerStyle={styles.scrollContent}>
-//         <View style={styles.cardsContainer}>
-//           {cardData.map((card, index) => {
-//             const isRejected = card.title === 'Rejected';
-//             return (
-//               <View
-//                 key={index}
-//                 style={[
-//                   styles.cardWrapper,
-//                   isRejected && styles.rejectedWrapper,
-//                 ]}
-//               >
-//                 <DashboardCard {...card} />
-//               </View>
-//             );
-//           })}
-//         </View>
-
-//         <View style={styles.overviewCard}>
-//           <Text style={styles.sectionTitle}>Ideas Overview</Text>
-//           <Ionicons name="bulb-outline" size={40} color="#fbc02d" style={{ marginVertical: 10 }} />
-//           <Text style={styles.readyTitle}>Ready to Innovate?</Text>
-//           <Text style={styles.readySubtitle}>
-//             You have not created any ideas yet. Start your innovation journey by sharing your first brilliant idea!
-//           </Text>
-
-//           <TouchableOpacity
-//             style={styles.createButton}
-//             onPress={() => navigation.navigate("Create Idea")}
-//           >
-//             <Text style={styles.createButtonText}>Create Your First Idea</Text>
-//           </TouchableOpacity>
-//         </View>
-//       </ScrollView>
-//     </View>
-//   );
-// };
-
-// export default DashboardScreen;
-
-// const { width } = Dimensions.get('window');
-// const isSmallDevice = width < 360;
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1, backgroundColor: '#f1f7fa' },
-//   header: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     alignItems: 'center',
-//     backgroundColor: '#004d61',
-//     paddingHorizontal: 20,
-//     paddingVertical: Platform.OS === 'ios' ? 50 : 15,
-//     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 20 : 40,
-//     borderBottomLeftRadius: 20,
-//     borderBottomRightRadius: 20,
-//   },
-//   empInfo: { flexDirection: 'row', alignItems: 'center' },
-//   name: { color: '#fff', fontSize: isSmallDevice ? 15 : 16, fontWeight: 'bold' },
-//   id: { color: '#ddd', fontSize: isSmallDevice ? 12 : 12 },
-//   cardsContainer: {
-//     flexDirection: 'row',
-//     flexWrap: 'wrap',
-//     justifyContent: 'space-between',
-//     paddingHorizontal: 20,
-//     marginVertical: 25,
-//   },
-//   cardWrapper: {
-//     width: '47%', // Slightly reduced to create gap
-//     marginBottom: 15, // Added consistent spacing
-//   },
-//   rejectedWrapper: {
-//     width: '47%', // Same width as other cards
-//     marginBottom: 15,
-//     // Center the rejected card by making it take full width and centering content
-//     alignSelf: 'center',
-//   },
-//   card: {
-//     width: '100%',
-//     borderRadius: 15,
-//     alignItems: 'center',
-//     paddingVertical: 25, // Slightly reduced padding
-//     shadowColor: '#000',
-//     shadowOpacity: 0.08,
-//     shadowRadius: 6,
-//     shadowOffset: { width: 0, height: 3 },
-//     elevation: 4,
-//     // Add subtle border for better definition
-//     borderWidth: 0.5,
-//     borderColor: 'rgba(0,0,0,0.05)',
-//   },
-//   cardTitle: {
-//     marginTop: 10,
-//     fontSize: 14,
-//     color: '#333',
-//     fontWeight: '600',
-//     textAlign: 'center',
-//     lineHeight: 18,
-//   },
-//   cardCount: {
-//     fontSize: 24,
-//     fontWeight: 'bold',
-//     color: '#004d61',
-//     marginTop: 6,
-//   },
-//   sectionTitle: {
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//     color: '#004d61',
-//     marginBottom: 6,
-//     textAlign: 'center',
-//   },
-//   overviewCard: {
-//     backgroundColor: '#fff',
-//     marginHorizontal: 20,
-//     marginTop: 10, // Added top margin for better separation
-//     padding: 20,
-//     borderRadius: 15,
-//     alignItems: 'center',
-//     shadowColor: '#000',
-//     shadowOpacity: 0.08,
-//     shadowRadius: 6,
-//     shadowOffset: { width: 0, height: 3 },
-//     elevation: 4,
-//     marginBottom: 30,
-//     // Add subtle border for consistency
-//     borderWidth: 0.5,
-//     borderColor: 'rgba(0,0,0,0.05)',
-//   },
-//   readyTitle: {
-//     fontSize: 16,
-//     fontWeight: 'bold',
-//     marginTop: 8,
-//     color: '#000',
-//   },
-//   readySubtitle: {
-//     fontSize: 13,
-//     color: '#555',
-//     textAlign: 'center',
-//     marginTop: 6,
-//     lineHeight: 18,
-//   },
-//   createButton: {
-//     marginTop: 15,
-//     backgroundColor: '#0f4c5c',
-//     paddingVertical: 12,
-//     paddingHorizontal: 20,
-//     borderRadius: 10,
-//     shadowColor: '#0f4c5c',
-//     shadowOpacity: 0.3,
-//     shadowRadius: 4,
-//     shadowOffset: { width: 0, height: 2 },
-//     elevation: 3,
-//   },
-//   createButtonText: {
-//     color: '#fff',
-//     fontSize: 16,
-//     fontWeight: '600',
-//   },
-//   scrollContent: {
-//     paddingBottom: 30,
-//   },
-// });
-
-
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Dimensions, Modal, FlatList, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-root-toast';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DASHBOARD_URL } from '../src/context/api'; 
+import axios from 'axios';
+import { decrypt } from './EncryptionHelper'; 
+import { DASHBOARD_URL, NOTIFICATION_USER_URL, NOTIFICATION_COUNT_URL, MARK_READ_URL, CLEAR_ALL_URL, REDIRECT_NOTIFICATION_URL, IDEA_DETAIL_URL } from '../src/context/api'; 
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
 
   const [employeeName, setEmployeeName] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
+  const [employeeUsername, setEmployeeUsername] = useState('');
+  const [employeeSystemId, setEmployeeSystemId] = useState('');
+  const [token, setToken] = useState('');
   const [cardData, setCardData] = useState([
     { title: 'Total Ideas', icon: 'bulb-outline', count: 0, color: '#d6f1f5', iconColor: '#004d61' },
     { title: 'In Progress', icon: 'refresh-circle-outline', count: 0, color: '#f0e6f9', iconColor: '#6a1b9a' },
@@ -303,17 +24,30 @@ const DashboardScreen = () => {
     { title: 'Rejected', icon: 'close-circle-outline', count: 0, color: '#ffe4e6', iconColor: '#d32f2f' },
   ]);
 
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  const [selectedIdea, setSelectedIdea] = useState(null);
+  const [ideaDetail, setIdeaDetail] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [showImage, setShowImage] = useState(false);
+
   useEffect(() => {
     const loadUserData = async () => {
       try {
         const storedData = await AsyncStorage.getItem("userData");
         if (storedData) {
           const parsed = JSON.parse(storedData);
+        
           setEmployeeName(parsed.employee.name);
-          setEmployeeId(parsed.employee.username);
-
-          // Call Dashboard API after getting token
-          fetchDashboard(parsed.token); // token stored in parsed.token
+          setEmployeeUsername(parsed.employee.username); 
+          setEmployeeSystemId(parsed.employee.id); 
+          setToken(parsed.token);
+          fetchDashboard(parsed.token);
+          fetchUnreadCount(parsed.employee.id, parsed.token);
         }
       } catch (error) {
         console.log("Error loading user data:", error);
@@ -321,6 +55,14 @@ const DashboardScreen = () => {
     };
     loadUserData();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (employeeSystemId && token) {
+        fetchUnreadCount(employeeSystemId, token);
+      }
+    }, [employeeSystemId, token])
+  );
 
   const fetchDashboard = async (token) => {
     try {
@@ -358,6 +100,216 @@ const DashboardScreen = () => {
     }
   };
 
+  const fetchUnreadCount = async (systemId, authToken) => {
+    try {
+      const url = NOTIFICATION_COUNT_URL(systemId);
+      console.log('Fetching unread count from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      const text = await response.text();
+      console.log('Unread count response:', text);
+      
+      if (response.ok) {
+        const count = parseInt(text);
+        if (!isNaN(count)) {
+          setUnreadCount(count);
+          console.log('Unread count set to:', count);
+        } else {
+          try {
+            const data = JSON.parse(text);
+            setUnreadCount(data.data?.unreadCount || data.unreadCount || 0);
+          } catch (e) {
+            console.log('Could not parse unread count:', e);
+          }
+        }
+      } else {
+        console.log('Unread count API error, status:', response.status);
+      }
+    } catch (error) {
+      console.log('Error fetching unread count:', error.message || error);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    if (!employeeSystemId || !token) {
+      console.log('Missing employeeSystemId or token');
+      return;
+    }
+
+    setLoadingNotifications(true);
+    try {
+      const url = NOTIFICATION_USER_URL(employeeSystemId);
+      console.log('Fetching notifications from:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.log('Notifications API error, status:', response.status);
+        setNotifications([]);
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Parsed notification data:", data);
+
+      if (Array.isArray(data)) {
+        setNotifications(data);
+      } else if (data.data && Array.isArray(data.data)) {
+        setNotifications(data.data);
+      } else {
+        setNotifications([]);
+      }
+
+    } catch (error) {
+      console.log('Error fetching notifications:', error);
+      setNotifications([]);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const fetchIdeaDetail = async (ideaId) => {
+    if (!ideaId) {
+      Toast.show('Idea ID not found', {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+      });
+      return;
+    }
+
+    try {
+      setLoadingDetail(true);
+      const authToken = await AsyncStorage.getItem('token');
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+
+      // Always encode the ideaId properly for URL
+      const encodedIdeaId = encodeURIComponent(ideaId);
+
+      const apiUrl = `${IDEA_DETAIL_URL}/${encodedIdeaId}`;
+      console.log('Fetching idea detail from URL:', apiUrl);
+      console.log('Original ideaId:', ideaId);
+      console.log('Encoded ideaId:', encodedIdeaId);
+      
+      const { data: response } = await axios.get(apiUrl, { headers });
+
+      console.log('API Response:', response);
+
+      if (response?.success && response?.data) {
+        setIdeaDetail(response.data);
+        setSelectedIdea(response.data);
+        setShowNotificationModal(false);
+      } else {
+        console.log('API returned no data or failed');
+        Toast.show(response?.message || 'Idea details not found', {
+          duration: Toast.durations.SHORT,
+          position: Toast.positions.BOTTOM,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching idea detail:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+      
+      Toast.show(error.response?.data?.message || 'Failed to fetch idea details', {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+      });
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const markAsRead = async (notificationId) => {
+    try {
+      const url = MARK_READ_URL(notificationId);
+      console.log('Marking as read:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const text = await response.text();
+      console.log('Mark read response:', text);
+
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(notif => 
+            notif.id === notificationId 
+              ? { ...notif, isRead: true } 
+              : notif
+          )
+        );
+        
+        fetchUnreadCount(employeeSystemId, token);
+      } else {
+        console.log('Mark read error, status:', response.status);
+      }
+    } catch (error) {
+      console.log('Error marking notification as read:', error.message || error);
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    try {
+      const url = CLEAR_ALL_URL(employeeSystemId);
+      console.log('Clearing all notifications:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const text = await response.text();
+      console.log('Clear all response:', text);
+
+      if (response.ok) {
+        setNotifications([]);
+        setUnreadCount(0);
+        Toast.show('All notifications cleared!', {
+          duration: Toast.durations.SHORT,
+          position: Toast.positions.BOTTOM,
+        });
+      } else {
+        console.log('Clear all error, status:', response.status);
+        Toast.show('Failed to clear notifications', {
+          duration: Toast.durations.SHORT,
+          position: Toast.positions.BOTTOM,
+        });
+      }
+    } catch (error) {
+      console.log('Error clearing notifications:', error.message || error);
+      Toast.show('Network error', {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+      });
+    }
+  };
+
+  const openNotificationModal = () => {
+    setShowNotificationModal(true);
+    fetchNotifications();
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       if (route.params?.showToast) {
@@ -373,6 +325,42 @@ const DashboardScreen = () => {
     }, [route.params])
   );
 
+  const getStatusColor = (status) => {
+    if (!status) return "gray";
+    const s = status.toLowerCase();
+    if (s === "draft") return "blue";
+    if (s === "published") return "green";
+    if (s === "pending") return "orange";
+    if (s === "approved" || s === "closed") return "gray";
+    if (s === "rejected") return "red";
+    if (s === "hold" || s === "on hold") return "yellow";
+    return "gray";
+  };
+
+  const safeRenderValue = (value) => {
+    if (value === null || value === undefined) return "N/A";
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  };
+
+  const parseRemarks = (remarkData) => {
+    if (!remarkData) return [];
+    
+    if (Array.isArray(remarkData)) {
+      return remarkData;
+    }
+    
+    if (typeof remarkData === "object") {
+      const keys = Object.keys(remarkData);
+      if (keys.length > 0 && keys.every(k => !isNaN(k))) {
+        return Object.values(remarkData);
+      }
+      return [remarkData];
+    }
+    
+    return [];
+  };
+
   const DashboardCard = ({ title, icon, count, color, iconColor }) => (
     <View style={[styles.card, { backgroundColor: color }]}>
       <Ionicons name={icon} size={28} color={iconColor} />
@@ -380,6 +368,131 @@ const DashboardScreen = () => {
       <Text style={styles.cardCount}>{count}</Text>
     </View>
   );
+
+  const NotificationItem = ({ item }) => {
+    const handleNotificationClick = async () => {
+      console.log('=== NOTIFICATION CLICKED ===');
+      console.log('Full notification item:', JSON.stringify(item, null, 2));
+      await markAsRead(item.id);
+      
+      let ideaId = null;
+      if (item.redirectUrl) {
+        const urlParts = item.redirectUrl.split('/');
+        const encryptedId = urlParts[urlParts.length - 1];
+        console.log('Using encrypted ID from URL:', encryptedId);
+        ideaId = encryptedId;
+      }
+      
+      if (!ideaId) {
+        ideaId = item.ideaId || 
+                 item.referenceId || 
+                 item.data?.ideaId || 
+                 item.ideaNumber ||
+                 item.idea_id ||
+                 item.reference_id;
+        console.log('Extracted from direct fields:', ideaId);
+      }
+      
+      console.log('Final ideaId to use:', ideaId);
+      
+      if (ideaId) {
+        console.log('Calling fetchIdeaDetail with:', ideaId);
+        await fetchIdeaDetail(ideaId);
+      } else {
+        console.log('❌ No ideaId found in notification');
+        Toast.show('Idea ID not found in notification', {
+          duration: Toast.durations.LONG,
+          position: Toast.positions.BOTTOM,
+        });
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.notificationItem,
+          !item.isRead && styles.unreadNotification
+        ]}
+        onPress={handleNotificationClick}
+      >
+        <View style={styles.notificationIcon}>
+          <Ionicons 
+            name={item.isRead ? "mail-open-outline" : "mail-unread-outline"} 
+            size={24} 
+            color={item.isRead ? "#666" : "#004d61"} 
+          />
+        </View>
+        <View style={styles.notificationContent}>
+          <Text style={[styles.notificationTitle, !item.isRead && styles.unreadText]}>
+            {item.module || 'Notification'}
+          </Text>
+          <Text style={styles.notificationMessage} numberOfLines={3}>
+            {item.text || 'No message'}
+          </Text>
+          <Text style={styles.notificationTime}>
+            {item.createdOn ? new Date(item.createdOn).toLocaleString('en-IN', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }) : ''}
+          </Text>
+        </View>
+        {!item.isRead && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
+
+  function TimelineItem({ status, date, description, isLast }) {
+    const getCircleColor = (status) => {
+      const s = status?.toLowerCase() || '';
+      if (s.includes('created')) return "#2196F3";
+      if (s.includes('edited')) return "#9C27B0";
+      if (s.includes('approved')) return "#4CAF50";
+      if (s.includes('pending')) return "#FF9800";
+      if (s.includes('implementation')) return "#9C27B0";
+      if (s.includes('rejected')) return "#F44336";
+      return "#9E9E9E";
+    };
+
+    return (
+      <View style={styles.timelineItem}>
+        <View style={styles.timelineLeft}>
+          <View style={[styles.timelineCircle, { backgroundColor: getCircleColor(status) }]} />
+          {!isLast && <View style={styles.timelineLine} />}
+        </View>
+        <View style={styles.timelineContent}>
+          <Text style={styles.timelineStatus}>{status}</Text>
+          {description && (
+            <Text style={styles.timelineDescription}>{description}</Text>
+          )}
+          {date && (
+            <Text style={styles.timelineDate}>
+              {new Date(date).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </Text>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  function RemarksCard({ title, comment, date }) {
+    return (
+      <View style={styles.remarkCard}>
+        <Text style={styles.remarkTitle}>{title}</Text>
+        <Text style={styles.remarkComment}>{comment}</Text>
+        <Text style={styles.remarkDate}>{date}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -392,17 +505,26 @@ const DashboardScreen = () => {
           <Ionicons name="person-circle-outline" size={35} color="#fff" style={{ marginRight: 8 }} />
           <View>
             <Text style={styles.name}>{employeeName}</Text>
-            <Text style={styles.id}>{employeeId}</Text>
+            <Text style={styles.id}>{employeeUsername}</Text>
           </View>
-          <TouchableOpacity onPress={() => alert('Notifications clicked!')}>
-            <Ionicons name="notifications-outline" size={22} color="#fff" style={{ marginLeft: 12 }} />
+          <TouchableOpacity 
+            onPress={openNotificationModal}
+            style={styles.notificationBell}
+          >
+            <Ionicons name="notifications-outline" size={22} color="#fff" />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.cardsContainer}>
-          {/* First Row: Total Ideas and In Progress */}
           <View style={styles.row}>
             <View style={styles.cardWrapper}>
               <DashboardCard {...cardData[0]} />
@@ -412,7 +534,6 @@ const DashboardScreen = () => {
             </View>
           </View>
 
-          {/* Second Row: Completed and On Hold */}
           <View style={styles.row}>
             <View style={styles.cardWrapper}>
               <DashboardCard {...cardData[2]} />
@@ -422,7 +543,6 @@ const DashboardScreen = () => {
             </View>
           </View>
 
-          {/* Third Row: Rejected (centered) */}
           <View style={styles.rejectedRow}>
             <View style={styles.rejectedWrapper}>
               <DashboardCard {...cardData[4]} />
@@ -446,6 +566,290 @@ const DashboardScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Notification Modal */}
+      <Modal
+        visible={showNotificationModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowNotificationModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Notifications</Text>
+              <View style={styles.modalActions}>
+                {notifications.length > 0 && (
+                  <TouchableOpacity 
+                    onPress={clearAllNotifications}
+                    style={styles.clearAllBtn}
+                  >
+                    <Text style={styles.clearAllText}>Clear All</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => setShowNotificationModal(false)}>
+                  <Ionicons name="close" size={28} color="#333" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {loadingNotifications ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#004d61" />
+                <Text style={styles.loadingText}>Loading notifications...</Text>
+              </View>
+            ) : notifications.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="notifications-off-outline" size={60} color="#ccc" />
+                <Text style={styles.emptyText}>No notifications yet</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={notifications}
+                keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+                renderItem={({ item }) => <NotificationItem item={item} />}
+                contentContainerStyle={styles.notificationList}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Loading Overlay for Idea Detail */}
+      {loadingDetail && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#004d61" />
+          <Text style={styles.loadingText}>Loading idea details...</Text>
+        </View>
+      )}
+
+      <Modal visible={!!selectedIdea} animationType="slide">
+        <View style={styles.fullModal}>
+          <View style={styles.modalHeaderDetail}>
+            <View style={styles.modalHeaderContent}>
+              <Text style={styles.modalHeaderTitle}>Idea Details</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => { 
+                  setSelectedIdea(null); 
+                  setIdeaDetail(null); 
+                }}
+              >
+                <Ionicons name="close" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity 
+              style={styles.timelineButtonHeader}
+              onPress={() => setShowTimelineModal(true)}
+            >
+              <Ionicons name="time-outline" size={18} color="#2c5aa0" />
+              <Text style={styles.timelineButtonText}>View Progress Timeline</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            {selectedIdea && ideaDetail && (
+              <>
+                <View style={styles.cardDetail}>
+                  <Text style={styles.cardHeading}>Employee Information</Text>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Employee Name:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || ideaDetail.ownerName || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Employee Number:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmployeeNo || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Employee Email:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmail || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Department:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || ideaDetail.department || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Mobile:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Reporting Manager:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.reportingManagerName || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Manager Email:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.managerEmail || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Employee Location:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.location || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Sub Department:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerSubDepartment || "N/A"}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.cardDetail}>
+                  <Text style={styles.cardHeading}>Idea Information</Text>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Idea No:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaNumber || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Solution Category:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.solutionCategory || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Creation Date:</Text>
+                    <Text style={styles.valueDetail}>
+                      {ideaDetail.ideaCreationDate || ideaDetail.creationDate ? 
+                        new Date(ideaDetail.ideaCreationDate || ideaDetail.creationDate).toLocaleDateString() : "N/A"}
+                    </Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Planned Duration Date:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.plannedImplementationDuration
+                      ? new Date(ideaDetail.plannedImplementationDuration).toLocaleDateString()
+                      : "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Status:</Text>
+                    <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus || ideaDetail.status) }]}>
+                      {ideaDetail.ideaStatus || ideaDetail.status || "N/A"}
+                    </Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Idea Description:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || ideaDetail.description || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Proposed Solution:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Team Members:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Idea Theme:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Type:</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.type || "N/A"}</Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>BE Team Support Needed:</Text>
+                    <Text style={styles.valueDetail}>
+                      {ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}
+                    </Text>
+                  </View>
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
+                    <Text style={styles.valueDetail}>
+                      {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.cardDetail}>
+                  <Text style={styles.cardHeading}>Remarks</Text>
+                  {(() => {
+                    const remarks = parseRemarks(ideaDetail.remark || ideaDetail.remarks);
+                    if (remarks.length === 0) {
+                      return <Text style={styles.noRemarksText}>No remarks available</Text>;
+                    }
+                    return remarks.map((remark, index) => (
+                      <RemarksCard
+                        key={index}
+                        title={remark.approverName || remark.title || "Unknown"}
+                        comment={remark.comments || remark.comment || "No comment"}
+                        date={remark.approvalDate || remark.date ? 
+                          new Date(remark.approvalDate || remark.date).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : ""}
+                      />
+                    ));
+                  })()}
+                </View>
+
+                {ideaDetail.beforeImplementationImagePath && (
+                  <TouchableOpacity
+                    style={styles.imageWrapper}
+                    onPress={() => setShowImage(true)}
+                  >
+                    <Image source={{ uri: ideaDetail.beforeImplementationImagePath }} style={styles.thumbnail} />
+                    <Text style={styles.viewImageText}>Tap to view full image</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Timeline Modal */}
+      <Modal visible={showTimelineModal} animationType="slide">
+        <View style={styles.fullModal}>
+          <View style={styles.timelineModalHeader}>
+            <Text style={styles.timelineModalTitle}>Progress Timeline</Text>
+            <TouchableOpacity
+              style={styles.closeButtonTimeline}
+              onPress={() => setShowTimelineModal(false)}
+            >
+              <Ionicons name="close" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            <View style={styles.timelineCardContainer}>
+              <View style={styles.timelineContainer}>
+                {ideaDetail?.timeline && Array.isArray(ideaDetail.timeline) && ideaDetail.timeline.length > 0 ? (
+                  ideaDetail.timeline.map((item, idx) => (
+                    <TimelineItem
+                      key={idx}
+                      status={safeRenderValue(item.status || item.approvalStage || item.approvalstage || "N/A")}
+                      date={item.date || item.approvalDate}
+                      description={safeRenderValue(item.description || item.comments)}
+                      isLast={idx === ideaDetail.timeline.length - 1}
+                    />
+                  ))
+                ) : (
+                  <View style={styles.noTimelineContainer}>
+                    <Ionicons name="time-outline" size={48} color="#ccc" />
+                    <Text style={styles.noTimelineText}>No timeline data available</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal visible={showImage} transparent animationType="fade">
+        <View style={styles.imageModal}>
+          <TouchableOpacity
+            style={styles.closeButtonImage}
+            onPress={() => setShowImage(false)}
+          >
+            <Ionicons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Image
+            source={{ uri: ideaDetail?.beforeImplementationImagePath }}
+            style={styles.fullImage}
+            resizeMode="contain"
+          />
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -471,6 +875,27 @@ const styles = StyleSheet.create({
   empInfo: { flexDirection: 'row', alignItems: 'center' },
   name: { color: '#fff', fontSize: isSmallDevice ? 15 : 16, fontWeight: 'bold' },
   id: { color: '#ddd', fontSize: isSmallDevice ? 12 : 12 },
+  notificationBell: {
+    marginLeft: 12,
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -8,
+    backgroundColor: '#ff3b30',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   cardsContainer: {
     paddingHorizontal: 20,
     marginVertical: 25,
@@ -486,22 +911,21 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   cardWrapper: {
-    width: '47%', // Two cards per row with gap
+    width: '47%', 
   },
   rejectedWrapper: {
-    width: '47%', // Same width as other cards but centered
+    width: '47%', 
   },
   card: {
     width: '100%',
     borderRadius: 15,
     alignItems: 'center',
-    paddingVertical: 25, // Slightly reduced padding
+    paddingVertical: 25, 
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
-    // Add subtle border for better definition
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.05)',
   },
@@ -529,7 +953,7 @@ const styles = StyleSheet.create({
   overviewCard: {
     backgroundColor: '#fff',
     marginHorizontal: 20,
-    marginTop: 10, // Added top margin for better separation
+    marginTop: 10, 
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
@@ -539,7 +963,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
     marginBottom: 30,
-    // Add subtle border for consistency
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.05)',
   },
@@ -575,5 +998,385 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 30,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#004d61',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  clearAllBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#ff3b30',
+    borderRadius: 6,
+  },
+  clearAllText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  notificationList: {
+    paddingHorizontal: 15,
+    paddingTop: 10,
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  unreadNotification: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#004d61',
+  },
+  notificationIcon: {
+    marginRight: 12,
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  unreadText: {
+    color: '#004d61',
+    fontWeight: 'bold',
+  },
+  notificationMessage: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+    marginBottom: 6,
+  },
+  notificationTime: {
+    fontSize: 11,
+    color: '#999',
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ff3b30',
+    marginLeft: 8,
+    alignSelf: 'center',
+  },
+  loadingContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyContainer: {
+    paddingVertical: 80,
+    alignItems: 'center',
+  },
+  emptyText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#999',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
+  fullModal: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  modalHeaderDetail: {
+    backgroundColor: '#fff',
+    paddingTop: 24,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    elevation: 4,
+  },
+  modalHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalHeaderTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c5aa0',
+  },
+  closeButton: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 18,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timelineButtonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2c5aa0',
+  },
+  timelineButtonText: {
+    color: '#2c5aa0',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  modalScrollContent: {
+    padding: 16,
+    paddingBottom: 30,
+  },
+  cardDetail: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    elevation: 2,
+  },
+  cardHeading: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#2c5aa0',
+  },
+  rowDetail: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  labelDetail: {
+    fontWeight: '600',
+    color: '#555',
+    width: '45%',
+    fontSize: 14,
+  },
+  valueDetail: {
+    color: '#222',
+    width: '50%',
+    textAlign: 'right',
+    fontSize: 14,
+  },
+  statusBadgeDetail: {
+    color: '#fff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 12,
+    overflow: 'hidden',
+    alignSelf: 'flex-end',
+  },
+  remarkCard: {
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#2c5aa0',
+  },
+  remarkTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#2c5aa0',
+    marginBottom: 6,
+  },
+  remarkComment: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  remarkDate: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  noRemarksText: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    fontStyle: 'italic',
+    paddingVertical: 10,
+  },
+  timelineModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#2c5aa0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingTop: 40,
+    elevation: 4,
+  },
+  timelineModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  closeButtonTimeline: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 18,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timelineCardContainer: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    elevation: 2,
+  },
+  timelineContainer: {
+    paddingLeft: 4,
+    paddingTop: 4,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  timelineLeft: {
+    alignItems: 'center',
+    marginRight: 15,
+    width: 20,
+  },
+  timelineCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 3,
+    borderColor: '#fff',
+    elevation: 2,
+  },
+  timelineLine: {
+    width: 3,
+    backgroundColor: '#E0E0E0',
+    flex: 1,
+    marginTop: 4,
+  },
+  timelineContent: {
+    flex: 1,
+    paddingBottom: 5,
+  },
+  timelineStatus: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  timelineDescription: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  timelineDate: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  noTimelineContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  noTimelineText: {
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 10,
+    fontSize: 15,
+    fontStyle: 'italic',
+  },
+  imageWrapper: {
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    elevation: 2,
+  },
+  thumbnail: {
+    width: 150,
+    height: 150,
+    borderRadius: 8,
+  },
+  viewImageText: {
+    marginTop: 8,
+    color: '#2c5aa0',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  imageModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonImage: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 22,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullImage: {
+    width: '90%',
+    height: '70%',
   },
 });

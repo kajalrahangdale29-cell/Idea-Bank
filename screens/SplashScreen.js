@@ -1,55 +1,199 @@
+// import React, { useEffect, useRef } from 'react';
+// import { View, Image, StyleSheet, Text, Animated } from 'react-native';
+// import { LinearGradient } from 'expo-linear-gradient';
+
+// export default function SplashScreen({ navigation }) {
+//   const logoAnim = useRef(new Animated.Value(0)).current;
+//   const bulbAnim = useRef(new Animated.Value(50)).current;
+//   const textAnim = useRef(new Animated.Value(0)).current;
+
+//   useEffect(() => {
+    
+//     Animated.sequence([
+//       Animated.timing(logoAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+//       Animated.spring(bulbAnim, { toValue: 0, friction: 4, useNativeDriver: true }),
+//       Animated.timing(textAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+//     ]).start();
+
+//     const timer = setTimeout(() => {
+//       navigation.replace('Login');
+//     }, 3000);
+
+//     return () => clearTimeout(timer);
+//   }, []);
+
+//   return (
+//     <LinearGradient
+//       colors={['#E0F7FA', '#FFFFFF']}
+//       style={styles.container}
+//     >
+      
+//       <Animated.View style={{ opacity: logoAnim }}>
+//         <Image
+//           source={require('../assets/ideabank_logo.png')}
+//           style={styles.logo}
+//         />
+//       </Animated.View>
+
+      
+//       <Animated.View style={{ transform: [{ translateY: bulbAnim }] }}>
+//         <Image
+//           source={require('../assets/IdeaBank_Bulb.png')}
+//           style={styles.mainImage}
+//         />
+//       </Animated.View>
+
+      
+//       <Animated.Text style={[styles.welcomeText, { opacity: textAnim }]}>
+//       Your Ideas, Our Platform.
+//       </Animated.Text>
+//     </LinearGradient>
+//   );
+// }
+// const styles = StyleSheet.create({
+//   container: { 
+//     flex: 1, 
+//     alignItems: 'center', 
+//     justifyContent: 'center'
+//   },
+//   logo: {
+//     width: 250,
+//     height: 70,
+//     resizeMode: 'contain',
+//     marginBottom: 20
+//   },
+//   mainImage: {
+//     width: 300,
+//     height: 350,
+//     resizeMode: 'contain'
+//   },
+//   welcomeText: {
+//     marginTop: 30,
+//     fontSize: 20,
+//     fontWeight: 'bold',
+//     color: '#004d61',
+//     letterSpacing: 1
+//   }
+// });
+
 import React, { useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Text, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SplashScreen({ navigation }) {
-  const logoAnim = useRef(new Animated.Value(0)).current;
-  const bulbAnim = useRef(new Animated.Value(50)).current;
-  const textAnim = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.5)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoRotate = useRef(new Animated.Value(0)).current;
+  
+  // Individual letter animations
+  const letterAnims = useRef(
+    'Welcome to IdeaBank!💡'.split('').map(() => new Animated.Value(0))
+  ).current;
 
   useEffect(() => {
-    
-    Animated.sequence([
-      Animated.timing(logoAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-      Animated.spring(bulbAnim, { toValue: 0, friction: 4, useNativeDriver: true }),
-      Animated.timing(textAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+    // Logo animation with dramatic entrance
+    Animated.parallel([
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 1200,
+        useNativeDriver: true
+      }),
+      Animated.spring(logoScale, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true
+      }),
+      Animated.timing(logoRotate, {
+        toValue: 1,
+        duration: 1200,
+        useNativeDriver: true
+      })
     ]).start();
+
+    // Stagger letter animations - each letter appears one by one
+    setTimeout(() => {
+      const letterAnimations = letterAnims.map((anim, index) => 
+        Animated.sequence([
+          Animated.delay(index * 80), // 80ms delay between each letter
+          Animated.spring(anim, {
+            toValue: 1,
+            friction: 5,
+            tension: 100,
+            useNativeDriver: true
+          })
+        ])
+      );
+
+      Animated.parallel(letterAnimations).start();
+    }, 1000); 
 
     const timer = setTimeout(() => {
       navigation.replace('Login');
-    }, 3000);
+    }, 4000); 
 
     return () => clearTimeout(timer);
   }, []);
+
+  const logoRotation = logoRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['15deg', '0deg']
+  });
+
+  const welcomeText = 'Welcome to IdeaBank!';
 
   return (
     <LinearGradient
       colors={['#E0F7FA', '#FFFFFF']}
       style={styles.container}
     >
-      
-      <Animated.View style={{ opacity: logoAnim }}>
+      {/* Logo with advanced animations */}
+      <Animated.View 
+        style={{
+          opacity: logoOpacity,
+          transform: [
+            { scale: logoScale },
+            { rotate: logoRotation }
+          ]
+        }}
+      >
         <Image
           source={require('../assets/ideabank_logo.png')}
           style={styles.logo}
         />
       </Animated.View>
 
-      
-      <Animated.View style={{ transform: [{ translateY: bulbAnim }] }}>
-        <Image
-          source={require('../assets/IdeaBank_Bulb.png')}
-          style={styles.mainImage}
-        />
-      </Animated.View>
+      {/* Animated text - each letter appears individually */}
+      <View style={styles.textContainer}>
+        {welcomeText.split('').map((letter, index) => {
+          const translateY = letterAnims[index].interpolate({
+            inputRange: [0, 1],
+            outputRange: [15, 0]
+          });
 
-      
-      <Animated.Text style={[styles.welcomeText, { opacity: textAnim }]}>
-      Your Ideas, Our Platform.
-      </Animated.Text>
+          return (
+            <Animated.Text
+              key={index}
+              style={[
+                styles.welcomeText,
+                {
+                  opacity: letterAnims[index],
+                  transform: [
+                    { translateY },
+                    { scale: letterAnims[index] }
+                  ]
+                }
+              ]}
+            >
+              {letter === ' ' ? '\u00A0' : letter}
+            </Animated.Text>
+          );
+        })}
+      </View>
     </LinearGradient>
   );
 }
+
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
@@ -57,21 +201,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   logo: {
-    width: 250,
-    height: 70,
+    width: 350,
+    height: 250,
     resizeMode: 'contain',
-    marginBottom: 20
+    marginBottom: 40,
   },
-  mainImage: {
-    width: 300,
-    height: 350,
-    resizeMode: 'contain'
+  textContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: -20
   },
   welcomeText: {
-    marginTop: 30,
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#004d61',
-    letterSpacing: 1
+    letterSpacing: 1,
+     includeFontPadding: false, 
+    textAlignVertical: 'center'
   }
 });
