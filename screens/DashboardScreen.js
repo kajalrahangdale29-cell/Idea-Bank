@@ -41,7 +41,6 @@ const DashboardScreen = () => {
         const storedData = await AsyncStorage.getItem("userData");
         if (storedData) {
           const parsed = JSON.parse(storedData);
-        
           setEmployeeName(parsed.employee.name);
           setEmployeeUsername(parsed.employee.username); 
           setEmployeeSystemId(parsed.employee.id); 
@@ -50,7 +49,7 @@ const DashboardScreen = () => {
           fetchUnreadCount(parsed.employee.id, parsed.token);
         }
       } catch (error) {
-        console.log("Error loading user data:", error);
+
       }
     };
     loadUserData();
@@ -66,7 +65,6 @@ const DashboardScreen = () => {
 
   const fetchDashboard = async (token) => {
     try {
-      console.log("Fetching dashboard with token:", token);
       const response = await fetch(DASHBOARD_URL, {
         method: 'GET',
         headers: {
@@ -80,7 +78,7 @@ const DashboardScreen = () => {
       try {
         jsonData = JSON.parse(text);
       } catch (e) {
-        console.log('Dashboard API response is not JSON:', e, text);
+
       }
 
       if (response.ok && jsonData.success) {
@@ -92,19 +90,15 @@ const DashboardScreen = () => {
         updatedCards[3].count = stats.hold || 0;      
         updatedCards[4].count = stats.cancelled || 0; 
         setCardData(updatedCards);
-      } else {
-        console.log('Dashboard API error:', jsonData.message || 'Unknown error');
       }
     } catch (err) {
-      console.log('Dashboard fetch error:', err);
+      
     }
   };
 
   const fetchUnreadCount = async (systemId, authToken) => {
     try {
       const url = NOTIFICATION_COUNT_URL(systemId);
-      console.log('Fetching unread count from:', url);
-      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -114,40 +108,30 @@ const DashboardScreen = () => {
       });
 
       const text = await response.text();
-      console.log('Unread count response:', text);
-      
       if (response.ok) {
         const count = parseInt(text);
         if (!isNaN(count)) {
           setUnreadCount(count);
-          console.log('Unread count set to:', count);
         } else {
           try {
             const data = JSON.parse(text);
             setUnreadCount(data.data?.unreadCount || data.unreadCount || 0);
           } catch (e) {
-            console.log('Could not parse unread count:', e);
+            
           }
         }
-      } else {
-        console.log('Unread count API error, status:', response.status);
       }
     } catch (error) {
-      console.log('Error fetching unread count:', error.message || error);
+      
     }
   };
 
   const fetchNotifications = async () => {
-    if (!employeeSystemId || !token) {
-      console.log('Missing employeeSystemId or token');
-      return;
-    }
+    if (!employeeSystemId || !token) return;
 
     setLoadingNotifications(true);
     try {
       const url = NOTIFICATION_USER_URL(employeeSystemId);
-      console.log('Fetching notifications from:', url);
-
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -157,14 +141,11 @@ const DashboardScreen = () => {
       });
 
       if (!response.ok) {
-        console.log('Notifications API error, status:', response.status);
         setNotifications([]);
         return;
       }
 
       const data = await response.json();
-      console.log("Parsed notification data:", data);
-
       if (Array.isArray(data)) {
         setNotifications(data);
       } else if (data.data && Array.isArray(data.data)) {
@@ -172,17 +153,15 @@ const DashboardScreen = () => {
       } else {
         setNotifications([]);
       }
-
     } catch (error) {
-      console.log('Error fetching notifications:', error);
       setNotifications([]);
     } finally {
       setLoadingNotifications(false);
     }
   };
 
-  const fetchIdeaDetail = async (ideaId) => {
-    if (!ideaId) {
+  const fetchIdeaDetail = async (encryptedId) => {
+    if (!encryptedId) {
       Toast.show('Idea ID not found', {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
@@ -192,39 +171,43 @@ const DashboardScreen = () => {
 
     try {
       setLoadingDetail(true);
-      const authToken = await AsyncStorage.getItem('token');
-      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
 
-      // Always encode the ideaId properly for URL
-      const encodedIdeaId = encodeURIComponent(ideaId);
+      const decryptedId = decrypt(encryptedId);
 
-      const apiUrl = `${IDEA_DETAIL_URL}/${encodedIdeaId}`;
-      console.log('Fetching idea detail from URL:', apiUrl);
-      console.log('Original ideaId:', ideaId);
-      console.log('Encoded ideaId:', encodedIdeaId);
+      if (!decryptedId || decryptedId.trim() === '') {
+        throw new Error('Failed to decrypt idea ID');
+      }
+
+      const apiUrl = `${IDEA_DETAIL_URL}/${decryptedId}`;
       
-      const { data: response } = await axios.get(apiUrl, { headers });
-
-      console.log('API Response:', response);
+      const { data: response } = await axios.get(apiUrl, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
 
       if (response?.success && response?.data) {
         setIdeaDetail(response.data);
         setSelectedIdea(response.data);
         setShowNotificationModal(false);
       } else {
-        console.log('API returned no data or failed');
         Toast.show(response?.message || 'Idea details not found', {
-          duration: Toast.durations.SHORT,
+          duration: Toast.durations.LONG,
           position: Toast.positions.BOTTOM,
         });
       }
     } catch (error) {
-      console.error("Error fetching idea detail:", error);
-      console.error("Error response:", error.response?.data);
-      console.error("Error status:", error.response?.status);
+      console.error('❌ Error Details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
       
-      Toast.show(error.response?.data?.message || 'Failed to fetch idea details', {
-        duration: Toast.durations.SHORT,
+      const errorMsg = error.response?.data?.message || 
+                       error.message || 
+                       'Failed to fetch idea details';
+      
+      Toast.show(errorMsg, {
+        duration: Toast.durations.LONG,
         position: Toast.positions.BOTTOM,
       });
     } finally {
@@ -235,8 +218,6 @@ const DashboardScreen = () => {
   const markAsRead = async (notificationId) => {
     try {
       const url = MARK_READ_URL(notificationId);
-      console.log('Marking as read:', url);
-      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -244,9 +225,6 @@ const DashboardScreen = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-
-      const text = await response.text();
-      console.log('Mark read response:', text);
 
       if (response.ok) {
         setNotifications(prev => 
@@ -256,21 +234,16 @@ const DashboardScreen = () => {
               : notif
           )
         );
-        
         fetchUnreadCount(employeeSystemId, token);
-      } else {
-        console.log('Mark read error, status:', response.status);
       }
     } catch (error) {
-      console.log('Error marking notification as read:', error.message || error);
+      
     }
   };
 
   const clearAllNotifications = async () => {
     try {
       const url = CLEAR_ALL_URL(employeeSystemId);
-      console.log('Clearing all notifications:', url);
-      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -278,9 +251,6 @@ const DashboardScreen = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-
-      const text = await response.text();
-      console.log('Clear all response:', text);
 
       if (response.ok) {
         setNotifications([]);
@@ -290,14 +260,12 @@ const DashboardScreen = () => {
           position: Toast.positions.BOTTOM,
         });
       } else {
-        console.log('Clear all error, status:', response.status);
         Toast.show('Failed to clear notifications', {
           duration: Toast.durations.SHORT,
           position: Toast.positions.BOTTOM,
         });
       }
     } catch (error) {
-      console.log('Error clearing notifications:', error.message || error);
       Toast.show('Network error', {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
@@ -345,11 +313,7 @@ const DashboardScreen = () => {
 
   const parseRemarks = (remarkData) => {
     if (!remarkData) return [];
-    
-    if (Array.isArray(remarkData)) {
-      return remarkData;
-    }
-    
+    if (Array.isArray(remarkData)) return remarkData;
     if (typeof remarkData === "object") {
       const keys = Object.keys(remarkData);
       if (keys.length > 0 && keys.every(k => !isNaN(k))) {
@@ -357,7 +321,6 @@ const DashboardScreen = () => {
       }
       return [remarkData];
     }
-    
     return [];
   };
 
@@ -371,36 +334,18 @@ const DashboardScreen = () => {
 
   const NotificationItem = ({ item }) => {
     const handleNotificationClick = async () => {
-      console.log('=== NOTIFICATION CLICKED ===');
-      console.log('Full notification item:', JSON.stringify(item, null, 2));
       await markAsRead(item.id);
       
-      let ideaId = null;
+      let encryptedId = null;
       if (item.redirectUrl) {
         const urlParts = item.redirectUrl.split('/');
-        const encryptedId = urlParts[urlParts.length - 1];
-        console.log('Using encrypted ID from URL:', encryptedId);
-        ideaId = encryptedId;
+        encryptedId = urlParts[urlParts.length - 1];
       }
       
-      if (!ideaId) {
-        ideaId = item.ideaId || 
-                 item.referenceId || 
-                 item.data?.ideaId || 
-                 item.ideaNumber ||
-                 item.idea_id ||
-                 item.reference_id;
-        console.log('Extracted from direct fields:', ideaId);
-      }
-      
-      console.log('Final ideaId to use:', ideaId);
-      
-      if (ideaId) {
-        console.log('Calling fetchIdeaDetail with:', ideaId);
-        await fetchIdeaDetail(ideaId);
+      if (encryptedId) {
+        await fetchIdeaDetail(encryptedId);
       } else {
-        console.log('❌ No ideaId found in notification');
-        Toast.show('Idea ID not found in notification', {
+        Toast.show('Redirect URL not found in notification', {
           duration: Toast.durations.LONG,
           position: Toast.positions.BOTTOM,
         });
@@ -409,10 +354,7 @@ const DashboardScreen = () => {
 
     return (
       <TouchableOpacity
-        style={[
-          styles.notificationItem,
-          !item.isRead && styles.unreadNotification
-        ]}
+        style={[styles.notificationItem, !item.isRead && styles.unreadNotification]}
         onPress={handleNotificationClick}
       >
         <View style={styles.notificationIcon}>
@@ -465,9 +407,7 @@ const DashboardScreen = () => {
         </View>
         <View style={styles.timelineContent}>
           <Text style={styles.timelineStatus}>{status}</Text>
-          {description && (
-            <Text style={styles.timelineDescription}>{description}</Text>
-          )}
+          {description && <Text style={styles.timelineDescription}>{description}</Text>}
           {date && (
             <Text style={styles.timelineDate}>
               {new Date(date).toLocaleDateString('en-IN', {
@@ -507,10 +447,7 @@ const DashboardScreen = () => {
             <Text style={styles.name}>{employeeName}</Text>
             <Text style={styles.id}>{employeeUsername}</Text>
           </View>
-          <TouchableOpacity 
-            onPress={openNotificationModal}
-            style={styles.notificationBell}
-          >
+          <TouchableOpacity onPress={openNotificationModal} style={styles.notificationBell}>
             <Ionicons name="notifications-outline" size={22} color="#fff" />
             {unreadCount > 0 && (
               <View style={styles.badge}>
@@ -557,33 +494,20 @@ const DashboardScreen = () => {
           <Text style={styles.readySubtitle}>
             You have not created any ideas yet. Start your innovation journey by sharing your first brilliant idea!
           </Text>
-
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={() => navigation.navigate("Create Idea")}
-          >
+          <TouchableOpacity style={styles.createButton} onPress={() => navigation.navigate("Create Idea")}>
             <Text style={styles.createButtonText}>Create Your First Idea</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Notification Modal */}
-      <Modal
-        visible={showNotificationModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowNotificationModal(false)}
-      >
+      <Modal visible={showNotificationModal} animationType="slide" transparent={true} onRequestClose={() => setShowNotificationModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Notifications</Text>
               <View style={styles.modalActions}>
                 {notifications.length > 0 && (
-                  <TouchableOpacity 
-                    onPress={clearAllNotifications}
-                    style={styles.clearAllBtn}
-                  >
+                  <TouchableOpacity onPress={clearAllNotifications} style={styles.clearAllBtn}>
                     <Text style={styles.clearAllText}>Clear All</Text>
                   </TouchableOpacity>
                 )}
@@ -615,7 +539,6 @@ const DashboardScreen = () => {
         </View>
       </Modal>
 
-      {/* Loading Overlay for Idea Detail */}
       {loadingDetail && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#004d61" />
@@ -628,20 +551,11 @@ const DashboardScreen = () => {
           <View style={styles.modalHeaderDetail}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => { 
-                  setSelectedIdea(null); 
-                  setIdeaDetail(null); 
-                }}
-              >
+              <TouchableOpacity style={styles.closeButton} onPress={() => { setSelectedIdea(null); setIdeaDetail(null); }}>
                 <Ionicons name="close" size={20} color="#666" />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity 
-              style={styles.timelineButtonHeader}
-              onPress={() => setShowTimelineModal(true)}
-            >
+            <TouchableOpacity style={styles.timelineButtonHeader} onPress={() => setShowTimelineModal(true)}>
               <Ionicons name="time-outline" size={18} color="#2c5aa0" />
               <Text style={styles.timelineButtonText}>View Progress Timeline</Text>
             </TouchableOpacity>
@@ -745,15 +659,11 @@ const DashboardScreen = () => {
                   </View>
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>BE Team Support Needed:</Text>
-                    <Text style={styles.valueDetail}>
-                      {ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}
-                    </Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}</Text>
                   </View>
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
-                    <Text style={styles.valueDetail}>
-                      {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
-                    </Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}</Text>
                   </View>
                 </View>
 
@@ -783,10 +693,7 @@ const DashboardScreen = () => {
                 </View>
 
                 {ideaDetail.beforeImplementationImagePath && (
-                  <TouchableOpacity
-                    style={styles.imageWrapper}
-                    onPress={() => setShowImage(true)}
-                  >
+                  <TouchableOpacity style={styles.imageWrapper} onPress={() => setShowImage(true)}>
                     <Image source={{ uri: ideaDetail.beforeImplementationImagePath }} style={styles.thumbnail} />
                     <Text style={styles.viewImageText}>Tap to view full image</Text>
                   </TouchableOpacity>
@@ -797,15 +704,11 @@ const DashboardScreen = () => {
         </View>
       </Modal>
 
-      {/* Timeline Modal */}
       <Modal visible={showTimelineModal} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
             <Text style={styles.timelineModalTitle}>Progress Timeline</Text>
-            <TouchableOpacity
-              style={styles.closeButtonTimeline}
-              onPress={() => setShowTimelineModal(false)}
-            >
+            <TouchableOpacity style={styles.closeButtonTimeline} onPress={() => setShowTimelineModal(false)}>
               <Ionicons name="close" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -837,10 +740,7 @@ const DashboardScreen = () => {
 
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
-          <TouchableOpacity
-            style={styles.closeButtonImage}
-            onPress={() => setShowImage(false)}
-          >
+          <TouchableOpacity style={styles.closeButtonImage} onPress={() => setShowImage(false)}>
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           <Image
@@ -930,10 +830,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.05)',
   },
   cardTitle: {
-    marginTop: 10,
+    marginTop: 9,
     fontSize: 14,
     color: '#333',
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
     lineHeight: 18,
   },
@@ -953,16 +853,16 @@ const styles = StyleSheet.create({
   overviewCard: {
     backgroundColor: '#fff',
     marginHorizontal: 20,
-    marginTop: 10, 
+    marginTop: 1, 
     padding: 20,
-    borderRadius: 15,
+    borderRadius: 20,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
-    marginBottom: 30,
+    marginBottom: 25,
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.05)',
   },

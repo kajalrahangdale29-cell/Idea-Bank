@@ -484,45 +484,54 @@
 //           {ideas.length === 0 ? (
 //             <Text style={styles.noDataText}>No pending approvals found.</Text>
 //           ) : (
-//             ideas.map((idea, index) => (
-//               <TouchableOpacity
-//                 key={index}
-//                 activeOpacity={0.8}
-//                 style={styles.cardContainer}
-//                 onPress={() => fetchIdeaDetail(idea.ideaId || idea.id)}
-//               >
-//                 <View style={styles.cardHeader}>
-//                   <Text style={styles.ideaNumber} numberOfLines={2}>{idea.ideaNumber || "N/A"}</Text>
-//                   <View style={styles.typeTag}>
-//                     <Text style={styles.typeText}>{idea.type || "N/A"}</Text>
+//             <>
+//               {ideas.map((idea, index) => (
+//                 <TouchableOpacity
+//                   key={index}
+//                   activeOpacity={0.8}
+//                   style={styles.cardContainer}
+//                   onPress={() => fetchIdeaDetail(idea.ideaId || idea.id)}
+//                 >
+                  
+//                   <View style={styles.cardHeader}>
+//                     <Text style={styles.ideaNumber} numberOfLines={2}>{idea.ideaNumber || "N/A"}</Text>
+//                     <View style={styles.typeTag}>
+//                       <Text style={styles.typeText}>{idea.type || "N/A"}</Text>
+//                     </View>
 //                   </View>
-//                 </View>
-                
-//                 <View style={styles.cardContent}>
-//                   <View style={styles.rowDetail}>
-//                     <Text style={styles.label}>Description:</Text>
-//                     <Text style={styles.value} numberOfLines={2}>{idea.description || "N/A"}</Text>
-//                   </View>
+                  
+//                   <View style={styles.cardContent}>
+//                     <View style={styles.rowDetail}>
+//                       <Text style={styles.label}>Description:</Text>
+//                       <Text style={styles.value} numberOfLines={2}>{idea.description || "N/A"}</Text>
+//                     </View>
 
-//                   <View style={styles.row}>
-//                     <Text style={styles.label}>Owner:</Text>
-//                     <Text style={styles.value}>{idea.ownerName || "N/A"}</Text>
-//                   </View>
+//                     <View style={styles.row}>
+//                       <Text style={styles.label}>Owner:</Text>
+//                       <Text style={styles.value}>{idea.ownerName || "N/A"}</Text>
+//                     </View>
 
-//                   <View style={styles.row}>
-//                     <Text style={styles.label}>Created:</Text>
-//                     <Text style={styles.value}>{formatDate(idea.creationDate)}</Text>
-//                   </View>
+//                     <View style={styles.row}>
+//                       <Text style={styles.label}>Created:</Text>
+//                       <Text style={styles.value}>{formatDate(idea.creationDate)}</Text>
+//                     </View>
 
-//                   <View style={styles.row}>
-//                     <Text style={styles.label}>Status:</Text>
-//                     <Text style={[styles.statusBadge, { backgroundColor: getStatusColor(idea.status) }]}>
-//                       {idea.status || "N/A"}
-//                     </Text>
+//                     <View style={styles.rowDetail}>
+//                       <Text style={styles.label}>Status:</Text>
+//                       <View style={{ flex: 1, alignItems: 'flex-end' }}>
+//                         <Text style={[styles.statusBadge, { backgroundColor: getStatusColor(idea.status) }]} numberOfLines={2}>
+//                           {idea.status || "N/A"}
+//                         </Text>
+//                       </View>
+//                     </View>
 //                   </View>
-//                 </View>
-//               </TouchableOpacity>
-//             ))
+//                 </TouchableOpacity>
+//               ))}
+              
+//               <View style={styles.totalContainer}>
+//                 <Text style={styles.totalText}>Total Ideas: {totalItems}</Text>
+//               </View>
+//             </>
 //           )}
 //         </ScrollView>
 //       )}
@@ -620,9 +629,11 @@
 
 //                   <View style={styles.rowDetail}>
 //                     <Text style={styles.labelDetail}>Status:</Text>
-//                     <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus) }]}>
-//                       {ideaDetail.ideaStatus || "N/A"}
-//                     </Text>
+//                     <View style={{ flex: 1, alignItems: 'flex-end' }}>
+//                       <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus) }]}>
+//                         {ideaDetail.ideaStatus || "N/A"}
+//                       </Text>
+//                     </View>
 //                   </View>
 //                   <View style={styles.rowDetail}>
 //                     <Text style={styles.labelDetail}>Idea Description:</Text>
@@ -848,10 +859,12 @@
 //   typeText: { color: '#fff', fontSize: 12, fontWeight: '500' },
 //   cardContent: { padding: 12 },
 //   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' },
-//   rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, flexWrap: 'wrap' },
+//   rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, alignItems: 'flex-start' },
 //   label: { color: '#555', fontWeight: '500', fontSize: 14 },
 //   value: { color: '#333', fontSize: 14, maxWidth: '65%', textAlign: 'right' },
-//   statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 12, overflow: "hidden" },
+//   statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
+//   totalContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
+//   totalText: { fontSize: 16, fontWeight: 'bold', color: '#2c5aa0' },
 //   noDataText: { textAlign: "center", marginTop: 20, color: "#777", fontSize: 16 },
 //   paginationContainer: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginVertical: 15, flexWrap: "wrap", paddingBottom: 10, paddingHorizontal: 10 },
 //   pageButton: { marginHorizontal: 5, marginVertical: 3, backgroundColor: "#ddd", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 4 },
@@ -873,7 +886,7 @@
 //   cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
 //   labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
 //   valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 14 },
-//   statusBadgeDetail: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 12, overflow: "hidden", alignSelf: 'flex-end' },
+//   statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
 //   remarkCard: { backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
 //   remarkTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c5aa0', marginBottom: 6 },
 //   remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
@@ -930,6 +943,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from '@react-navigation/native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { 
   PENDING_APPROVALS_URL, 
   IDEA_DETAIL_URL, 
@@ -1033,8 +1047,10 @@ export default function PendingScreen() {
   const [totalItems, setTotalItems] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [searchIdeaNumber, setSearchIdeaNumber] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [fromDate, setFromDate] = useState(null);
+  const [toDate, setToDate] = useState(null);
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
 
   const [selectedIdea, setSelectedIdea] = useState(null);
   const [showImage, setShowImage] = useState(false);
@@ -1061,11 +1077,11 @@ export default function PendingScreen() {
       if (searchIdeaNumber.trim()) {
         url += `&ideaNumber=${searchIdeaNumber.trim()}`;
       }
-      if (fromDate.trim()) {
-        url += `&fromDate=${fromDate.trim()}`;
+      if (fromDate) {
+        url += `&fromDate=${fromDate.toISOString().split('T')[0]}`;
       }
-      if (toDate.trim()) {
-        url += `&toDate=${toDate.trim()}`;
+      if (toDate) {
+        url += `&toDate=${toDate.toISOString().split('T')[0]}`;
       }
 
       const response = await axios.get(url, {
@@ -1077,8 +1093,9 @@ export default function PendingScreen() {
         response.data.data &&
         Array.isArray(response.data.data.items)
       ) {
-        setIdeas(response.data.data.items);
-        setTotalItems(response.data.data.total || 0);
+        const items = response.data.data.items;
+        setIdeas(items);
+        setTotalItems(items.length);
       } else {
         setIdeas([]);
         setTotalItems(0);
@@ -1229,10 +1246,15 @@ export default function PendingScreen() {
     openRemarkModal("hold");
   };
 
+  const applyFilters = () => {
+    fetchIdeas();
+    setShowFilters(false);
+  };
+
   const clearFilters = () => {
     setSearchIdeaNumber("");
-    setFromDate("");
-    setToDate("");
+    setFromDate(null);
+    setToDate(null);
     setPage(1);
   };
 
@@ -1341,7 +1363,7 @@ export default function PendingScreen() {
         <Text style={styles.headerTitle}>Pending Approvals</Text>
         <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters(!showFilters)}>
           <Text style={styles.filterButtonText}>{showFilters ? "HIDE FILTERS" : "SHOW FILTERS"}</Text>
-          <Ionicons name={showFilters ? "chevron-up" : "chevron-down"} size={16} color="#666" />
+          <Text style={styles.filterArrow}>{showFilters ? "▲" : "▼"}</Text>
         </TouchableOpacity>
       </View>
 
@@ -1361,28 +1383,48 @@ export default function PendingScreen() {
       {showFilters && (
         <View style={styles.filtersContainer}>
           <Text style={styles.filterLabel}>Create Date Range</Text>
-          <View style={styles.dateFilterRow}>
-            <View style={styles.dateInputContainer}>
-              <Text style={styles.dateLabel}>From Date:</Text>
-              <TextInput
-                placeholder="YYYY-MM-DD"
-                style={styles.dateInput}
-                value={fromDate}
-                onChangeText={(text) => setFromDate(text)}
-              />
-            </View>
-            <View style={styles.dateInputContainer}>
-              <Text style={styles.dateLabel}>To Date:</Text>
-              <TextInput
-                placeholder="YYYY-MM-DD"
-                style={styles.dateInput}
-                value={toDate}
-                onChangeText={(text) => setToDate(text)}
-              />
-            </View>
-          </View>
+
+          <TouchableOpacity style={styles.dateInput} onPress={() => setShowFromPicker(true)}>
+            <Text style={styles.dateInputText}>{fromDate ? fromDate.toLocaleDateString() : "Select From Date"}</Text>
+          </TouchableOpacity>
+          {showFromPicker && (
+            <DateTimePicker
+              value={fromDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={(e, date) => { 
+                setShowFromPicker(false); 
+                if (date) { 
+                  setFromDate(date); 
+                  if (toDate && date > toDate) { 
+                    setToDate(null) 
+                  } 
+                } 
+              }}
+              maximumDate={toDate || undefined}
+            />
+          )}
+
+          <TouchableOpacity style={styles.dateInput} onPress={() => setShowToPicker(true)}>
+            <Text style={styles.dateInputText}>{toDate ? toDate.toLocaleDateString() : "Select To Date"}</Text>
+          </TouchableOpacity>
+          {showToPicker && (
+            <DateTimePicker
+              value={toDate || (fromDate || new Date())}
+              mode="date"
+              display="default"
+              onChange={(e, date) => { 
+                setShowToPicker(false); 
+                if (date) { 
+                  setToDate(date) 
+                } 
+              }}
+              minimumDate={fromDate || undefined}
+            />
+          )}
+
           <View style={styles.filterButtons}>
-            <TouchableOpacity style={styles.applyBtn} onPress={() => setShowFilters(false)}>
+            <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
               <Text style={styles.btnText}>Apply</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.resetBtn} onPress={clearFilters}>
@@ -1636,7 +1678,7 @@ export default function PendingScreen() {
         </View>
       </Modal>
 
-      
+      {/* Remark Modal */}
       <Modal visible={showRemarkModal} transparent animationType="fade">
         <View style={styles.remarkModalOverlay}>
           <View style={styles.remarkModalContainer}>
@@ -1726,7 +1768,7 @@ export default function PendingScreen() {
         </View>
       </Modal>
 
-      
+      {/* Image Modal */}
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
           <TouchableOpacity
@@ -1752,16 +1794,15 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#000' },
   filterButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#e8e8e8', borderRadius: 4 },
   filterButtonText: { fontSize: 11, color: '#000', marginRight: 6, fontWeight: '600' },
+  filterArrow: { fontSize: 10, color: '#000', fontWeight: 'bold' },
   searchSection: { backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
   searchContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', marginRight: 12 },
   searchLabel: { fontSize: 16, color: '#333', marginRight: 8, fontWeight: '500' },
   searchInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 4, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, backgroundColor: '#fff' },
   filtersContainer: { backgroundColor: '#fff', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
   filterLabel: { fontSize: 16, fontWeight: '500', marginBottom: 8, color: '#333' },
-  dateFilterRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
-  dateInputContainer: { flex: 1, marginHorizontal: 5 },
-  dateLabel: { fontSize: 12, fontWeight: "600", color: "#333", marginBottom: 5 },
-  dateInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 12, backgroundColor: '#f9f9f9', fontSize: 14 },
+  dateInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 12, backgroundColor: '#f9f9f9', marginBottom: 10 },
+  dateInputText: { fontSize: 14, color: '#333' },
   filterButtons: { flexDirection: 'row', marginTop: 12 },
   applyBtn: { flex: 1, backgroundColor: '#0A5064', padding: 12, borderRadius: 6, alignItems: 'center', marginRight: 8 },
   resetBtn: { flex: 1, backgroundColor: '#6c757d', padding: 12, borderRadius: 6, alignItems: 'center' },

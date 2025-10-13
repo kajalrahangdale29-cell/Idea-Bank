@@ -16,6 +16,17 @@
 // import AsyncStorage from "@react-native-async-storage/async-storage";
 // import { REJECTED_BY_ME_URL, IDEA_DETAIL_URL } from "../src/context/api";
 
+// const formatDateTime = (dateString) => {
+//   if (!dateString) return "";
+//   const date = new Date(dateString);
+//   const day = String(date.getDate()).padStart(2, '0');
+//   const month = date.toLocaleString('en-IN', { month: 'short' });
+//   const year = date.getFullYear();
+//   const hours = String(date.getHours()).padStart(2, '0');
+//   const minutes = String(date.getMinutes()).padStart(2, '0');
+//   return `${day} ${month} ${year}, ${hours}:${minutes}`;
+// };
+
 // function TimelineItem({ status, date, description, isLast, isFirst }) {
 //   const getCircleColor = (status) => {
 //     const s = status?.toLowerCase() || '';
@@ -40,15 +51,7 @@
 //           <Text style={styles.timelineDescription}>{description}</Text>
 //         )}
 //         {date && (
-//           <Text style={styles.timelineDate}>
-//             {new Date(date).toLocaleDateString('en-IN', {
-//               day: 'numeric',
-//               month: 'short',
-//               year: 'numeric',
-//               hour: '2-digit',
-//               minute: '2-digit'
-//             })}
-//           </Text>
+//           <Text style={styles.timelineDate}>{formatDateTime(date)}</Text>
 //         )}
 //       </View>
 //     </View>
@@ -83,9 +86,10 @@
 //   const [totalItems, setTotalItems] = useState(0);
 //   const [showFilters, setShowFilters] = useState(false);
 //   const [searchTerm, setSearchTerm] = useState("");
-//   const [statusFilter, setStatusFilter] = useState("");
-//   const [fromDate, setFromDate] = useState("");
-//   const [toDate, setToDate] = useState("");
+//   const [fromDate, setFromDate] = useState(null);
+//   const [toDate, setToDate] = useState(null);
+//   const [showFromPicker, setShowFromPicker] = useState(false);
+//   const [showToPicker, setShowToPicker] = useState(false);
 
 //   const [selectedIdea, setSelectedIdea] = useState(null);
 //   const [showImage, setShowImage] = useState(false);
@@ -95,7 +99,7 @@
 
 //   useEffect(() => {
 //     fetchIdeas();
-//   }, [searchTerm, statusFilter, fromDate, toDate]);
+//   }, [searchTerm, fromDate, toDate]);
 
 //   const fetchIdeas = async () => {
 //     setLoading(true);
@@ -104,20 +108,18 @@
 //       const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
 //       let url = `${REJECTED_BY_ME_URL.split('?')[0]}?sortOrder=desc&page=1&pageSize=1000`;
-      
+
 //       if (searchTerm.trim()) {
 //         url += `&searchTerm=${encodeURIComponent(searchTerm.trim())}`;
 //       }
-      
-//       if (statusFilter && statusFilter !== "All Status") {
-//         url += `&statusFilter=${encodeURIComponent(statusFilter)}`;
+
+//       if (fromDate) {
+//         const formattedFrom = fromDate.toISOString().split("T")[0];
+//         url += `&startDate=${formattedFrom}`;
 //       }
-      
-//       if (fromDate.trim()) {
-//         url += `&startDate=${fromDate.trim()}`;
-//       }
-//       if (toDate.trim()) {
-//         url += `&endDate=${toDate.trim()}`;
+//       if (toDate) {
+//         const formattedTo = toDate.toISOString().split("T")[0];
+//         url += `&endDate=${formattedTo}`;
 //       }
 
 //       const response = await axios.get(url, {
@@ -151,10 +153,14 @@
 //       const token = await AsyncStorage.getItem('token');
 //       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-//      // const { data: response } = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
-//      const { data: response } = await axios.get(`${IDEA_DETAIL_URL}?ideaId=${encodeURIComponent(ideaId)}`, { headers });
-//      console.log(" Idea Detail API Response:", response);
-//      console.log("Keys in response.data:", Object.keys(response.data));
+//       // ✅ FIXED: Using correct endpoint format
+//       const { data: response } = await axios.get(
+//         `${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, 
+//         { headers }
+//       );
+
+//       console.log("Idea Detail API Response:", response);
+
 //       if (response?.success && response?.data) {
 //         setIdeaDetail(response.data);
 //         setSelectedIdea(response.data);
@@ -171,9 +177,8 @@
 
 //   const clearFilters = () => {
 //     setSearchTerm("");
-//     setStatusFilter("");
-//     setFromDate("");
-//     setToDate("");
+//     setFromDate(null);
+//     setToDate(null);
 //   };
 
 //   const applyFilters = () => {
@@ -189,11 +194,11 @@
 
 //   const parseRemarks = (remarkData) => {
 //     if (!remarkData) return [];
-    
+
 //     if (Array.isArray(remarkData)) {
 //       return remarkData;
 //     }
-    
+
 //     if (typeof remarkData === "object") {
 //       const keys = Object.keys(remarkData);
 //       if (keys.length > 0 && keys.every(k => !isNaN(k))) {
@@ -201,25 +206,8 @@
 //       }
 //       return [remarkData];
 //     }
-    
-//     return [];
-//   };
 
-//   const handleStatusSelect = () => {
-//     Alert.alert(
-//       "Select Status",
-//       "",
-//       [
-//         { text: "All Status", onPress: () => setStatusFilter("") },
-//         { text: "Draft", onPress: () => setStatusFilter("Draft") },
-//         { text: "Published", onPress: () => setStatusFilter("Published") },
-//         { text: "Pending", onPress: () => setStatusFilter("Pending") },
-//         { text: "Closed", onPress: () => setStatusFilter("Closed") },
-//         { text: "Rejected", onPress: () => setStatusFilter("Rejected") },
-//         { text: "On Hold", onPress: () => setStatusFilter("On Hold") },
-//         { text: "Cancel", style: "cancel" }
-//       ]
-//     );
+//     return [];
 //   };
 
 //   return (
@@ -228,7 +216,7 @@
 //         <Text style={styles.headerTitle}>Rejected Idea</Text>
 //         <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters(!showFilters)}>
 //           <Text style={styles.filterButtonText}>{showFilters ? "HIDE FILTERS" : "SHOW FILTERS"}</Text>
-//           <Text style={styles.filterArrow}>{showFilters ? "▲" : "▼"}</Text>
+//           <Ionicons name={showFilters ? "chevron-up" : "chevron-down"} size={16} color="#666" />
 //         </TouchableOpacity>
 //       </View>
 
@@ -247,49 +235,61 @@
 
 //       {showFilters && (
 //         <View style={styles.filtersContainer}>
-//           <View style={styles.dateFilterRow}>
-//             <View style={styles.dateInputContainer}>
-//               <Text style={styles.dateLabel}>Create Date</Text>
-//               <TextInput
-//                 placeholder="DD/MM/YYYY - DD/MM/YYYY"
-//                 style={styles.dateInput}
-//                 value={fromDate && toDate ? `${fromDate} - ${toDate}` : ""}
-//                 editable={false}
-//               />
-//             </View>
-//           </View>
-          
+//           <Text style={styles.filterLabel}>Create Date Range</Text>
+
 //           <View style={styles.datePickerRow}>
 //             <View style={styles.dateInputContainer}>
-//               <TextInput
-//                 placeholder="From: DD/MM/YYYY"
+//               <Text style={styles.dateLabel}>From Date:</Text>
+//               <TouchableOpacity
 //                 style={styles.datePickerInput}
-//                 value={fromDate}
-//                 onChangeText={(text) => setFromDate(text)}
-//               />
+//                 onPress={() => setShowFromPicker(true)}
+//               >
+//                 <Text style={styles.datePickerText}>
+//                   {fromDate ? formatDateTime(fromDate).split(',')[0] : "DD-MM-YYYY"}
+//                 </Text>
+//               </TouchableOpacity>
 //             </View>
 //             <View style={styles.dateInputContainer}>
-//               <TextInput
-//                 placeholder="To: DD/MM/YYYY"
+//               <Text style={styles.dateLabel}>To Date:</Text>
+//               <TouchableOpacity
 //                 style={styles.datePickerInput}
-//                 value={toDate}
-//                 onChangeText={(text) => setToDate(text)}
-//               />
+//                 onPress={() => setShowToPicker(true)}
+//               >
+//                 <Text style={styles.datePickerText}>
+//                   {toDate ? formatDateTime(toDate).split(',')[0] : "DD-MM-YYYY"}
+//                 </Text>
+//               </TouchableOpacity>
 //             </View>
 //           </View>
 
-//           <View style={styles.statusFilterRow}>
-//             <Text style={styles.dateLabel}>Status</Text>
-//             <TouchableOpacity 
-//               style={styles.pickerWrapper}
-//               onPress={handleStatusSelect}
-//             >
-//               <Text style={styles.pickerText}>{statusFilter || "All Status"}</Text>
-//               <View style={styles.pickerButton}>
-//                 <Ionicons name="chevron-down" size={18} color="#666" />
-//               </View>
-//             </TouchableOpacity>
-//           </View>
+//           {showFromPicker && (
+//             <DateTimePicker
+//               value={fromDate || new Date()}
+//               mode="date"
+//               display="default"
+//               onChange={(_, date) => {
+//                 setShowFromPicker(false);
+//                 if (date) {
+//                   setFromDate(date);
+//                   if (toDate && date > toDate) setToDate(null);
+//                 }
+//               }}
+//               maximumDate={toDate || undefined}
+//             />
+//           )}
+
+//           {showToPicker && (
+//             <DateTimePicker
+//               value={toDate || (fromDate || new Date())}
+//               mode="date"
+//               display="default"
+//               onChange={(_, date) => {
+//                 setShowToPicker(false);
+//                 if (date) setToDate(date);
+//               }}
+//               minimumDate={fromDate || undefined}
+//             />
+//           )}
 
 //           <View style={styles.filterButtons}>
 //             <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
@@ -315,23 +315,22 @@
 //                   key={index}
 //                   activeOpacity={0.8}
 //                   style={styles.cardContainer}
-//                   // onPress={() => fetchIdeaDetail(idea.id || idea.ideaNumber)}
 //                   onPress={() => {
 //                     console.log("Selected idea object:", idea);
 //                     setSelectedIdea(idea);
-//                     fetchIdeaDetail(idea.id || idea.ideaNumber);
-//                     console.log("Fetching detail for ideaId:", idea.id || idea.ideaNumber);
-
+//                     // ✅ FIXED: Using correct ideaId
+//                     fetchIdeaDetail(idea.ideaId || idea.id || idea.ideaNumber);
 //                   }}
-                  
 //                 >
 //                   <View style={styles.cardHeader}>
-//                     <Text style={styles.ideaNumber} numberOfLines={2}>{idea.itemNumber || "N/A"}</Text>
+//                     <Text style={styles.ideaNumber} numberOfLines={2}>
+//                       {idea.ideaNumber || idea.itemNumber || "N/A"}
+//                     </Text>
 //                     <View style={styles.typeTag}>
 //                       <Text style={styles.typeText}>{idea.type || "N/A"}</Text>
 //                     </View>
 //                   </View>
-                  
+
 //                   <View style={styles.cardContent}>
 //                     <View style={styles.row}>
 //                       <Text style={styles.label}>Owner:</Text>
@@ -366,7 +365,7 @@
 //                   </View>
 //                 </TouchableOpacity>
 //               ))}
-              
+
 //               <View style={styles.totalContainer}>
 //                 <Text style={styles.totalText}>Total Ideas: {totalItems}</Text>
 //               </View>
@@ -532,14 +531,7 @@
 //                         key={index}
 //                         title={remark.approverName || remark.title || "Unknown"}
 //                         comment={remark.comments || remark.comment || "No comment"}
-//                         date={remark.approvalDate || remark.date ? 
-//                           new Date(remark.approvalDate || remark.date).toLocaleDateString('en-IN', {
-//                             day: 'numeric',
-//                             month: 'short',
-//                             year: 'numeric',
-//                             hour: '2-digit',
-//                             minute: '2-digit'
-//                           }) : ""}
+//                         date={remark.approvalDate || remark.date ? formatDateTime(remark.approvalDate || remark.date) : ""}
 //                       />
 //                     ));
 //                   })()}
@@ -623,26 +615,21 @@
 //   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c5aa0' },
 //   filterButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#e8e8e8', borderRadius: 4 },
 //   filterButtonText: { fontSize: 11, color: '#000', marginRight: 6, fontWeight: '600' },
-//   filterArrow: { fontSize: 10, color: '#000', fontWeight: 'bold' },
 //   searchSection: { backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
 //   searchContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', marginRight: 12 },
 //   searchLabel: { fontSize: 16, color: '#333', marginRight: 8, fontWeight: '500' },
 //   searchInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 4, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, backgroundColor: '#fff' },
 //   filtersContainer: { backgroundColor: '#fff', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
-//   dateFilterRow: { marginBottom: 12 },
+//   filterLabel: { fontSize: 16, fontWeight: '500', marginBottom: 8, color: '#333' },
+//   datePickerRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10, gap: 10 },
 //   dateInputContainer: { flex: 1 },
-//   dateLabel: { fontSize: 14, fontWeight: "600", color: "#333", marginBottom: 6 },
-//   dateInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 10, backgroundColor: '#fff', fontSize: 14, color: '#666' },
-//   datePickerRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12, gap: 10 },
-//   datePickerInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 10, backgroundColor: '#fff', fontSize: 13 },
-//   statusFilterRow: { marginBottom: 12 },
-//   pickerWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ccc', borderRadius: 4, backgroundColor: '#fff', paddingLeft: 12 },
-//   pickerText: { flex: 1, fontSize: 14, color: '#333', paddingVertical: 10 },
-//   pickerButton: { padding: 10, paddingLeft: 12, paddingRight: 12 },
-//   filterButtons: { flexDirection: 'row', marginTop: 8, gap: 10 },
-//   applyBtn: { flex: 1, backgroundColor: '#0A5064', padding: 12, borderRadius: 4, alignItems: 'center' },
-//   resetBtn: { flex: 1, backgroundColor: '#6c757d', padding: 12, borderRadius: 4, alignItems: 'center' },
-//   btnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+//   dateLabel: { fontSize: 12, fontWeight: "600", color: "#333", marginBottom: 5 },
+//   datePickerInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 12, backgroundColor: '#f9f9f9', justifyContent: 'center' },
+//   datePickerText: { fontSize: 14, color: '#333' },
+//   filterButtons: { flexDirection: 'row', marginTop: 12 },
+//   applyBtn: { flex: 1, backgroundColor: '#0A5064', padding: 12, borderRadius: 6, alignItems: 'center', marginRight: 8 },
+//   resetBtn: { flex: 1, backgroundColor: '#6c757d', padding: 12, borderRadius: 6, alignItems: 'center' },
+//   btnText: { color: '#fff', fontWeight: '600' },
 //   scrollContainer: { padding: 16, paddingBottom: 30 },
 //   cardContainer: { backgroundColor: '#fff', borderRadius: 8, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
 //   cardHeader: { backgroundColor: '#2c5aa0', padding: 12, borderTopLeftRadius: 8, borderTopRightRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
@@ -656,54 +643,57 @@
 //   descriptionRow: { marginTop: 6 },
 //   description: { color: '#333', fontSize: 14 },
 //   dateRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-// dateColumn: { flexDirection: 'column' },
-// dateText: { color: '#333', fontSize: 12 },
-// statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 12, overflow: "hidden" },
-// totalContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
-// totalText: { fontSize: 16, fontWeight: 'bold', color: '#2c5aa0' },
-// noDataText: { textAlign: "center", marginTop: 20, color: "#777", fontSize: 16 },
-// loadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(255,255,255,0.6)" },
-// fullModal: { flex: 1, backgroundColor: "#f5f5f5" },
-// modalHeader: { backgroundColor: '#fff', paddingTop: 24, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', elevation: 4 },
-// modalHeaderContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-// modalHeaderTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c5aa0' },
-// closeButton: { backgroundColor: '#f0f0f0', borderRadius: 18, width: 32, height: 32, justifyContent: "center", alignItems: "center" },
-// timelineButtonHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e3f2fd', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#2c5aa0' },
-// timelineButtonText: { color: '#2c5aa0', fontSize: 14, fontWeight: '600', marginLeft: 6 },
-// modalScrollContent: { padding: 16, paddingBottom: 30 },
-// cardDetail: { backgroundColor: "#fff", padding: 16, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
-// cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
-// rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, flexWrap: 'wrap' },
-// labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
-// valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 14 },
-// statusBadgeDetail: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 12, overflow: "hidden", alignSelf: 'flex-end' },
-// remarkCard: { backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
-// remarkTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c5aa0', marginBottom: 6 },
-// remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
-// remarkDate: { fontSize: 12, color: '#999', fontStyle: 'italic' },
-// noRemarksText: { textAlign: 'center', color: '#999', fontSize: 14, fontStyle: 'italic', paddingVertical: 10 },
-// timelineModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2c5aa0', paddingHorizontal: 10, paddingVertical: 12, paddingTop: 25, elevation: 4 },
-// timelineModalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-// closeButtonTimeline: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 18, width: 32, height: 32, justifyContent: "center", alignItems: "center" },
-// timelineCardContainer: { backgroundColor: "#fff", padding: 16, borderRadius: 10, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
-// timelineContainer: { paddingLeft: 4, paddingTop: 4 },
-// timelineItem: { flexDirection: "row", marginBottom: 20 },
-// timelineLeft: { alignItems: "center", marginRight: 15, width: 20 },
-// timelineCircle: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: "#fff", elevation: 2 },
-// timelineLine: { width: 3, backgroundColor: "#E0E0E0", flex: 1, marginTop: 4 },
-// timelineContent: { flex: 1, paddingBottom: 5 },
-// timelineStatus: { fontSize: 15, fontWeight: "bold", color: "#333", marginBottom: 4 },
-// timelineDescription: { fontSize: 13, color: "#666", marginBottom: 6, lineHeight: 18 },
-// timelineDate: { fontSize: 12, color: "#999", fontStyle: "italic" },
-// noTimelineContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
-// noTimelineText: { color: "#999", textAlign: "center", marginTop: 10, fontSize: 15, fontStyle: 'italic' },
-// imageWrapper: { alignItems: "center", backgroundColor: '#fff', padding: 16, borderRadius: 10, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
-// thumbnail: { width: 150, height: 150, borderRadius: 8 },
-// viewImageText: { marginTop: 8, color: '#2c5aa0', fontSize: 14, fontWeight: '500' },
-// imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
-// closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
-// fullImage: { width: "80%", height: "60%" },
+//   dateColumn: { flexDirection: 'column' },
+//   dateText: { color: '#333', fontSize: 12 },
+//   statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 12, overflow: "hidden" },
+//   totalContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
+//   totalText: { fontSize: 16, fontWeight: 'bold', color: '#2c5aa0' },
+//   noDataText: { textAlign: "center", marginTop: 20, color: "#777", fontSize: 16 },
+//   loadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(255,255,255,0.6)" },
+//   fullModal: { flex: 1, backgroundColor: "#f5f5f5" },
+//   modalHeader: { backgroundColor: '#fff', paddingTop: 24, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', elevation: 4 },
+//   modalHeaderContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+//   modalHeaderTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c5aa0' },
+//   closeButton: { backgroundColor: '#f0f0f0', borderRadius: 18, width: 32, height: 32, justifyContent: "center", alignItems: "center" },
+//   timelineButtonHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e3f2fd', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#2c5aa0' },
+//   timelineButtonText: { color: '#2c5aa0', fontSize: 14, fontWeight: '600', marginLeft: 6 },
+//   modalScrollContent: { padding: 16, paddingBottom: 30 },
+//   cardDetail: { backgroundColor: "#fff", padding: 16, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
+//   cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
+//   rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, flexWrap: 'wrap' },
+//   labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
+//   valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 14 },
+//   statusBadgeDetail: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 12, overflow: "hidden", alignSelf: 'flex-end' },
+//   remarkCard: { backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
+//   remarkTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c5aa0', marginBottom: 6 },
+//   remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
+//   remarkDate: { fontSize: 12, color: '#999', fontStyle: 'italic' },
+//   noRemarksText: { textAlign: 'center', color: '#999', fontSize: 14, fontStyle: 'italic', paddingVertical: 10 },
+//   timelineModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2c5aa0', paddingHorizontal: 10, paddingVertical: 12, paddingTop: 25, elevation: 4 },
+//   timelineModalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+//   closeButtonTimeline: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 18, width: 32, height: 32, justifyContent: "center", alignItems: "center" },
+//   timelineCardContainer: { backgroundColor: "#fff", padding: 16, borderRadius: 10, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
+//   timelineContainer: { paddingLeft: 4, paddingTop: 4 },
+//   timelineItem: { flexDirection: "row", marginBottom: 20 },
+//   timelineLeft: { alignItems: "center", marginRight: 15, width: 20 },
+//   timelineCircle: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: "#fff", elevation: 2 },
+//   timelineLine: { width: 3, backgroundColor: "#E0E0E0", flex: 1, marginTop: 4 },
+//   timelineContent: { flex: 1, paddingBottom: 5 },
+//   timelineStatus: { fontSize: 15, fontWeight: "bold", color: "#333", marginBottom: 4 },
+//   timelineDescription: { fontSize: 13, color: "#666", marginBottom: 6, lineHeight: 18 },
+//   timelineDate: { fontSize: 12, color: "#999", fontStyle: "italic" },
+//   noTimelineContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
+//   noTimelineText: { color: "#999", textAlign: "center", marginTop: 10, fontSize: 15, fontStyle: 'italic' },
+//   imageWrapper: { alignItems: "center", backgroundColor: '#fff', padding: 16, borderRadius: 10, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
+//   thumbnail: { width: 150, height: 150, borderRadius: 8 },
+//   viewImageText: { marginTop: 8, color: '#2c5aa0', fontSize: 14, fontWeight: '500' },
+//   imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
+//   closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
+//   fullImage: { width: "80%", height: "60%" },
 // });
+
+
+
 
 import React, { useEffect, useState } from "react";
 import {
@@ -717,11 +707,22 @@ import {
   ScrollView,
   Modal,
   Image,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { REJECTED_BY_ME_URL, IDEA_DETAIL_URL } from "../src/context/api";
+
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
 
 const formatDateTime = (dateString) => {
   if (!dateString) return "";
@@ -734,32 +735,35 @@ const formatDateTime = (dateString) => {
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
 
-function TimelineItem({ status, date, description, isLast, isFirst }) {
+function TimelineItem({ status, date, description, isLast }) {
   const getCircleColor = (status) => {
-    const s = status?.toLowerCase() || '';
-    if (s.includes('created')) return "#2196F3";
-    if (s.includes('edited')) return "#9C27B0";
-    if (s.includes('approved')) return "#4CAF50";
-    if (s.includes('pending')) return "#FF9800";
-    if (s.includes('implementation')) return "#9C27B0";
-    if (s.includes('rejected')) return "#F44336";
+    if (!status) return "#9E9E9E";
+    const s = status.toLowerCase();
+    if (s.includes("created")) return "#2196F3";
+    if (s.includes("edited")) return "#9C27B0";
+    if (s.includes("approved")) return "#4CAF50";
+    if (s.includes("implementation")) return "#3F51B5";
+    if (s.includes("rejected")) return "#F44336";
     return "#9E9E9E";
   };
 
   return (
-    <View style={styles.timelineItem}>
-      <View style={styles.timelineLeft}>
-        <View style={[styles.timelineCircle, { backgroundColor: getCircleColor(status) }]} />
-        {!isLast && <View style={styles.timelineLine} />}
+    <View style={{ flexDirection: "row", marginBottom: 12 }}>
+      <View style={{ alignItems: "center", marginRight: 12 }}>
+        <View style={{
+          width: 14,
+          height: 14,
+          borderRadius: 7,
+          backgroundColor: getCircleColor(status),
+          borderWidth: 2,
+          borderColor: "#fff",
+        }} />
+        {!isLast && <View style={{ width: 2, flex: 1, backgroundColor: "#E0E0E0", marginTop: 2 }} />}
       </View>
-      <View style={styles.timelineContent}>
-        <Text style={styles.timelineStatus}>{status}</Text>
-        {description && (
-          <Text style={styles.timelineDescription}>{description}</Text>
-        )}
-        {date && (
-          <Text style={styles.timelineDate}>{formatDateTime(date)}</Text>
-        )}
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontWeight: "bold", fontSize: 14, color: "#333" }}>{status}</Text>
+        {description && <Text style={{ fontSize: 12, color: "#555", marginVertical: 2 }}>{description}</Text>}
+        {date && <Text style={{ fontSize: 11, color: "#999" }}>{formatDateTime(date)}</Text>}
       </View>
     </View>
   );
@@ -780,70 +784,71 @@ const getStatusColor = (status) => {
   const s = status.toLowerCase();
   if (s === "draft") return "blue";
   if (s === "published") return "green";
-  if (s === "pending") return "orange";
-  if (s === "approved" || s === "closed") return "gray";
-  if (s === "rejected") return "red";
-  if (s === "hold" || s === "on hold") return "yellow";
+  if (s === "closed") return "#00ACC1";
+  if (s === "rejected") return "#F44336";
   return "gray";
 };
 
 export default function RejectedByMeScreen() {
-  const [ideas, setIdeas] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [totalItems, setTotalItems] = useState(0);
+  const [searchText, setSearchText] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedIdea, setSelectedIdea] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [ideaDetail, setIdeaDetail] = useState(null);
+  const [ideas, setIdeas] = useState([]);
+  const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [showImage, setShowImage] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
-  const [selectedIdea, setSelectedIdea] = useState(null);
-  const [showImage, setShowImage] = useState(false);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [ideaDetail, setIdeaDetail] = useState(null);
-  const [showTimelineModal, setShowTimelineModal] = useState(false);
-
-  useEffect(() => {
-    fetchIdeas();
-  }, [searchTerm, fromDate, toDate]);
-
-  const fetchIdeas = async () => {
-    setLoading(true);
+  const fetchRejectedIdeas = async (from, to, page = 1) => {
     try {
-      const token = await AsyncStorage.getItem("token");
-      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+      if (page === 1) setLoading(true);
 
-      let url = `${REJECTED_BY_ME_URL.split('?')[0]}?sortOrder=desc&page=1&pageSize=1000`;
-      
-      if (searchTerm.trim()) {
-        url += `&searchTerm=${encodeURIComponent(searchTerm.trim())}`;
-      }
-      
-      if (fromDate) {
-        const formattedFrom = fromDate.toISOString().split("T")[0];
-        url += `&startDate=${formattedFrom}`;
-      }
-      if (toDate) {
-        const formattedTo = toDate.toISOString().split("T")[0];
-        url += `&endDate=${formattedTo}`;
+      const token = await AsyncStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      let url = REJECTED_BY_ME_URL;
+      const params = [];
+      if (from) params.push(`fromDate=${from}`);
+      if (to) params.push(`toDate=${to}`);
+      params.push(`page=${page}`, `pageSize=10`);
+      if (params.length > 0) url += `?${params.join('&')}`;
+
+      const response = await axios.get(url, { headers });
+      const items = response.data?.data?.items || [];
+
+      let filteredByDate = items;
+      if (from || to) {
+        const fromTime = from ? new Date(from).getTime() : null;
+        const toTime = to ? new Date(to).getTime() : null;
+
+        filteredByDate = items.filter(item => {
+          if (!item.rejectionDate && !item.creationDate) return false;
+          const itemDate = item.rejectionDate || item.creationDate;
+          const itemTime = new Date(itemDate).getTime();
+          if (fromTime !== null && itemTime < fromTime) return false;
+          if (toTime !== null && itemTime > toTime) return false;
+          return true;
+        });
       }
 
-      const response = await axios.get(url, {
-        headers: authHeaders,
-      });
+      setIdeas(prev => (page === 1 ? filteredByDate : [...prev, ...filteredByDate]));
 
-      if (
-        response.data &&
-        response.data.data &&
-        Array.isArray(response.data.data.items)
-      ) {
-        setIdeas(response.data.data.items);
-        setTotalItems(response.data.data.totalItems || response.data.data.total || 0);
-      } else {
-        setIdeas([]);
-        setTotalItems(0);
-      }
+      setCurrentPage(response.data.currentPage || page);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalItems(response.data.totalItems || filteredByDate.length);
+      setHasNextPage(response.data.hasNextPage || false);
+
     } catch (error) {
       console.error("Error fetching rejected ideas:", error);
       Alert.alert("Error", "Failed to load rejected ideas.");
@@ -852,22 +857,32 @@ export default function RejectedByMeScreen() {
     }
   };
 
+  useEffect(() => {
+    fetchRejectedIdeas();
+  }, []);
+
+  const filteredIdeas = Array.isArray(ideas)
+    ? ideas.filter(idea => {
+      const searchLower = searchText.trim().toLowerCase();
+      return (
+        searchLower === '' ||
+        (idea.ideaNumber && idea.ideaNumber.toLowerCase().includes(searchLower)) ||
+        (idea.itemNumber && idea.itemNumber.toLowerCase().includes(searchLower)) ||
+        (idea.ownerName && idea.ownerName.toLowerCase().includes(searchLower)) ||
+        (idea.description && idea.description.toLowerCase().includes(searchLower))
+      );
+    })
+    : [];
+
   const fetchIdeaDetail = async (ideaId) => {
-    console.log("Fetching detail for ideaId:", ideaId);
     if (!ideaId) return;
     try {
       setLoadingDetail(true);
       const token = await AsyncStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      // ✅ FIXED: Using correct endpoint format
-      const { data: response } = await axios.get(
-        `${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, 
-        { headers }
-      );
+      const { data: response } = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
 
-      console.log("Idea Detail API Response:", response);
-      
       if (response?.success && response?.data) {
         setIdeaDetail(response.data);
         setSelectedIdea(response.data);
@@ -882,30 +897,22 @@ export default function RejectedByMeScreen() {
     }
   };
 
-  const clearFilters = () => {
-    setSearchTerm("");
+  const applyFilters = () => {
+    let from = fromDate ? fromDate.toISOString().split('T')[0] : null;
+    let to = toDate ? toDate.toISOString().split('T')[0] : null;
+    fetchRejectedIdeas(from, to);
+    setShowFilters(false);
+  };
+
+  const resetFilters = () => {
     setFromDate(null);
     setToDate(null);
-  };
-
-  const applyFilters = () => {
-    setShowFilters(false);
-    fetchIdeas();
-  };
-
-  const safeRenderValue = (value) => {
-    if (value === null || value === undefined) return "N/A";
-    if (typeof value === "object") return JSON.stringify(value);
-    return String(value);
+    fetchRejectedIdeas();
   };
 
   const parseRemarks = (remarkData) => {
     if (!remarkData) return [];
-    
-    if (Array.isArray(remarkData)) {
-      return remarkData;
-    }
-    
+    if (Array.isArray(remarkData)) return remarkData;
     if (typeof remarkData === "object") {
       const keys = Object.keys(remarkData);
       if (keys.length > 0 && keys.every(k => !isNaN(k))) {
@@ -913,87 +920,100 @@ export default function RejectedByMeScreen() {
       }
       return [remarkData];
     }
-    
     return [];
   };
 
+  const renderIdeaCard = ({ item }) => (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      style={styles.cardContainer}
+      onPress={() => fetchIdeaDetail(item.ideaId || item.ideaNumber)}
+    >
+      <View style={styles.cardHeader}>
+        <Text style={styles.ideaNumber} numberOfLines={2}>{item.itemNumber || item.ideaNumber || "N/A"}</Text>
+        <View style={styles.typeTag}>
+          <Text style={styles.typeText}>{item.type || "N/A"}</Text>
+        </View>
+      </View>
+
+      <View style={styles.cardContent}>
+        <View style={styles.rowDetail}>
+          <Text style={styles.label}>Description:</Text>
+          <Text style={styles.value} numberOfLines={2}>{item.description || "N/A"}</Text>
+        </View>
+
+        <View style={styles.rowDetail}>
+          <Text style={styles.label}>Owner:</Text>
+          <Text style={styles.value}>{item.ownerName || "N/A"}</Text>
+        </View>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Created:</Text>
+          <Text style={styles.value}>{formatDate(item.creationDate)}</Text>
+        </View>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Status:</Text>
+          <Text style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+            {item.status || "N/A"}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Rejected Idea</Text>
+        <Text style={styles.headerTitle}>Rejected Ideas</Text>
         <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters(!showFilters)}>
           <Text style={styles.filterButtonText}>{showFilters ? "HIDE FILTERS" : "SHOW FILTERS"}</Text>
-          <Ionicons name={showFilters ? "chevron-up" : "chevron-down"} size={16} color="#666" />
+          <Text style={styles.filterArrow}>{showFilters ? "▲" : "▼"}</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Search Section */}
       <View style={styles.searchSection}>
         <View style={styles.searchContainer}>
           <Text style={styles.searchLabel}>Search:</Text>
           <TextInput
             placeholder="Idea Number / Owner / Description"
             style={styles.searchInput}
-            value={searchTerm}
-            onChangeText={(text) => setSearchTerm(text)}
+            value={searchText}
+            onChangeText={setSearchText}
             placeholderTextColor="#999"
           />
         </View>
       </View>
 
+      {/* Filters */}
       {showFilters && (
         <View style={styles.filtersContainer}>
           <Text style={styles.filterLabel}>Create Date Range</Text>
-          
-          <View style={styles.datePickerRow}>
-            <View style={styles.dateInputContainer}>
-              <Text style={styles.dateLabel}>From Date:</Text>
-              <TouchableOpacity
-                style={styles.datePickerInput}
-                onPress={() => setShowFromPicker(true)}
-              >
-                <Text style={styles.datePickerText}>
-                  {fromDate ? formatDateTime(fromDate).split(',')[0] : "DD-MM-YYYY"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.dateInputContainer}>
-              <Text style={styles.dateLabel}>To Date:</Text>
-              <TouchableOpacity
-                style={styles.datePickerInput}
-                onPress={() => setShowToPicker(true)}
-              >
-                <Text style={styles.datePickerText}>
-                  {toDate ? formatDateTime(toDate).split(',')[0] : "DD-MM-YYYY"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
 
+          <TouchableOpacity style={styles.dateInput} onPress={() => setShowFromPicker(true)}>
+            <Text style={styles.dateInputText}>{fromDate ? fromDate.toLocaleDateString() : "Select From Date"}</Text>
+          </TouchableOpacity>
           {showFromPicker && (
             <DateTimePicker
               value={fromDate || new Date()}
               mode="date"
               display="default"
-              onChange={(_, date) => {
-                setShowFromPicker(false);
-                if (date) {
-                  setFromDate(date);
-                  if (toDate && date > toDate) setToDate(null);
-                }
-              }}
+              onChange={(e, date) => { setShowFromPicker(false); if (date) { setFromDate(date); if (toDate && date > toDate) { setToDate(null) } } }}
               maximumDate={toDate || undefined}
             />
           )}
 
+          <TouchableOpacity style={styles.dateInput} onPress={() => setShowToPicker(true)}>
+            <Text style={styles.dateInputText}>{toDate ? toDate.toLocaleDateString() : "Select To Date"}</Text>
+          </TouchableOpacity>
           {showToPicker && (
             <DateTimePicker
               value={toDate || (fromDate || new Date())}
               mode="date"
               display="default"
-              onChange={(_, date) => {
-                setShowToPicker(false);
-                if (date) setToDate(date);
-              }}
+              onChange={(e, date) => { setShowToPicker(false); if (date) { setToDate(date) } }}
               minimumDate={fromDate || undefined}
             />
           )}
@@ -1002,77 +1022,25 @@ export default function RejectedByMeScreen() {
             <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
               <Text style={styles.btnText}>Apply</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.resetBtn} onPress={clearFilters}>
+            <TouchableOpacity style={styles.resetBtn} onPress={resetFilters}>
               <Text style={styles.btnText}>Reset</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
+      {/* Cards List */}
       {loading ? (
-        <ActivityIndicator size="large" color="#0A5064" style={{ marginTop: 20 }} />
+        <ActivityIndicator size="large" color="#2c5aa0" style={{ marginTop: 20 }} />
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContainer}>
-          {ideas.length === 0 ? (
-            <Text style={styles.noDataText}>No rejected ideas found.</Text>
+          {filteredIdeas.length === 0 ? (
+            <Text style={styles.noDataText}>No ideas found.</Text>
           ) : (
             <>
-              {ideas.map((idea, index) => (
-                <TouchableOpacity
-                  key={index}
-                  activeOpacity={0.8}
-                  style={styles.cardContainer}
-                  onPress={() => {
-                    console.log("Selected idea object:", idea);
-                    setSelectedIdea(idea);
-                    // ✅ FIXED: Using correct ideaId
-                    fetchIdeaDetail(idea.ideaId || idea.id || idea.ideaNumber);
-                  }}
-                >
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.ideaNumber} numberOfLines={2}>
-                      {idea.ideaNumber || idea.itemNumber || "N/A"}
-                    </Text>
-                    <View style={styles.typeTag}>
-                      <Text style={styles.typeText}>{idea.type || "N/A"}</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.cardContent}>
-                    <View style={styles.row}>
-                      <Text style={styles.label}>Owner:</Text>
-                      <Text style={styles.value} numberOfLines={2}>{idea.ownerName || "N/A"}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.label}>Location:</Text>
-                      <Text style={styles.value}>{idea.location || "N/A"}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.label}>Department:</Text>
-                      <Text style={styles.value}>{idea.department || "N/A"}</Text>
-                    </View>
-                    <View style={styles.descriptionRow}>
-                      <Text style={styles.label}>Description:</Text>
-                      <Text style={styles.description} numberOfLines={3}>{idea.description || "N/A"}</Text>
-                    </View>
-                    <View style={styles.dateRow}>
-                      <View style={styles.dateColumn}>
-                        <Text style={styles.label}>Created:</Text>
-                        <Text style={styles.dateText}>
-                          {idea.creationDate ? new Date(idea.creationDate).toLocaleDateString() : "N/A"}
-                        </Text>
-                      </View>
-                      <View style={styles.dateColumn}>
-                        <Text style={styles.label}>Status:</Text>
-                        <Text style={[styles.statusBadge, { backgroundColor: getStatusColor(idea.status) }]}>
-                          {idea.status || "N/A"}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+              {filteredIdeas.map((idea, index) => (
+                <View key={index}>{renderIdeaCard({ item: idea })}</View>
               ))}
-              
               <View style={styles.totalContainer}>
                 <Text style={styles.totalText}>Total Ideas: {totalItems}</Text>
               </View>
@@ -1081,14 +1049,17 @@ export default function RejectedByMeScreen() {
         </ScrollView>
       )}
 
+      {/* Loading overlay */}
       {loadingDetail && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#0A5064" />
+          <ActivityIndicator size="large" color="#2c5aa0" />
         </View>
       )}
 
+      {/* Fullscreen Modal with Details */}
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
+          {/* Modal Header */}
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
@@ -1099,7 +1070,7 @@ export default function RejectedByMeScreen() {
                 <Ionicons name="close" size={20} color="#666" />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.timelineButtonHeader}
               onPress={() => setShowTimelineModal(true)}
             >
@@ -1115,7 +1086,7 @@ export default function RejectedByMeScreen() {
                   <Text style={styles.cardHeading}>Employee Information</Text>
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Employee Name:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || ideaDetail.ownerName || "N/A"}</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || "N/A"}</Text>
                   </View>
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Employee Number:</Text>
@@ -1127,7 +1098,7 @@ export default function RejectedByMeScreen() {
                   </View>
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Department:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || ideaDetail.department || "N/A"}</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || "N/A"}</Text>
                   </View>
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Mobile:</Text>
@@ -1163,26 +1134,22 @@ export default function RejectedByMeScreen() {
                   </View>
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Creation Date:</Text>
-                    <Text style={styles.valueDetail}>
-                      {ideaDetail.ideaCreationDate || ideaDetail.creationDate ? 
-                        new Date(ideaDetail.ideaCreationDate || ideaDetail.creationDate).toLocaleDateString() : "N/A"}
-                    </Text>
+                    <Text style={styles.valueDetail}>{formatDate(ideaDetail.ideaCreationDate)}</Text>
                   </View>
                   <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Planned Duration Date:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.plannedImplementationDuration
-                      ? new Date(ideaDetail.plannedImplementationDuration).toLocaleDateString()
-                      : "N/A"}</Text>
+                    <Text style={styles.labelDetail}>Planned Completion:</Text>
+                    <Text style={styles.valueDetail}>{formatDate(ideaDetail.plannedImplementationDuration)}</Text>
                   </View>
+
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Status:</Text>
-                    <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus || ideaDetail.status) }]}>
-                      {ideaDetail.ideaStatus || ideaDetail.status || "N/A"}
+                    <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus) }]}>
+                      {ideaDetail.ideaStatus || "N/A"}
                     </Text>
                   </View>
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Idea Description:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || ideaDetail.description || "N/A"}</Text>
+                    <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || "N/A"}</Text>
                   </View>
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Proposed Solution:</Text>
@@ -1205,21 +1172,13 @@ export default function RejectedByMeScreen() {
                     <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
                   </View>
                   <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Type:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.type || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Before Implementation:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.beforeImplementationImagePath || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>BE Team Support Needed:</Text>
+                    <Text style={styles.labelDetail}>IsBETeamSupportNeeded:</Text>
                     <Text style={styles.valueDetail}>
                       {ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}
                     </Text>
                   </View>
                   <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
+                    <Text style={styles.labelDetail}>CanBeImplementedToOtherLocations:</Text>
                     <Text style={styles.valueDetail}>
                       {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
                     </Text>
@@ -1259,6 +1218,7 @@ export default function RejectedByMeScreen() {
         </View>
       </Modal>
 
+      {/* Progress Timeline Modal */}
       <Modal visible={showTimelineModal} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
@@ -1278,11 +1238,10 @@ export default function RejectedByMeScreen() {
                   ideaDetail.timeline.map((item, idx) => (
                     <TimelineItem
                       key={idx}
-                      status={safeRenderValue(item.status || item.approvalStage || item.approvalstage || "N/A")}
+                      status={item.status || item.approvalStage || "N/A"}
                       date={item.date || item.approvalDate}
-                      description={safeRenderValue(item.description || item.comments)}
+                      description={item.description || item.comments}
                       isLast={idx === ideaDetail.timeline.length - 1}
-                      isFirst={idx === 0}
                     />
                   ))
                 ) : (
@@ -1297,6 +1256,7 @@ export default function RejectedByMeScreen() {
         </View>
       </Modal>
 
+      {/* Image Modal */}
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
           <TouchableOpacity
@@ -1312,27 +1272,25 @@ export default function RejectedByMeScreen() {
           />
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5" },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
   header: { backgroundColor: '#fff', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', elevation: 2 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c5aa0' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#000' },
   filterButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#e8e8e8', borderRadius: 4 },
   filterButtonText: { fontSize: 11, color: '#000', marginRight: 6, fontWeight: '600' },
+  filterArrow: { fontSize: 10, color: '#000', fontWeight: 'bold' },
   searchSection: { backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
   searchContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', marginRight: 12 },
   searchLabel: { fontSize: 16, color: '#333', marginRight: 8, fontWeight: '500' },
   searchInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 4, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, backgroundColor: '#fff' },
   filtersContainer: { backgroundColor: '#fff', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
   filterLabel: { fontSize: 16, fontWeight: '500', marginBottom: 8, color: '#333' },
-  datePickerRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10, gap: 10 },
-  dateInputContainer: { flex: 1 },
-  dateLabel: { fontSize: 12, fontWeight: "600", color: "#333", marginBottom: 5 },
-  datePickerInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 12, backgroundColor: '#f9f9f9', justifyContent: 'center' },
-  datePickerText: { fontSize: 14, color: '#333' },
+  dateInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 12, backgroundColor: '#f9f9f9', marginBottom: 10 },
+  dateInputText: { fontSize: 14, color: '#333' },
   filterButtons: { flexDirection: 'row', marginTop: 12 },
   applyBtn: { flex: 1, backgroundColor: '#0A5064', padding: 12, borderRadius: 6, alignItems: 'center', marginRight: 8 },
   resetBtn: { flex: 1, backgroundColor: '#6c757d', padding: 12, borderRadius: 6, alignItems: 'center' },
@@ -1344,14 +1302,10 @@ const styles = StyleSheet.create({
   typeTag: { backgroundColor: '#f0ad4e', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   typeText: { color: '#fff', fontSize: 12, fontWeight: '500' },
   cardContent: { padding: 12 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' },
+  rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, flexWrap: 'wrap' },
   label: { color: '#555', fontWeight: '500', fontSize: 14 },
-  value: { color: '#333', fontSize: 14,  maxWidth: '65%', textAlign: 'right' },
-  descriptionRow: { marginTop: 6 },
-  description: { color: '#333', fontSize: 14 },
-  dateRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  dateColumn: { flexDirection: 'column' },
-  dateText: { color: '#333', fontSize: 12 },
+  value: { color: '#333', fontSize: 14, maxWidth: '65%', textAlign: 'right' },
   statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 12, overflow: "hidden" },
   totalContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
   totalText: { fontSize: 16, fontWeight: 'bold', color: '#2c5aa0' },
