@@ -90,7 +90,17 @@ const getStatusColor = (status) => {
   if (s === "draft") return "blue";
   if (s === "published") return "green";
   if (s === "closed") return "#00ACC1";
+  if (s.includes("approved by be team") || s.includes("ready for implementation")) return "#4CAF50";
   return "gray";
+};
+
+const shouldShowImplementationDetails = (status) => {
+  if (!status) return false;
+  const s = status.toLowerCase().trim();
+  return s.includes("approved by be team") || 
+         s.includes("ready for implementation") || 
+         s.includes("implementation") || 
+         s === "closed";
 };
 
 const ApprovedScreen = () => {
@@ -103,6 +113,10 @@ const ApprovedScreen = () => {
   const [ideas, setIdeas] = useState([]);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showImage, setShowImage] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState(null);
+  const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(true);
+  const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(false);
+  const [showImplementationDetails, setShowImplementationDetails] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -224,6 +238,19 @@ const ApprovedScreen = () => {
       return [remarkData];
     }
     return [];
+  };
+
+  const openImagePreview = (imageUrl) => {
+    setCurrentImageUrl(imageUrl);
+    setShowImage(true);
+  };
+
+  const closeModal = () => {
+    setSelectedIdea(null);
+    setIdeaDetail(null);
+    setEmployeeInfoExpanded(true);
+    setIdeaInfoExpanded(false);
+    setShowImplementationDetails(false);
   };
 
   const renderIdeaCard = ({ item }) => (
@@ -366,10 +393,7 @@ const ApprovedScreen = () => {
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => { setSelectedIdea(null); setIdeaDetail(null); }}
-              >
+              <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
                 <Ionicons name="close" size={20} color="#666" />
               </TouchableOpacity>
             </View>
@@ -385,108 +409,226 @@ const ApprovedScreen = () => {
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             {selectedIdea && ideaDetail && (
               <>
-                <View style={styles.cardDetail}>
-                  <Text style={styles.cardHeading}>Employee Information</Text>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Employee Name:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Employee Number:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmployeeNo || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Employee Email:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmail || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Department:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Mobile:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Reporting Manager:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.reportingManagerName || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Manager Email:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.managerEmail || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Employee Location:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.location || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Sub Department:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerSubDepartment || "N/A"}</Text>
-                  </View>
-                </View>
+                <TouchableOpacity 
+                  style={styles.collapsibleHeader} 
+                  onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} 
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
+                  <Ionicons 
+                    name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} 
+                    size={24} 
+                    color="#2c5aa0" 
+                  />
+                </TouchableOpacity>
 
-                <View style={styles.cardDetail}>
-                  <Text style={styles.cardHeading}>Idea Information</Text>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Idea No:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaNumber || "N/A"}</Text>
+                {employeeInfoExpanded && (
+                  <View style={styles.cardDetail}>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Employee Name:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Employee Number:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmployeeNo || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Employee Email:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmail || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Department:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Mobile:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Reporting Manager:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.reportingManagerName || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Manager Email:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.managerEmail || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Employee Location:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.location || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Sub Department:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerSubDepartment || "N/A"}</Text>
+                    </View>
                   </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Solution Category:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.solutionCategory || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Creation Date:</Text>
-                    <Text style={styles.valueDetail}>{formatDate(ideaDetail.ideaCreationDate)}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Planned Completion:</Text>
-                    <Text style={styles.valueDetail}>{formatDate(ideaDetail.plannedImplementationDuration)}</Text>
-                  </View>
+                )}
 
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Status:</Text>
-                    <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus) }]}>
-                      {ideaDetail.ideaStatus || "N/A"}
-                    </Text>
+                <TouchableOpacity 
+                  style={styles.collapsibleHeader} 
+                  onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} 
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
+                  <Ionicons 
+                    name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} 
+                    size={24} 
+                    color="#2c5aa0" 
+                  />
+                </TouchableOpacity>
+
+                {ideaInfoExpanded && (
+                  <View style={styles.cardDetail}>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Idea No:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaNumber || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Solution Category:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.solutionCategory || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Creation Date:</Text>
+                      <Text style={styles.valueDetail}>{formatDate(ideaDetail.ideaCreationDate)}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Planned Completion:</Text>
+                      <Text style={styles.valueDetail}>{formatDate(ideaDetail.plannedImplementationDuration)}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Before Implementation:</Text>
+                      {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
+                        <TouchableOpacity 
+                          style={styles.imagePreviewContainer} 
+                          onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                        >
+                          <Image 
+                            source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
+                            style={styles.thumbnailSmall} 
+                          />
+                          <Text style={styles.tapToEnlargeText}>Tap to view</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.valueDetail}>N/A</Text>
+                      )}
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Status:</Text>
+                      <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus) }]}>
+                        {ideaDetail.ideaStatus || "N/A"}
+                      </Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Idea Description:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Proposed Solution:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Team Members:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Mobile Number:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Idea Theme:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Type:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaType || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>IsBETeamSupportNeeded:</Text>
+                      <Text style={styles.valueDetail}>
+                        {ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}
+                      </Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>CanBeImplementedToOtherLocations:</Text>
+                      <Text style={styles.valueDetail}>
+                        {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Idea Description:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Proposed Solution:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Team Members:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Mobile Number:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Idea Theme:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>IsBETeamSupportNeeded:</Text>
-                    <Text style={styles.valueDetail}>
-                      {ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}
-                    </Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>CanBeImplementedToOtherLocations:</Text>
-                    <Text style={styles.valueDetail}>
-                      {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
-                    </Text>
-                  </View>
-                </View>
+                )}
+
+                {shouldShowImplementationDetails(ideaDetail.ideaStatus) && (
+                  <>
+                    <TouchableOpacity 
+                      style={styles.collapsibleHeader} 
+                      onPress={() => setShowImplementationDetails(!showImplementationDetails)} 
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
+                      <Ionicons 
+                        name={showImplementationDetails ? "chevron-up" : "chevron-down"} 
+                        size={24} 
+                        color="#2c5aa0" 
+                      />
+                    </TouchableOpacity>
+                    
+                    {showImplementationDetails && (
+                      <View style={styles.cardDetail}>
+                        <View style={styles.rowDetail}>
+                          <Text style={styles.labelDetail}>Implementation Details:</Text>
+                          <Text style={styles.valueDetail}>
+                            {ideaDetail.implementationCycle?.implementation || 
+                             ideaDetail.implementationDetail || 
+                             ideaDetail.implementation || 
+                             "Not provided"}
+                          </Text>
+                        </View>
+                        <View style={styles.rowDetail}>
+                          <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
+                          <Text style={styles.valueDetail}>
+                            {ideaDetail.implementationCycle?.outcome || 
+                             ideaDetail.implementationOutcome || 
+                             ideaDetail.outcome || 
+                             "Not provided"}
+                          </Text>
+                        </View>
+                        {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
+                          <View style={styles.rowDetail}>
+                            <Text style={styles.labelDetail}>Completed On:</Text>
+                            <Text style={styles.valueDetail}>
+                              {formatDate(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate)}
+                            </Text>
+                          </View>
+                        )}
+                        {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
+                          <View style={styles.implementationImageSection}>
+                            <Text style={styles.imageLabel}>Before Implementation:</Text>
+                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
+                              <Image 
+                                source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
+                                style={styles.implementationImage} 
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                        {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
+                          <View style={styles.implementationImageSection}>
+                            <Text style={styles.imageLabel}>After Implementation:</Text>
+                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath)}>
+                              <Image 
+                                source={{ uri: ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath }} 
+                                style={styles.implementationImage} 
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </>
+                )}
 
                 <View style={styles.cardDetail}>
                   <Text style={styles.cardHeading}>Remarks</Text>
@@ -505,16 +647,6 @@ const ApprovedScreen = () => {
                     ));
                   })()}
                 </View>
-
-                {ideaDetail.beforeImplementationImagePath && (
-                  <TouchableOpacity
-                    style={styles.imageWrapper}
-                    onPress={() => setShowImage(true)}
-                  >
-                    <Image source={{ uri: ideaDetail.beforeImplementationImagePath }} style={styles.thumbnail} />
-                    <Text style={styles.viewImageText}>Tap to view full image</Text>
-                  </TouchableOpacity>
-                )}
               </>
             )}
           </ScrollView>
@@ -564,15 +696,20 @@ const ApprovedScreen = () => {
         <View style={styles.imageModal}>
           <TouchableOpacity
             style={styles.closeButtonImage}
-            onPress={() => setShowImage(false)}
+            onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}
           >
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
-          <Image
-            source={{ uri: ideaDetail?.beforeImplementationImagePath }}
-            style={styles.fullImage}
-            resizeMode="contain"
-          />
+          {currentImageUrl ? (
+            <Image
+              source={{ uri: currentImageUrl }}
+              style={styles.fullImage}
+              resizeMode="contain"
+              onError={(e) => Alert.alert('Error', 'Failed to load image')}
+            />
+          ) : (
+            <Text style={{ color: '#fff' }}>No image available</Text>
+          )}
         </View>
       </Modal>
     </SafeAreaView>
@@ -606,7 +743,7 @@ const styles = StyleSheet.create({
   typeText: { color: '#fff', fontSize: 12, fontWeight: '500' },
   cardContent: { padding: 12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' },
-  rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, flexWrap: 'wrap' },
+  rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' },
   label: { color: '#555', fontWeight: '500', fontSize: 14 },
   value: { color: '#333', fontSize: 14, maxWidth: '65%', textAlign: 'right' },
   statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 12, overflow: "hidden" },
@@ -622,11 +759,24 @@ const styles = StyleSheet.create({
   timelineButtonHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e3f2fd', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#2c5aa0' },
   timelineButtonText: { color: '#2c5aa0', fontSize: 14, fontWeight: '600', marginLeft: 6 },
   modalScrollContent: { padding: 16, paddingBottom: 30 },
-  cardDetail: { backgroundColor: "#fff", padding: 16, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
+  cardDetail: { 
+    backgroundColor: "#fff", 
+    padding: 16, 
+    borderRadius: 8, 
+    marginBottom: 12, 
+    borderWidth: 1, 
+    borderColor: "#e0e0e0"
+  },
   cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
   labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
   valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 14 },
-  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
+  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center', alignSelf: 'flex-end' },
+  imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
+  tapToEnlargeText: { color: '#2196F3', fontSize: 12, fontWeight: '500' },
+  implementationImageSection: { marginTop: 12, marginBottom: 12 },
+  imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
+  implementationImage: { width: '100%', height: 200, borderRadius: 8, resizeMode: 'cover' },
   remarkCard: { backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
   remarkTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c5aa0', marginBottom: 6 },
   remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
@@ -639,11 +789,30 @@ const styles = StyleSheet.create({
   timelineContainer: { paddingLeft: 4, paddingTop: 4 },
   noTimelineContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
   noTimelineText: { color: "#999", textAlign: "center", marginTop: 10, fontSize: 15, fontStyle: 'italic' },
-  imageWrapper: { alignItems: "center", backgroundColor: '#fff', padding: 16, borderRadius: 10, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
-  thumbnail: { width: 150, height: 150, borderRadius: 8 },
-  viewImageText: { marginTop: 8, color: '#2c5aa0', fontSize: 14, fontWeight: '500' },
   imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
   closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
-  fullImage: { width: "80%", height: "60%" },
+  fullImage: { width: "90%", height: "70%" },
+  collapsibleHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    backgroundColor: '#fff', 
+    padding: 16, 
+    borderRadius: 8, 
+    marginBottom: 8, 
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    elevation: 1, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 1 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 2 
+  },
+  collapsibleHeaderText: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#2c5aa0' 
+  },
 });
+
 export default ApprovedScreen;

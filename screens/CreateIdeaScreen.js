@@ -11,15 +11,17 @@ import {
   Image,
   Modal,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { CREATE_IDEA_POST_URL  } from '../src/context/api';
-import {EMPLOYEE_GET_URL} from '../src/context/api';
+import { CREATE_IDEA_POST_URL } from '../src/context/api';
+import { EMPLOYEE_GET_URL } from '../src/context/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 
 export default function CreateIdeaScreen() {
   const navigation = useNavigation();
@@ -37,7 +39,7 @@ export default function CreateIdeaScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
-  const [fileType, setFileType] = useState(''); 
+  const [fileType, setFileType] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
   const [imageScale, setImageScale] = useState(1);
@@ -66,41 +68,75 @@ export default function CreateIdeaScreen() {
   };
 
   const pickImageFromGallery = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      alert('Permission required!');
-      return;
-    }
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
-    if (!result.canceled) {
-      setFile(result.assets[0].uri);
-      setFileType('image');
-      const uriParts = result.assets[0].uri.split('/');
-      setFileName(uriParts[uriParts.length - 1]);
-      setShowFileOptions(false);
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow access to your photos');
+        return;
+      }
+
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.7,
+        base64: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        console.log('✅ Selected Image URI:', asset.uri);
+        
+        setFile(asset.uri);
+        setFileType('image');
+        
+        // Create a clean filename with timestamp
+        const timestamp = Date.now();
+        const extension = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
+        const cleanFileName = `image_${timestamp}.${extension}`;
+        
+        setFileName(cleanFileName);
+        console.log('📁 Clean filename set:', cleanFileName);
+        setShowFileOptions(false);
+      }
+    } catch (error) {
+      console.error('❌ Error picking image from gallery:', error);
+      Alert.alert('Error', 'Failed to pick image');
     }
   };
 
   const pickImageFromCamera = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) {
-      alert('Camera permission required!');
-      return;
-    }
-    let result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-    if (!result.canceled) {
-      setFile(result.assets[0].uri);
-      setFileType('image');
-      const uriParts = result.assets[0].uri.split('/');
-      setFileName(uriParts[uriParts.length - 1]);
-      setShowFileOptions(false);
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow camera access');
+        return;
+      }
+
+      let result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.7,
+        base64: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        console.log('✅ Captured Image URI:', asset.uri);
+        
+        setFile(asset.uri);
+        setFileType('image');
+        
+        // Create a clean filename with timestamp
+        const timestamp = Date.now();
+        const extension = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
+        const cleanFileName = `camera_${timestamp}.${extension}`;
+        
+        setFileName(cleanFileName);
+        console.log('📁 Clean filename set:', cleanFileName);
+        setShowFileOptions(false);
+      }
+    } catch (error) {
+      console.error('❌ Error capturing image:', error);
+      Alert.alert('Error', 'Failed to capture image');
     }
   };
 
@@ -110,15 +146,18 @@ export default function CreateIdeaScreen() {
         type: 'application/pdf',
         copyToCacheDirectory: true,
       });
-      
+
       if (result.type === 'success' || !result.canceled) {
         const selectedFile = result.assets ? result.assets[0] : result;
+        console.log('✅ Selected PDF URI:', selectedFile.uri);
+        
         setFile(selectedFile.uri);
         setFileType('pdf');
         setFileName(selectedFile.name);
         setShowFileOptions(false);
       }
     } catch (error) {
+      console.error('❌ Error picking PDF:', error);
       Alert.alert('Error', 'Failed to pick PDF file');
     }
   };
@@ -175,10 +214,99 @@ export default function CreateIdeaScreen() {
           reportingManagerEmail: data.data.managerEmail || '',
         });
       } catch (error) {
+        console.error('❌ Error fetching employee details:', error);
       }
     };
     fetchEmployeeDetails();
   }, [activeTab]);
+
+  const createFormDataWithFile = async (submitType) => {
+    const formData = new FormData();
+    
+    // Text fields
+    formData.append('IdeaDescription', ideaDescription || '');
+    formData.append('ProposedSolution', proposedSolution || '');
+    formData.append('TentativeBenefit', benefit || '');
+    formData.append('TeamMembers', teamMembers || '');
+    formData.append('MobileNumber', mobileNumber || '');
+    formData.append('SolutionCategory', solutionCategory || '');
+    formData.append('IdeaTheme', ideaTheme || '');
+    formData.append('PlannedImplementationDuration', date ? date.toISOString().split('T')[0] : '');
+    formData.append('IsBETeamSupportNeeded', beSupportNeeded === 'Yes' ? 'true' : 'false');
+    formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation === 'Yes' ? 'true' : 'false');
+    formData.append('SubmitType', submitType);
+  
+    // ✅ PROPER FILE HANDLING FOR MOBILE
+    if (file && fileName) {
+      try {
+        let fileUri = file;
+        
+        // Ensure proper file:// prefix for Android
+        if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+          fileUri = `file://${fileUri}`;
+        }
+  
+        // Verify file exists
+        const fileInfo = await FileSystem.getInfoAsync(fileUri);
+        
+        if (!fileInfo.exists) {
+          console.error('❌ File does not exist at:', fileUri);
+          throw new Error('File does not exist');
+        }
+  
+        console.log('✅ File verified:', {
+          uri: fileInfo.uri,
+          size: fileInfo.size,
+          exists: fileInfo.exists,
+          fileName: fileName
+        });
+  
+        // Detect MIME type properly
+        let mimeType = 'application/octet-stream';
+        const extension = fileName.split('.').pop()?.toLowerCase();
+        
+        if (fileType === 'pdf' || extension === 'pdf') {
+          mimeType = 'application/pdf';
+        } else if (extension === 'png') {
+          mimeType = 'image/png';
+        } else if (extension === 'jpg' || extension === 'jpeg') {
+          mimeType = 'image/jpeg';
+        } else if (extension === 'gif') {
+          mimeType = 'image/gif';
+        } else if (extension === 'webp') {
+          mimeType = 'image/webp';
+        }
+  
+        // Create proper file object with clean filename
+        const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        
+        const fileToUpload = {
+          uri: fileUri, 
+          type: mimeType,
+          name: cleanFileName,
+        };
+  
+        console.log('📤 Uploading file:', {
+          name: fileToUpload.name,
+          type: fileToUpload.type,
+          uriLength: fileToUpload.uri.length
+        });
+        
+        formData.append('BeforeImplementationImage', fileToUpload);
+        
+        console.log('✅ File successfully added to FormData');
+        
+      } catch (error) {
+        console.error('❌ Error preparing file:', error);
+        Alert.alert('File Error', 'Failed to prepare image for upload. Please try again.');
+        throw error;
+      }
+    } else {
+      console.warn('⚠️ No file selected');
+    }
+  
+    return formData;
+  };
 
   const handleSaveDraft = async () => {
     if (!proposedSolution || !solutionCategory || !file || !date || !mobileNumber) {
@@ -199,59 +327,55 @@ export default function CreateIdeaScreen() {
         return;
       }
 
-      const formData = new FormData();
-      formData.append('IdeaDescription', ideaDescription);
-      formData.append('ProposedSolution', proposedSolution);
-      formData.append('TentativeBenefit', benefit);
-      formData.append('TeamMembers', teamMembers);
-      formData.append('MobileNumber', mobileNumber);
-      formData.append('SolutionCategory', solutionCategory);
-      formData.append('IdeaTheme', ideaTheme);
-      formData.append('PlannedImplementationDuration', date ? date.toISOString().split('T')[0] : null);
-      formData.append('IsBETeamSupportNeeded', beSupportNeeded);
-      formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation);   
-      formData.append('SubmitType', 'draft');
+      const formData = await createFormDataWithFile('draft');
 
-      if (file) {
-        if (fileType === 'pdf') {
-          formData.append('image', {
-            uri: file,
-            type: 'application/pdf',
-            name: fileName || 'document.pdf',
-          });
-        } else {
-          formData.append('image', {
-            uri: file,
-            type: 'image/jpeg',
-            name: fileName || 'idea.jpg',
-          });
-        }
-      }
+      console.log('📨 Sending draft request...');
 
       const response = await fetch(CREATE_IDEA_POST_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json',
         },
         body: formData,
       });
 
       const text = await response.text();
+      console.log('📥 Draft Response:', text);
+      
       let data = {};
-      try { data = JSON.parse(text); } catch (e) { data = {}; }
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('❌ Response parsing error:', text);
+        data = {};
+      }
 
       if (response.ok && data.success) {
+        console.log('✅ Draft saved successfully!');
+        console.log('📸 Image path:', data.data?.imagePath);
+        console.log('📄 Full response data:', data.data);
+        
+        // ✅ Map imagePath to beforeImplementationImagePath for MyIdeas screen
+        const ideaData = { ...data.data, status: 'Draft' };
+        if (data.data?.imagePath) {
+          ideaData.beforeImplementationImagePath = data.data.imagePath;
+          console.log('✅ Mapped imagePath to beforeImplementationImagePath');
+        }
+        
         resetForm();
-        navigation.navigate('My Ideas', { 
-          newIdea: { ...data.data, status: 'Draft' },
+        Alert.alert('Success', 'Draft saved successfully!');
+        navigation.navigate('My Ideas', {
+          newIdea: ideaData,
           refreshIdeas: true,
           showDraftMessage: true
         });
       } else {
+        console.error('❌ Draft save failed:', data?.message);
         Alert.alert('Error', data?.message || 'Failed to save draft.');
       }
     } catch (error) {
+      console.error('❌ Save draft error:', error);
       Alert.alert('Error', 'Network error, please try again.');
     } finally {
       setIsSubmitting(false);
@@ -280,60 +404,56 @@ export default function CreateIdeaScreen() {
         return;
       }
 
-      const formData = new FormData();
-      formData.append('IdeaDescription', ideaDescription);
-      formData.append('ProposedSolution', proposedSolution);
-      formData.append('TentativeBenefit', benefit);
-      formData.append('TeamMembers', teamMembers);
-      formData.append('MobileNumber', mobileNumber);
-      formData.append('SolutionCategory', solutionCategory);
-      formData.append('IdeaTheme', ideaTheme);
-      formData.append('PlannedImplementationDuration', date ? date.toISOString().split('T')[0] : null);
-      formData.append('IsBETeamSupportNeeded', beSupportNeeded);
-      formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation);   
-      formData.append('SubmitType', 'publish');    
+      const formData = await createFormDataWithFile('publish');
 
-      if (file) {
-        if (fileType === 'pdf') {
-          formData.append('image', {
-            uri: file,
-            type: 'application/pdf',
-            name: fileName || 'document.pdf',
-          });
-        } else {
-          formData.append('image', {
-            uri: file,
-            type: 'image/jpeg',
-            name: fileName || 'idea.jpg',
-          });
-        }
-      }
+      console.log('📨 Sending publish request...');
 
       const response = await fetch(CREATE_IDEA_POST_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json',
         },
         body: formData,
       });
 
       const text = await response.text();
+      console.log('📥 Publish Response:', text);
+      
       let data = {};
-      try { data = JSON.parse(text); } catch (e) { data = {}; }
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('❌ Response parsing error:', text);
+        data = {};
+      }
 
       if (response.ok && data.success) {
+        console.log('✅ Idea published successfully!');
+        console.log('📸 Image path:', data.data?.imagePath);
+        console.log('📄 Full response data:', data.data);
+        
+        // ✅ Map imagePath to beforeImplementationImagePath for MyIdeas screen
+        const ideaData = { ...data.data };
+        if (data.data?.imagePath) {
+          ideaData.beforeImplementationImagePath = data.data.imagePath;
+          console.log('✅ Mapped imagePath to beforeImplementationImagePath');
+        }
+        
         resetForm();
-        navigation.navigate('My Ideas', { 
-          newIdea: data.data,
-          refreshIdeas: true 
+        Alert.alert('Success', 'Idea published successfully!');
+        navigation.navigate('My Ideas', {
+          newIdea: ideaData,
+          refreshIdeas: true
         });
       } else {
+        console.error('❌ Publish failed:', data?.message);
         Alert.alert('Error', data?.message || 'Failed to create idea.');
       }
 
     } catch (error) {
-      Alert.alert('Network error, please try again.');
+      console.error('❌ Submit error:', error);
+      Alert.alert('Error', 'Network error, please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -397,7 +517,7 @@ export default function CreateIdeaScreen() {
               placeholder="Enter idea description..."
               value={ideaDescription}
               onChangeText={setIdeaDescription}
-              maxLength={100}
+              maxLength={300}
             />
 
             <InputField
@@ -408,7 +528,7 @@ export default function CreateIdeaScreen() {
               value={proposedSolution}
               onChangeText={setProposedSolution}
               multiline
-              maxLength={300}
+              maxLength={500}
             />
 
             <InputField
@@ -419,7 +539,7 @@ export default function CreateIdeaScreen() {
               value={benefit}
               onChangeText={setBenefit}
               multiline
-              maxLength={300}
+              maxLength={200}
             />
 
             <InputField
@@ -428,7 +548,7 @@ export default function CreateIdeaScreen() {
               placeholder="Enter team Members..."
               value={teamMembers}
               onChangeText={setTeamMembers}
-              maxLength={30}
+              maxLength={100}
             />
 
             <PickerField
@@ -473,7 +593,9 @@ export default function CreateIdeaScreen() {
                 <TouchableOpacity style={styles.chooseFileButton} onPress={() => setShowFileOptions(true)}>
                   <Text style={styles.chooseFileText}>Choose File</Text>
                 </TouchableOpacity>
-                <Text style={styles.fileNameDisplay}>{fileName || 'No file chosen'}</Text>
+                <Text style={styles.fileNameDisplay} numberOfLines={1} ellipsizeMode="middle">
+                  {fileName || 'No file chosen'}
+                </Text>
               </View>
 
               {file && fileType === 'image' && (
@@ -498,7 +620,7 @@ export default function CreateIdeaScreen() {
                   }}>
                     <Feather name="x" size={30} color="#fff" />
                   </TouchableOpacity>
-                  
+
                   <View style={styles.zoomControls}>
                     <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut}>
                       <Feather name="minus" size={24} color="#fff" />
@@ -516,10 +638,10 @@ export default function CreateIdeaScreen() {
                     showsHorizontalScrollIndicator={false}
                     showsVerticalScrollIndicator={false}
                   >
-                    <Image 
-                      source={{ uri: file }} 
-                      style={[styles.fullScreenImage, { transform: [{ scale: imageScale }] }]} 
-                      resizeMode="contain" 
+                    <Image
+                      source={{ uri: file }}
+                      style={[styles.fullScreenImage, { transform: [{ scale: imageScale }] }]}
+                      resizeMode="contain"
                     />
                   </ScrollView>
                 </View>
@@ -529,7 +651,7 @@ export default function CreateIdeaScreen() {
                 <View style={styles.imageOptionsContainer}>
                   <View style={styles.imageOptionsContent}>
                     <Text style={styles.imageOptionsTitle}>Choose File Source</Text>
-                    
+
                     <TouchableOpacity style={styles.imageOptionButton} onPress={pickImageFromCamera}>
                       <Feather name="camera" size={24} color="#2196F3" />
                       <Text style={styles.imageOptionText}>Take Photo</Text>
@@ -545,8 +667,8 @@ export default function CreateIdeaScreen() {
                       <Text style={styles.imageOptionText}>Choose PDF Document</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
-                      style={[styles.imageOptionButton, styles.cancelButton]} 
+                    <TouchableOpacity
+                      style={[styles.imageOptionButton, styles.cancelButton]}
                       onPress={() => setShowFileOptions(false)}
                     >
                       <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -622,18 +744,18 @@ export default function CreateIdeaScreen() {
             <Text style={{ fontSize: 18, fontWeight: 'bold', marginVertical: 10 }}>Save & Publish</Text>
             <Text style={{ fontSize: 14, textAlign: 'center', color: '#333' }}>Are you sure you want to save and publish this record?</Text>
             <View style={{ flexDirection: 'row', marginTop: 20 }}>
-              <TouchableOpacity 
-                style={{ backgroundColor: '#ddd', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, marginRight: 10 }} 
+              <TouchableOpacity
+                style={{ backgroundColor: '#ddd', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, marginRight: 10 }}
                 onPress={() => setShowConfirm(false)}
                 disabled={isSubmitting}
               >
                 <Text style={{ color: '#333', fontWeight: '600' }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={{ backgroundColor: '#00B894', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 }} 
-                onPress={() => { 
-                  setShowConfirm(false); 
-                  handleFinalSubmit(); 
+              <TouchableOpacity
+                style={{ backgroundColor: '#00B894', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 }}
+                onPress={() => {
+                  setShowConfirm(false);
+                  handleFinalSubmit();
                 }}
                 disabled={isSubmitting}
               >
@@ -746,7 +868,6 @@ const styles = StyleSheet.create({
   picker: { flex: 1, marginLeft: 10, color: '#333' },
   textArea: { height: 100, textAlignVertical: 'top' },
   charCount: { alignSelf: 'flex-end', fontSize: 12, color: '#888', marginTop: 4 },
-  
   fileInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -802,7 +923,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-
   dateInputWeb: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -824,10 +944,9 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontStyle: 'italic',
   },
-
-  buttonRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 20,
     gap: 5,
   },
@@ -842,7 +961,6 @@ const styles = StyleSheet.create({
   draftText: { marginLeft: 7, fontSize: 16, color: '#333', fontWeight: '600' },
   submitButton: { backgroundColor: '#00B894', paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10 },
   submitText: { color: '#fff', fontSize: 16, fontWeight: '500' },
-  
   radioRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   radioOption: { flexDirection: 'row', alignItems: 'center', marginRight: 20 },
   radioCircle: {

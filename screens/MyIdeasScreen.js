@@ -1,15 +1,40 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Image, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Image, ActivityIndicator, TextInput, Vibration,   Platform, } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MY_IDEAS_URL, IDEA_DETAIL_URL, DELETE_IDEA_URL } from '../src/context/api';
+import { MY_IDEAS_URL, IDEA_DETAIL_URL, DELETE_IDEA_URL, SUBMIT_URL } from '../src/context/api';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-
+import * as FileSystem from 'expo-file-system';
 const Tab = createMaterialTopTabNavigator();
+
+
+// Ensure all image paths are absolute URLs
+const normalizeImageUrl = (path, fallbackUrl) => {
+  if (!path) return null;
+
+  // Already absolute? just return
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+
+  // Derive the base from beforeImplementationImagePath if available
+  if (fallbackUrl && (fallbackUrl.startsWith('http://') || fallbackUrl.startsWith('https://'))) {
+    try {
+      const base = new URL(fallbackUrl).origin;
+      return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+    } catch (e) {
+      // fallback to default
+    }
+  }
+
+  // Default API base (update this if your API host changes)
+  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -68,6 +93,7 @@ function TimelineItem({ status, date, description, isLast }) {
 function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   const [selectedIdea, setSelectedIdea] = useState(null);
   const [showImage, setShowImage] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [ideaDetail, setIdeaDetail] = useState(null);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
@@ -83,9 +109,16 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       const { data: response } = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
 
       if (response?.success && response?.data) {
+    
+        console.log('📸 Image fields:', {
+          imagePath: response.data.imagePath,
+          beforePath: response.data.beforeImplementationImagePath,
+          afterPath: response.data.afterImplementationImagePath,
+        });
+
         setIdeaDetail(response.data);
         setSelectedIdea(response.data);
-        
+
         if (isImplementationPhase(response.data.ideaStatus)) {
           setShowImplementationForm(true);
         }
@@ -117,6 +150,12 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
     setSelectedIdea(null);
     setIdeaDetail(null);
     setShowImplementationForm(false);
+  };
+
+  const openImagePreview = (imageUrl, fallbackBeforeUrl) => {
+    const finalUrl = normalizeImageUrl(imageUrl, fallbackBeforeUrl);
+    setCurrentImageUrl(finalUrl);
+    setShowImage(true);
   };
 
   return (
@@ -184,10 +223,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Submit Implementation</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={closeModal}
-              >
+              <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
                 <Ionicons name="close" size={20} color="#666" />
               </TouchableOpacity>
             </View>
@@ -206,10 +242,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={closeModal}
-              >
+              <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
                 <Ionicons name="close" size={20} color="#666" />
               </TouchableOpacity>
             </View>
@@ -284,6 +317,27 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                     <Text style={styles.valueDetail}>{formatDate(ideaDetail.plannedImplementationDuration)}</Text>
                   </View>
 
+                  {/* ✅ FIXED: Before Implementation Image */}
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Before Implementation:</Text>
+                    {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
+                      <TouchableOpacity
+                        style={styles.imagePreviewContainer}
+                        onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath, ideaDetail.beforeImplementationImagePath)}
+                      >
+                        <Image
+                          source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }}
+                          style={styles.thumbnailSmall}
+                          onError={(e) => console.log('❌ Image error:', e.nativeEvent.error)}
+                          onLoad={() => console.log('✅ Image loaded')}
+                        />
+                        <Text style={styles.tapToEnlargeText}></Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.valueDetail}>N/A</Text>
+                    )}
+                  </View>
+
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Status:</Text>
                     <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus) }]}>
@@ -328,45 +382,75 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                   </View>
                 </View>
 
-                {isImplementationPhase(ideaDetail.ideaStatus) && (
+                {/* ✅ NEW: Implementation Summary - Shows completed implementation */}
+                {(ideaDetail.implementationDetail || ideaDetail.implementation) && (
                   <View style={styles.cardDetail}>
-                    <Text style={styles.cardHeading}>Implementation Details</Text>
+                    <Text style={styles.cardHeading}>✅ Implementation Summary</Text>
+
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Implementation Status:</Text>
+                      <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus) }]}>
+                        {ideaDetail.ideaStatus || "N/A"}
+                      </Text>
+                    </View>
 
                     <View style={styles.rowDetail}>
                       <Text style={styles.labelDetail}>Implementation Details:</Text>
                       <Text style={styles.valueDetail}>
-                        {ideaDetail.implementationDetail || "Not provided yet"}
+                        {ideaDetail.implementationDetail || ideaDetail.implementation || "Not provided"}
                       </Text>
                     </View>
 
                     <View style={styles.rowDetail}>
-                      <Text style={styles.labelDetail}>Outcome/Benefits Achieved:</Text>
+                      <Text style={styles.labelDetail}>Benefits Achieved:</Text>
                       <Text style={styles.valueDetail}>
-                        {ideaDetail.implementationOutcome || "Not provided yet"}
+                        {ideaDetail.implementationOutcome || ideaDetail.outcome || "Not provided"}
                       </Text>
                     </View>
 
-                    {ideaDetail.beforeImplementationImagePath && (
+                    {ideaDetail.implementationDate && (
+                      <View style={styles.rowDetail}>
+                        <Text style={styles.labelDetail}>Completed On:</Text>
+                        <Text style={styles.valueDetail}>
+                          {formatDate(ideaDetail.implementationDate)}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Before Image */}
+                    {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
                       <View style={styles.implementationImageSection}>
                         <Text style={styles.imageLabel}>Before Implementation:</Text>
-                        <TouchableOpacity onPress={() => setShowImage(true)}>
+                        <TouchableOpacity onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath, ideaDetail.beforeImplementationImagePath)}>
                           <Image
-                            source={{ uri: ideaDetail.beforeImplementationImagePath }}
+                            source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }}
                             style={styles.implementationImage}
+                            onError={(e) => console.log('❌ Before image error:', e.nativeEvent.error)}
                           />
                         </TouchableOpacity>
                       </View>
                     )}
 
+                    {/* After Image */}
                     {ideaDetail.afterImplementationImagePath && (
                       <View style={styles.implementationImageSection}>
                         <Text style={styles.imageLabel}>After Implementation:</Text>
-                        <TouchableOpacity onPress={() => setShowImage(true)}>
-                          <Image
-                            source={{ uri: ideaDetail.afterImplementationImagePath }}
-                            style={styles.implementationImage}
-                          />
-                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() =>
+  openImagePreview(
+    ideaDetail.afterImplementationImagePath,
+    ideaDetail.beforeImplementationImagePath
+  )
+}>
+<Image
+  source={{
+    uri: normalizeImageUrl(
+      ideaDetail.afterImplementationImagePath,
+      ideaDetail.beforeImplementationImagePath
+    ),
+  }}
+  style={styles.implementationImage}
+/>
+</TouchableOpacity>
                       </View>
                     )}
                   </View>
@@ -389,16 +473,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                     ));
                   })()}
                 </View>
-
-                {ideaDetail.beforeImplementationImagePath && !isImplementationPhase(ideaDetail.ideaStatus) && (
-                  <TouchableOpacity
-                    style={styles.imageWrapper}
-                    onPress={() => setShowImage(true)}
-                  >
-                    <Image source={{ uri: ideaDetail.beforeImplementationImagePath }} style={styles.thumbnail} />
-                    <Text style={styles.viewImageText}>Tap to view full image</Text>
-                  </TouchableOpacity>
-                )}
 
                 {!isImplementationPhase(ideaDetail.ideaStatus) && (
                   <View style={styles.buttonRow}>
@@ -469,19 +543,32 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
         </View>
       </Modal>
 
+      {/* ✅ FIXED: Image Preview Modal */}
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
           <TouchableOpacity
             style={styles.closeButtonImage}
-            onPress={() => setShowImage(false)}
+            onPress={() => {
+              setShowImage(false);
+              setCurrentImageUrl(null);
+            }}
           >
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
-          <Image
-            source={{ uri: ideaDetail?.beforeImplementationImagePath }}
-            style={styles.fullImage}
-            resizeMode="contain"
-          />
+          {currentImageUrl ? (
+            <Image
+              source={{ uri: currentImageUrl }}
+              style={styles.fullImage}
+              resizeMode="contain"
+              onError={(e) => {
+                console.log('❌ Full image error:', e.nativeEvent.error);
+                Alert.alert('Error', 'Failed to load image');
+              }}
+              onLoad={() => console.log('✅ Full image loaded')}
+            />
+          ) : (
+            <Text style={{ color: '#fff' }}>No image available</Text>
+          )}
         </View>
       </Modal>
     </ScrollView>
@@ -704,6 +791,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
     flexWrap: 'wrap',
+    alignItems: 'center'
   },
   label: {
     color: '#555',
@@ -851,6 +939,24 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignSelf: 'flex-end',
   },
+  // ✅ NEW STYLES
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  thumbnailSmall: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  tapToEnlargeText: {
+    color: '#2196F3',
+    fontSize: 12,
+    fontWeight: '500',
+  },
   implementationImageSection: {
     marginTop: 12,
     marginBottom: 12,
@@ -946,26 +1052,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontStyle: 'italic',
   },
-  imageWrapper: {
-    alignItems: "center",
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    elevation: 2,
-  },
-  thumbnail: {
-    width: 150,
-    height: 150,
-    borderRadius: 8
-  },
-  viewImageText: {
-    marginTop: 8,
-    color: '#2c5aa0',
-    fontSize: 14,
-    fontWeight: '500',
-  },
   imageModal: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.95)",
@@ -1026,7 +1112,7 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 11,
     alignItems: 'flex-start',
   },
   infoLabel: {
@@ -1228,25 +1314,6 @@ const styles = StyleSheet.create({
   submitButtonDisabled: {
     backgroundColor: '#9E9E9E',
   },
-  timelineHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  viewTimelineButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2c5aa0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    gap: 4,
-  },
-  viewTimelineButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
   imagePreviewModal: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.95)',
@@ -1374,7 +1441,7 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         type: 'application/pdf',
         copyToCacheDirectory: true,
       });
-      
+
       if (result.type === 'success' || !result.canceled) {
         const selectedFile = result.assets ? result.assets[0] : result;
         setAfterImage(selectedFile.uri);
@@ -1406,27 +1473,53 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
     try {
       const token = await AsyncStorage.getItem('token');
       const formData = new FormData();
-      
-      formData.append('ideaId', ideaDetail.id);
-      formData.append('implementationDetail', implementationDetails);
-      formData.append('implementationOutcome', outcomesBenefits);
-      
-      if (afterImageType === 'pdf') {
-        formData.append('afterImplementationImage', {
-          uri: afterImage,
-          type: 'application/pdf',
-          name: afterImageName || 'after_document.pdf',
-        });
-      } else {
-        formData.append('afterImplementationImage', {
-          uri: afterImage,
-          type: 'image/jpeg',
-          name: afterImageName || 'after_image.jpg',
+
+      formData.append('IdeaId', ideaDetail.id);
+      formData.append('Implementation', implementationDetails);
+      formData.append('Outcome', outcomesBenefits);
+
+      // if (afterImageType === 'pdf') {
+      //   formData.append('afterImplementationImage', {
+      //     uri: afterImage,
+      //     type: 'application/pdf',
+      //     name: afterImageName || 'after_document.pdf',
+      //   });
+      // } else {
+      //   formData.append('afterImplementationImage', {
+      //     uri: afterImage,
+      //     type: 'image/jpeg',
+      //     name: afterImageName || 'after_image.jpg',
+      //   });
+      // }
+
+      if (afterImage && afterImageName) {
+        let fileUri = afterImage;
+        if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+          fileUri = `file://${fileUri}`;
+        }
+        const fileInfo = await FileSystem.getInfoAsync(fileUri);
+        if (!fileInfo.exists) {
+          Alert.alert('File Error', 'Image file not found!');
+          throw new Error('File not found');
+        }
+        let mimeType = 'application/octet-stream';
+        const ext = afterImageName.split('.').pop()?.toLowerCase();
+        if (ext === 'pdf') mimeType = 'application/pdf';
+        else if (ext === 'png') mimeType = 'image/png';
+        else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+        const cleanName = afterImageName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        formData.append('AfterImplementationImage', {
+          uri: fileInfo.uri,
+          type: mimeType,
+          name: cleanName,
         });
       }
+      
+
+      console.log('Submitting implementation for Idea ID:', ideaDetail.id);
 
       const response = await axios.post(
-        'YOUR_IMPLEMENTATION_SUBMIT_URL',
+        SUBMIT_URL,
         formData,
         {
           headers: {
@@ -1436,16 +1529,28 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         }
       );
 
+      console.log('Implementation Submit Response:', response.data);
+
       if (response.data?.success) {
-        Alert.alert('Success', 'Implementation submitted successfully!');
-        refreshIdeas();
-        onClose();
+        const pattern = [0, 100, 50, 100];
+        Vibration.vibrate(pattern);
+
+        Alert.alert('Success', response.data?.message || 'Implementation submitted successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              refreshIdeas();
+              onClose();
+            }
+          }
+        ]);
       } else {
         Alert.alert('Error', response.data?.message || 'Failed to submit implementation');
       }
     } catch (error) {
       console.error('Error submitting implementation:', error);
-      Alert.alert('Error', 'Failed to submit implementation. Please try again.');
+      console.error('Error response:', error.response?.data);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to submit implementation. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -1474,7 +1579,6 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
 
   return (
     <ScrollView contentContainerStyle={styles.implementationFormContainer}>
-      {/* Progress Timeline Button - Similar to Idea Details */}
       <TouchableOpacity
         style={styles.timelineButtonHeaderImplementation}
         onPress={() => setShowTimelineModal(true)}
@@ -1483,7 +1587,6 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         <Text style={styles.timelineButtonText}>View Progress Timeline</Text>
       </TouchableOpacity>
 
-      {/* Employee Information Card */}
       <View style={styles.infoCard}>
         <Text style={styles.infoCardHeading}>Employee Information</Text>
         <View style={styles.infoRow}>
@@ -1524,7 +1627,6 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         </View>
       </View>
 
-      {/* Idea Information Card */}
       <View style={styles.infoCard}>
         <Text style={styles.infoCardHeading}>Idea Information</Text>
         <View style={styles.infoRow}>
@@ -1573,6 +1675,20 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         </View>
       </View>
 
+      {/* Before Implementation Image */}
+      {ideaDetail.beforeImplementationImagePath && (
+        <View style={styles.infoCard}>
+          <Text style={styles.infoCardHeading}>Before Implementation Image</Text>
+          <View style={styles.implementationImageSection}>
+            <Image
+              source={{ uri: ideaDetail.beforeImplementationImagePath }}
+              style={styles.implementationImage}
+              resizeMode="cover"
+            />
+          </View>
+        </View>
+      )}
+
       {/* Remarks Card */}
       <View style={styles.infoCard}>
         <Text style={styles.infoCardHeading}>Remarks</Text>
@@ -1596,7 +1712,7 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
       {/* Implementation Details Card */}
       <View style={styles.infoCard}>
         <Text style={styles.infoCardHeading}>Implementation Details</Text>
-        
+
         <Text style={styles.fieldLabel}>
           Implementation Details<Text style={styles.requiredStar}>*</Text>
         </Text>
@@ -1652,7 +1768,7 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
           <View style={styles.imageOptionsContainer}>
             <View style={styles.imageOptionsContent}>
               <Text style={styles.imageOptionsTitle}>Choose File Source</Text>
-              
+
               <TouchableOpacity style={styles.imageOptionButton} onPress={pickImageFromCamera}>
                 <Feather name="camera" size={24} color="#2196F3" />
                 <Text style={styles.imageOptionText}>Take Photo</Text>
@@ -1668,8 +1784,8 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
                 <Text style={styles.imageOptionText}>Choose PDF Document</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.imageOptionButton, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.imageOptionButton, styles.cancelButton]}
                 onPress={() => setShowFileOptions(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>

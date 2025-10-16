@@ -6,7 +6,7 @@ import Toast from 'react-native-root-toast';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { decrypt } from './EncryptionHelper'; 
-import { DASHBOARD_URL, NOTIFICATION_USER_URL, NOTIFICATION_COUNT_URL, MARK_READ_URL, CLEAR_ALL_URL, REDIRECT_NOTIFICATION_URL, IDEA_DETAIL_URL } from '../src/context/api'; 
+import { DASHBOARD_URL, NOTIFICATION_USER_URL, NOTIFICATION_COUNT_URL, MARK_READ_URL, CLEAR_ALL_URL, REDIRECT_NOTIFICATION_URL, IDEA_DETAIL_URL, PENDING_APPROVALS_URL } from '../src/context/api'; 
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
@@ -92,7 +92,7 @@ const DashboardScreen = () => {
         setCardData(updatedCards);
       }
     } catch (err) {
-      
+      // Silent fail
     }
   };
 
@@ -117,12 +117,12 @@ const DashboardScreen = () => {
             const data = JSON.parse(text);
             setUnreadCount(data.data?.unreadCount || data.unreadCount || 0);
           } catch (e) {
-            
+            // Silent fail
           }
         }
       }
     } catch (error) {
-      
+      // Silent fail
     }
   };
 
@@ -157,6 +157,30 @@ const DashboardScreen = () => {
       setNotifications([]);
     } finally {
       setLoadingNotifications(false);
+    }
+  };
+
+  // Check if user has pending approvals access
+  const checkPendingAccess = async (encryptedId) => {
+    try {
+      const decryptedId = decrypt(encryptedId);
+      
+      // Fetch pending approvals to check if this idea exists
+      const response = await axios.get(`${PENDING_APPROVALS_URL}?page=1&pageSize=100`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data?.data?.items) {
+        const pendingIdea = response.data.data.items.find(
+          item => item.ideaId === decryptedId || item.id === decryptedId
+        );
+        
+        return !!pendingIdea;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking pending access:', error);
+      return false;
     }
   };
 
@@ -237,7 +261,7 @@ const DashboardScreen = () => {
         fetchUnreadCount(employeeSystemId, token);
       }
     } catch (error) {
-      
+      // Silent fail
     }
   };
 
@@ -343,7 +367,21 @@ const DashboardScreen = () => {
       }
       
       if (encryptedId) {
-        await fetchIdeaDetail(encryptedId);
+        // Check if user has access to pending approvals
+        const hasPendingAccess = await checkPendingAccess(encryptedId);
+        
+        setShowNotificationModal(false);
+        
+        if (hasPendingAccess) {
+          // Redirect to Pending Screen
+          navigation.navigate('Pending', { 
+            fromNotification: true,
+            encryptedIdeaId: encryptedId 
+          });
+        } else {
+          // Show in detail modal
+          await fetchIdeaDetail(encryptedId);
+        }
       } else {
         Toast.show('Redirect URL not found in notification', {
           duration: Toast.durations.LONG,
@@ -622,11 +660,23 @@ const DashboardScreen = () => {
                     </Text>
                   </View>
                   <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Planned Duration Date:</Text>
+                    <Text style={styles.labelDetail}>Planned Completion:</Text>
                     <Text style={styles.valueDetail}>{ideaDetail.plannedImplementationDuration
                       ? new Date(ideaDetail.plannedImplementationDuration).toLocaleDateString()
                       : "N/A"}</Text>
                   </View>
+
+                  <View style={styles.rowDetail}>
+                    <Text style={styles.labelDetail}>Before Implementation:</Text>
+                    {ideaDetail.beforeImplementationImagePath ? (
+                      <TouchableOpacity style={styles.imagePreviewContainer} onPress={() => setShowImage(true)}>
+                        <Image source={{ uri: ideaDetail.beforeImplementationImagePath }} style={styles.thumbnailSmall} />
+                        <Text style={styles.tapToEnlargeText}>Tap to image</Text>
+                      </TouchableOpacity>
+                    ) : <Text style={styles.valueDetail}>N/A</Text>}
+                  </View>
+                 
+                  
                   <View style={styles.rowDetail}>
                     <Text style={styles.labelDetail}>Status:</Text>
                     <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus || ideaDetail.status) }]}>
@@ -692,12 +742,12 @@ const DashboardScreen = () => {
                   })()}
                 </View>
 
-                {ideaDetail.beforeImplementationImagePath && (
+                {/* {ideaDetail.beforeImplementationImagePath && (
                   <TouchableOpacity style={styles.imageWrapper} onPress={() => setShowImage(true)}>
                     <Image source={{ uri: ideaDetail.beforeImplementationImagePath }} style={styles.thumbnail} />
                     <Text style={styles.viewImageText}>Tap to view full image</Text>
                   </TouchableOpacity>
-                )}
+                )} */}
               </>
             )}
           </ScrollView>
@@ -797,27 +847,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   cardsContainer: {
-    paddingHorizontal: 20,
-    marginVertical: 25,
+    paddingHorizontal: 15,
+    marginVertical: 15,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   rejectedRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 15,
+    marginBottom: 6,
   },
   cardWrapper: {
-    width: '47%', 
+    width: '46%', 
   },
   rejectedWrapper: {
-    width: '47%', 
+    width: '46%', 
   },
   card: {
-    width: '100%',
+    width: '99%',
     borderRadius: 15,
     alignItems: 'center',
     paddingVertical: 25, 
@@ -830,7 +880,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.05)',
   },
   cardTitle: {
-    marginTop: 9,
+    marginTop: 8,
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
@@ -853,7 +903,7 @@ const styles = StyleSheet.create({
   overviewCard: {
     backgroundColor: '#fff',
     marginHorizontal: 20,
-    marginTop: 1, 
+    marginTop: 0.3, 
     padding: 20,
     borderRadius: 20,
     alignItems: 'center',
@@ -862,21 +912,21 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
-    marginBottom: 25,
+    marginBottom: 20,
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.05)',
   },
   readyTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginTop: 8,
+    marginTop: 1,
     color: '#000',
   },
   readySubtitle: {
     fontSize: 13,
     color: '#555',
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 4,
     lineHeight: 18,
   },
   createButton: {

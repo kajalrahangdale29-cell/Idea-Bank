@@ -13,7 +13,7 @@ export const EDIT_IDEA_URL = (id) => `${BASE_URL}/edit/${id}`;
 export const PUBLISH_IDEA_URL = (id) => `${BASE_URL}/edit/${id}?SubmitType=publish`;
 export const ALL_TEAM_IDEAS_URL = `${BASE_URL}/allIdeas?page=1&pageSize=10`;
 export const TEAM_IDEAS_URL = `${BASE_URL}/teamIdeas`;
-
+export const SUBMIT_URL = BASE_URL + "/submit";
 export const NOTIFICATION_USER_URL = (userId) => `${BASE_URL}/user/${userId}`;
 export const NOTIFICATION_COUNT_URL = (userId) => `${BASE_URL}/unread/count/${userId}`;
 export const MARK_READ_URL = (notificationId) => `${BASE_URL}/markread/${notificationId}`;

@@ -7,13 +7,12 @@ export default function SplashScreen({ navigation }) {
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoRotate = useRef(new Animated.Value(0)).current;
   
-  // Individual letter animations
+
   const letterAnims = useRef(
     'Welcome to IdeaBank!💡'.split('').map(() => new Animated.Value(0))
   ).current;
 
   useEffect(() => {
-    // Logo animation with dramatic entrance
     Animated.parallel([
       Animated.timing(logoOpacity, {
         toValue: 1,
@@ -33,11 +32,10 @@ export default function SplashScreen({ navigation }) {
       })
     ]).start();
 
-    // Stagger letter animations - each letter appears one by one
     setTimeout(() => {
       const letterAnimations = letterAnims.map((anim, index) => 
         Animated.sequence([
-          Animated.delay(index * 80), // 80ms delay between each letter
+          Animated.delay(index * 80), 
           Animated.spring(anim, {
             toValue: 1,
             friction: 5,
@@ -69,7 +67,7 @@ export default function SplashScreen({ navigation }) {
       colors={['#E0F7FA', '#FFFFFF']}
       style={styles.container}
     >
-      {/* Logo with advanced animations */}
+      
       <Animated.View 
         style={{
           opacity: logoOpacity,
@@ -84,15 +82,12 @@ export default function SplashScreen({ navigation }) {
           style={styles.logo}
         />
       </Animated.View>
-
-      {/* Animated text - each letter appears individually */}
       <View style={styles.textContainer}>
         {welcomeText.split('').map((letter, index) => {
           const translateY = letterAnims[index].interpolate({
             inputRange: [0, 1],
             outputRange: [15, 0]
           });
-
           return (
             <Animated.Text
               key={index}
@@ -115,7 +110,6 @@ export default function SplashScreen({ navigation }) {
     </LinearGradient>
   );
 }
-
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
