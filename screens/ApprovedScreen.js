@@ -38,7 +38,6 @@ const formatDateTime = (dateString) => {
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
 
-// Timeline Component
 function TimelineItem({ status, date, description, isLast }) {
   const getCircleColor = (status) => {
     if (!status) return "#9E9E9E";
@@ -48,32 +47,25 @@ function TimelineItem({ status, date, description, isLast }) {
     if (s.includes("approved")) return "#4CAF50";
     if (s.includes("implementation")) return "#3F51B5";
     if (s.includes("rejected")) return "#F44336";
+    if (s.includes("pending")) return "#FF9800";
     return "#9E9E9E";
   };
 
   return (
-    <View style={{ flexDirection: "row", marginBottom: 12 }}>
-      <View style={{ alignItems: "center", marginRight: 12 }}>
-        <View style={{
-          width: 14,
-          height: 14,
-          borderRadius: 7,
-          backgroundColor: getCircleColor(status),
-          borderWidth: 2,
-          borderColor: "#fff",
-        }} />
-        {!isLast && <View style={{ width: 2, flex: 1, backgroundColor: "#E0E0E0", marginTop: 2 }} />}
+    <View style={styles.timelineItem}>
+      <View style={styles.timelineLeft}>
+        <View style={[styles.timelineCircle, { backgroundColor: getCircleColor(status) }]} />
+        {!isLast && <View style={styles.timelineLine} />}
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontWeight: "bold", fontSize: 14, color: "#333" }}>{status}</Text>
-        {description && <Text style={{ fontSize: 12, color: "#555", marginVertical: 2 }}>{description}</Text>}
-        {date && <Text style={{ fontSize: 11, color: "#999" }}>{formatDateTime(date)}</Text>}
+      <View style={styles.timelineContent}>
+        <Text style={styles.timelineStatus}>{status}</Text>
+        {description && <Text style={styles.timelineDescription}>{description}</Text>}
+        {date && <Text style={styles.timelineDate}>{formatDateTime(date)}</Text>}
       </View>
     </View>
   );
 }
 
-// Remarks Card Component
 function RemarksCard({ title, comment, date }) {
   return (
     <View style={styles.remarkCard}>
@@ -87,20 +79,23 @@ function RemarksCard({ title, comment, date }) {
 const getStatusColor = (status) => {
   if (!status) return "gray";
   const s = status.toLowerCase();
-  if (s === "draft") return "blue";
-  if (s === "published") return "green";
+  if (s === "draft") return "#2196F3";
+  if (s === "published") return "#4CAF50";
+  if (s === "pending" || s.includes("pending")) return "#FF9800";
   if (s === "closed") return "#00ACC1";
   if (s.includes("approved by be team") || s.includes("ready for implementation")) return "#4CAF50";
-  return "gray";
+  if (s === "rejected") return "#F44336";
+  if (s === "hold") return "#FFC107";
+  return "#9E9E9E";
 };
 
-const shouldShowImplementationDetails = (status) => {
-  if (!status) return false;
-  const s = status.toLowerCase().trim();
-  return s.includes("approved by be team") || 
-         s.includes("ready for implementation") || 
-         s.includes("implementation") || 
-         s === "closed";
+const shouldShowImplementationDetails = (ideaDetail) => {
+  if (!ideaDetail) return false;
+  if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
+    return true;
+  }
+  const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
+  return type === "implementation" || type === "implement";
 };
 
 const ApprovedScreen = () => {
@@ -111,64 +106,115 @@ const ApprovedScreen = () => {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [ideaDetail, setIdeaDetail] = useState(null);
   const [ideas, setIdeas] = useState([]);
+  const [allIdeasOriginal, setAllIdeasOriginal] = useState([]);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showImage, setShowImage] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
-  const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(true);
-  const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(false);
+  const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
+  const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [hasNextPage, setHasNextPage] = useState(false);
-
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
-  const fetchApprovedIdeas = async (from, to, page = 1) => {
+  const fetchApprovedIdeas = async () => {
+    setLoading(true);
     try {
-      if (page === 1) setLoading(true);
+      const storedData = await AsyncStorage.getItem("userData");
+      if (!storedData) {
+        Alert.alert("Error", "User data not found. Please login again.");
+        setLoading(false);
+        return;
+      }
+      
+      const parsed = JSON.parse(storedData);
+      const token = parsed.token;
+      const authHeaders = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
 
-      const token = await AsyncStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      let allIdeas = [];
+      let currentPage = 1;
+      let hasMorePages = true;
+      let apiTotalItems = 0;
 
-      let url = APPROVED_BY_ME_URL;
-      const params = [];
-      if (from) params.push(`fromDate=${from}`);
-      if (to) params.push(`toDate=${to}`);
-      params.push(`page=${page}`, `pageSize=10`);
-      if (params.length > 0) url += `?${params.join('&')}`;
+      console.log("🔄 Starting to fetch approved ideas...");
 
-      const response = await axios.get(url, { headers });
-      const items = response.data?.data?.items || [];
+      while (hasMorePages) {
+        try {
+          const baseUrl = APPROVED_BY_ME_URL.split('?')[0];
+          const url = `${baseUrl}?sortOrder=desc&page=${currentPage}&pageSize=10`;
+          console.log(`📡 Fetching page ${currentPage}: ${url}`);
+          
+          const response = await axios.get(url, { 
+            headers: authHeaders,
+            timeout: 15000 
+          });
 
-      let filteredByDate = items;
-      if (from || to) {
-        const fromTime = from ? new Date(from).getTime() : null;
-        const toTime = to ? new Date(to).getTime() : null;
+          console.log(`✅ Page ${currentPage} response:`, JSON.stringify(response.data).substring(0, 200));
 
-        filteredByDate = items.filter(item => {
-          if (!item.approvalDate) return false;
-          const approvalTime = new Date(item.approvalDate).getTime();
-          if (fromTime !== null && approvalTime < fromTime) return false;
-          if (toTime !== null && approvalTime > toTime) return false;
-          return true;
-        });
+          if (response.data && response.data.data) {
+            const { items, totalPages, totalItems, hasNextPage } = response.data.data;
+            
+            if (currentPage === 1 && totalItems !== undefined) {
+              apiTotalItems = totalItems;
+              console.log(`📊 Total items available: ${totalItems}`);
+            }
+            
+            if (items && Array.isArray(items) && items.length > 0) {
+              allIdeas = [...allIdeas, ...items];
+              console.log(`✅ Added ${items.length} ideas. Total so far: ${allIdeas.length}`);
+            } else {
+              console.log(`⚠️ No items in page ${currentPage}`);
+            }
+            
+            if (hasNextPage === false || items.length === 0 || (totalPages && currentPage >= totalPages)) {
+              hasMorePages = false;
+              console.log("🏁 No more pages to fetch");
+            }
+          } else {
+            console.log("⚠️ Unexpected response structure");
+            hasMorePages = false;
+          }
+          
+          currentPage++;
+          if (currentPage > 100) {
+            console.log("⚠️ Reached safety limit of 100 pages");
+            hasMorePages = false;
+          }
+        } catch (pageError) {
+          console.error(`❌ Error fetching page ${currentPage}:`, pageError.message);
+          if (pageError.response) {
+            console.error("Response status:", pageError.response.status);
+            console.error("Response data:", pageError.response.data);
+          }
+          hasMorePages = false;
+        }
       }
 
-      setIdeas(prev => (page === 1 ? filteredByDate : [...prev, ...filteredByDate]));
+      console.log(`✅ Fetch complete: ${allIdeas.length} total approved ideas`);
+      setAllIdeasOriginal(allIdeas);
+      setIdeas(allIdeas);
+      setTotalItems(apiTotalItems || allIdeas.length);
 
-      setCurrentPage(response.data.currentPage || page);
-      setTotalPages(response.data.totalPages || 1);
-      setTotalItems(response.data.totalItems || filteredByDate.length);
-      setHasNextPage(response.data.hasNextPage || false);
-
+      if (allIdeas.length === 0) {
+        console.log("ℹ️ No approved ideas found");
+      }
     } catch (error) {
-      console.error("Error fetching approved ideas:", error);
-      Alert.alert("Error", "Failed to load approved ideas.");
+      console.error("❌ Error fetching approved ideas:", error);
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+        Alert.alert("Error", `Failed to load approved ideas: ${error.response.data?.message || error.message}`);
+      } else {
+        Alert.alert("Error", "Failed to load approved ideas. Please check your connection.");
+      }
+      setIdeas([]);
+      setAllIdeasOriginal([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
@@ -192,39 +238,114 @@ const ApprovedScreen = () => {
     : [];
 
   const fetchIdeaDetail = async (ideaId) => {
-    if (!ideaId) return;
+    if (!ideaId) {
+      Alert.alert("Error", "Idea ID is missing");
+      return;
+    }
+    
     try {
       setLoadingDetail(true);
-      const token = await AsyncStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      console.log("🔍 Fetching idea detail for ID:", ideaId);
+      
+      const storedData = await AsyncStorage.getItem("userData");
+      if (!storedData) {
+        Alert.alert("Error", "Session expired. Please login again.");
+        return;
+      }
+      
+      const parsed = JSON.parse(storedData);
+      const token = parsed.token;
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
 
-      const { data: response } = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
+      const apiUrl = `${IDEA_DETAIL_URL}/${ideaId}`;
+      console.log("📡 Fetching from:", apiUrl);
+      
+      const response = await axios.get(apiUrl, { headers, timeout: 15000 });
+      console.log("✅ Response received:", JSON.stringify(response.data).substring(0, 200));
 
-      if (response?.success && response?.data) {
+      if (response?.data?.success && response?.data?.data) {
+        setIdeaDetail(response.data.data);
+        setSelectedIdea(response.data.data);
+        if (shouldShowImplementationDetails(response.data.data)) {
+          setShowImplementationDetails(true);
+        }
+        console.log("✅ Idea detail loaded successfully");
+      } else if (response?.data) {
         setIdeaDetail(response.data);
         setSelectedIdea(response.data);
+        if (shouldShowImplementationDetails(response.data)) {
+          setShowImplementationDetails(true);
+        }
+        console.log("✅ Idea detail loaded (direct format)");
       } else {
-        Alert.alert("Error", response?.message || "Idea details not found.");
+        console.log("⚠️ Unexpected response format");
+        Alert.alert("Error", "Idea details not found or invalid format.");
       }
     } catch (error) {
-      console.error("Error fetching idea detail:", error);
-      Alert.alert("Error", "Failed to fetch idea details.");
+      console.error("❌ Error fetching idea details:", error);
+      let errorMessage = "Failed to fetch idea details.";
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+        if (error.response.status === 404) {
+          errorMessage = "Idea not found.";
+        } else if (error.response.status === 401) {
+          errorMessage = "Session expired. Please login again.";
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      Alert.alert("Error", errorMessage);
     } finally {
       setLoadingDetail(false);
     }
   };
 
   const applyFilters = () => {
-    let from = fromDate ? fromDate.toISOString().split('T')[0] : null;
-    let to = toDate ? toDate.toISOString().split('T')[0] : null;
-    fetchApprovedIdeas(from, to);
-    setShowFilters(false);
+    setLoading(true);
+    try {
+      let filteredIdeas = [...allIdeasOriginal];
+      if (fromDate || toDate) {
+        filteredIdeas = filteredIdeas.filter(idea => {
+          if (!idea.creationDate) return false;
+          const ideaDate = new Date(idea.creationDate);
+          ideaDate.setHours(0, 0, 0, 0);
+          if (fromDate && toDate) {
+            const from = new Date(fromDate);
+            from.setHours(0, 0, 0, 0);
+            const to = new Date(toDate);
+            to.setHours(23, 59, 59, 999);
+            return ideaDate >= from && ideaDate <= to;
+          } else if (fromDate) {
+            const from = new Date(fromDate);
+            from.setHours(0, 0, 0, 0);
+            return ideaDate >= from;
+          } else if (toDate) {
+            const to = new Date(toDate);
+            to.setHours(23, 59, 59, 999);
+            return ideaDate <= to;
+          }
+          return true;
+        });
+      }
+      setIdeas(filteredIdeas);
+      setTotalItems(filteredIdeas.length);
+      setShowFilters(false);
+    } catch (error) {
+      console.error("Filter error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetFilters = () => {
     setFromDate(null);
     setToDate(null);
-    fetchApprovedIdeas();
+    setIdeas(allIdeasOriginal);
+    setTotalItems(allIdeasOriginal.length);
   };
 
   const parseRemarks = (remarkData) => {
@@ -248,8 +369,8 @@ const ApprovedScreen = () => {
   const closeModal = () => {
     setSelectedIdea(null);
     setIdeaDetail(null);
-    setEmployeeInfoExpanded(true);
-    setIdeaInfoExpanded(false);
+    setEmployeeInfoExpanded(false);
+    setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
   };
 
@@ -265,28 +386,26 @@ const ApprovedScreen = () => {
           <Text style={styles.typeText}>{item.type || "N/A"}</Text>
         </View>
       </View>
-
       <View style={styles.cardContent}>
         <View style={styles.rowDetail}>
           <Text style={styles.label}>Description:</Text>
           <Text style={styles.value} numberOfLines={2}>{item.description || "N/A"}</Text>
         </View>
-
         <View style={styles.rowDetail}>
           <Text style={styles.label}>Owner:</Text>
           <Text style={styles.value}>{item.ownerName || "N/A"}</Text>
         </View>
-
         <View style={styles.row}>
           <Text style={styles.label}>Created:</Text>
           <Text style={styles.value}>{formatDate(item.creationDate)}</Text>
         </View>
-
-        <View style={styles.row}>
+        <View style={styles.rowDetail}>
           <Text style={styles.label}>Status:</Text>
-          <Text style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            {item.status || "N/A"}
-          </Text>
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+            <Text style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]} numberOfLines={2}>
+              {item.status || "N/A"}
+            </Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -294,7 +413,6 @@ const ApprovedScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Approved Ideas</Text>
         <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters(!showFilters)}>
@@ -303,7 +421,6 @@ const ApprovedScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Search Section */}
       <View style={styles.searchSection}>
         <View style={styles.searchContainer}>
           <Text style={styles.searchLabel}>Search:</Text>
@@ -317,11 +434,9 @@ const ApprovedScreen = () => {
         </View>
       </View>
 
-      {/* Filters */}
       {showFilters && (
         <View style={styles.filtersContainer}>
           <Text style={styles.filterLabel}>Create Date Range</Text>
-
           <TouchableOpacity style={styles.dateInput} onPress={() => setShowFromPicker(true)}>
             <Text style={styles.dateInputText}>{fromDate ? fromDate.toLocaleDateString() : "Select From Date"}</Text>
           </TouchableOpacity>
@@ -331,10 +446,9 @@ const ApprovedScreen = () => {
               mode="date"
               display="default"
               onChange={(e, date) => { setShowFromPicker(false); if (date) { setFromDate(date); if (toDate && date > toDate) { setToDate(null) } } }}
-              maximumDate={toDate || undefined}
+              maximumDate={toDate || new Date()}
             />
           )}
-
           <TouchableOpacity style={styles.dateInput} onPress={() => setShowToPicker(true)}>
             <Text style={styles.dateInputText}>{toDate ? toDate.toLocaleDateString() : "Select To Date"}</Text>
           </TouchableOpacity>
@@ -345,9 +459,9 @@ const ApprovedScreen = () => {
               display="default"
               onChange={(e, date) => { setShowToPicker(false); if (date) { setToDate(date) } }}
               minimumDate={fromDate || undefined}
+              maximumDate={new Date()}
             />
           )}
-
           <View style={styles.filterButtons}>
             <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
               <Text style={styles.btnText}>Apply</Text>
@@ -359,7 +473,6 @@ const ApprovedScreen = () => {
         </View>
       )}
 
-      {/* Cards List */}
       {loading ? (
         <ActivityIndicator size="large" color="#2c5aa0" style={{ marginTop: 20 }} />
       ) : (
@@ -379,17 +492,14 @@ const ApprovedScreen = () => {
         </ScrollView>
       )}
 
-      {/* Loading overlay */}
       {loadingDetail && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#2c5aa0" />
         </View>
       )}
 
-      {/* Fullscreen Modal with Details */}
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
-          {/* Modal Header */}
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
@@ -397,10 +507,7 @@ const ApprovedScreen = () => {
                 <Ionicons name="close" size={20} color="#666" />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.timelineButtonHeader}
-              onPress={() => setShowTimelineModal(true)}
-            >
+            <TouchableOpacity style={styles.timelineButtonHeader} onPress={() => setShowTimelineModal(true)}>
               <Ionicons name="time-outline" size={18} color="#2c5aa0" />
               <Text style={styles.timelineButtonText}>View Progress Timeline</Text>
             </TouchableOpacity>
@@ -409,50 +516,42 @@ const ApprovedScreen = () => {
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             {selectedIdea && ideaDetail && (
               <>
-                <TouchableOpacity 
-                  style={styles.collapsibleHeader} 
-                  onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} 
-                  activeOpacity={0.7}
-                >
+                <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} activeOpacity={0.7}>
                   <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
-                  <Ionicons 
-                    name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color="#2c5aa0" 
-                  />
+                  <Ionicons name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                 </TouchableOpacity>
 
                 {employeeInfoExpanded && (
                   <View style={styles.cardDetail}>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Employee Name:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || "N/A"}</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || ideaDetail.ownerName || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Employee Number:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmployeeNo || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Employee Email:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmail || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Department:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || "N/A"}</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || ideaDetail.department || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Mobile:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Reporting Manager:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.reportingManagerName || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Manager Email:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.managerEmail || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Employee Location:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.location || "N/A"}</Text>
                     </View>
@@ -463,168 +562,158 @@ const ApprovedScreen = () => {
                   </View>
                 )}
 
-                <TouchableOpacity 
-                  style={styles.collapsibleHeader} 
-                  onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} 
-                  activeOpacity={0.7}
-                >
+                <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} activeOpacity={0.7}>
                   <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
-                  <Ionicons 
-                    name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color="#2c5aa0" 
-                  />
+                  <Ionicons name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                 </TouchableOpacity>
 
                 {ideaInfoExpanded && (
                   <View style={styles.cardDetail}>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Idea No:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.ideaNumber || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Solution Category:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.solutionCategory || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Creation Date:</Text>
-                      <Text style={styles.valueDetail}>{formatDate(ideaDetail.ideaCreationDate)}</Text>
+                      <Text style={styles.valueDetail}>
+                        {ideaDetail.ideaCreationDate || ideaDetail.creationDate ?
+                          formatDate(ideaDetail.ideaCreationDate || ideaDetail.creationDate) : "N/A"}
+                      </Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Planned Completion:</Text>
-                      <Text style={styles.valueDetail}>{formatDate(ideaDetail.plannedImplementationDuration)}</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.plannedImplementationDuration ? formatDate(ideaDetail.plannedImplementationDuration) : "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
                       {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
-                        <TouchableOpacity 
-                          style={styles.imagePreviewContainer} 
-                          onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
-                        >
-                          <Image 
-                            source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
-                            style={styles.thumbnailSmall} 
-                          />
-                          <Text style={styles.tapToEnlargeText}>Tap to view</Text>
+                        <TouchableOpacity style={styles.imagePreviewContainer} onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
+                          <Image source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.thumbnailSmall} />
+                          <Text style={styles.tapToEnlargeText}></Text>
                         </TouchableOpacity>
                       ) : (
                         <Text style={styles.valueDetail}>N/A</Text>
                       )}
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Status:</Text>
-                      <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus) }]}>
-                        {ideaDetail.ideaStatus || "N/A"}
+                      <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus || ideaDetail.status) }]}>
+                        {ideaDetail.ideaStatus || ideaDetail.status || "N/A"}
                       </Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Idea Description:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || "N/A"}</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || ideaDetail.description || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Proposed Solution:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Team Members:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Mobile Number:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Idea Theme:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetail}>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Type:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaType || "N/A"}</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.type || ideaDetail.ideaType || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>BE Team Support Needed:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}</Text>
                     </View>
                     <View style={styles.rowDetail}>
-                      <Text style={styles.labelDetail}>IsBETeamSupportNeeded:</Text>
-                      <Text style={styles.valueDetail}>
-                        {ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}
-                      </Text>
-                    </View>
-                    <View style={styles.rowDetail}>
-                      <Text style={styles.labelDetail}>CanBeImplementedToOtherLocations:</Text>
-                      <Text style={styles.valueDetail}>
-                        {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
-                      </Text>
+                      <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}</Text>
                     </View>
                   </View>
                 )}
 
-                {shouldShowImplementationDetails(ideaDetail.ideaStatus) && (
+                {shouldShowImplementationDetails(ideaDetail) && (
                   <>
-                    <TouchableOpacity 
-                      style={styles.collapsibleHeader} 
-                      onPress={() => setShowImplementationDetails(!showImplementationDetails)} 
-                      activeOpacity={0.7}
-                    >
+                    <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setShowImplementationDetails(!showImplementationDetails)} activeOpacity={0.7}>
                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
-                      <Ionicons 
-                        name={showImplementationDetails ? "chevron-up" : "chevron-down"} 
-                        size={24} 
-                        color="#2c5aa0" 
-                      />
+                      <Ionicons name={showImplementationDetails ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                     </TouchableOpacity>
                     
                     {showImplementationDetails && (
                       <View style={styles.cardDetail}>
-                        <View style={styles.rowDetail}>
-                          <Text style={styles.labelDetail}>Implementation Details:</Text>
-                          <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.implementation || 
-                             ideaDetail.implementationDetail || 
-                             ideaDetail.implementation || 
-                             "Not provided"}
+                        <View style={styles.rowDetailWithBorder}>
+                          <Text style={styles.labelDetail}>Implementation Status:</Text>
+                          <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.implementationCycle?.status) }]}>
+                            {ideaDetail.implementationCycle?.status || "N/A"}
                           </Text>
                         </View>
-                        <View style={styles.rowDetail}>
+                        <View style={styles.rowDetailWithBorder}>
+                          <Text style={styles.labelDetail}>Implementation Details:</Text>
+                          <Text style={styles.valueDetail}>
+                            {ideaDetail.implementationCycle?.implementation || ideaDetail.implementationDetail || ideaDetail.implementation || "Not provided"}
+                          </Text>
+                        </View>
+                        <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
                           <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.outcome || 
-                             ideaDetail.implementationOutcome || 
-                             ideaDetail.outcome || 
-                             "Not provided"}
+                            {ideaDetail.implementationCycle?.outcome || ideaDetail.implementationOutcome || ideaDetail.outcome || "Not provided"}
                           </Text>
                         </View>
                         {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
-                          <View style={styles.rowDetail}>
+                          <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>Completed On:</Text>
                             <Text style={styles.valueDetail}>
                               {formatDate(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate)}
                             </Text>
                           </View>
                         )}
-                        {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
+                        {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>Before Implementation:</Text>
-                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
-                              <Image 
-                                source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
-                                style={styles.implementationImage} 
-                              />
+                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
+                              <Image source={{ uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.implementationImage} />
                             </TouchableOpacity>
                           </View>
                         )}
-                        {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
+                        {/* {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>After Implementation:</Text>
                             <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath)}>
-                              <Image 
-                                source={{ uri: ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath }} 
-                                style={styles.implementationImage} 
-                              />
+                              <Image source={{ uri: ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath }} style={styles.implementationImage} />
+                            </TouchableOpacity>
+                          </View>
+                        )} */}
+
+{(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
+                          <View style={styles.implementationImageSection}>
+                            <Text style={styles.imageLabel}>After Implementation:</Text>
+                            <TouchableOpacity onPress={() => {
+                              const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
+                              const fullUrl = imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
+                              openImagePreview(fullUrl);
+                            }}>
+                              <Image source={{ 
+                                uri: (() => {
+                                  const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
+                                  return imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
+                                })()
+                              }} style={styles.implementationImage} />
                             </TouchableOpacity>
                           </View>
                         )}
+
                       </View>
                     )}
                   </>
@@ -653,19 +742,14 @@ const ApprovedScreen = () => {
         </View>
       </Modal>
 
-      {/* Progress Timeline Modal */}
       <Modal visible={showTimelineModal} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
             <Text style={styles.timelineModalTitle}>Progress Timeline</Text>
-            <TouchableOpacity
-              style={styles.closeButtonTimeline}
-              onPress={() => setShowTimelineModal(false)}
-            >
+            <TouchableOpacity style={styles.closeButtonTimeline} onPress={() => setShowTimelineModal(false)}>
               <Ionicons name="close" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
-
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             <View style={styles.timelineCardContainer}>
               <View style={styles.timelineContainer}>
@@ -673,7 +757,7 @@ const ApprovedScreen = () => {
                   ideaDetail.timeline.map((item, idx) => (
                     <TimelineItem
                       key={idx}
-                      status={item.status || item.approvalStage || "N/A"}
+                      status={item.status || item.approvalStage || item.approvalstage || "N/A"}
                       date={item.date || item.approvalDate}
                       description={item.description || item.comments}
                       isLast={idx === ideaDetail.timeline.length - 1}
@@ -691,22 +775,13 @@ const ApprovedScreen = () => {
         </View>
       </Modal>
 
-      {/* Image Modal */}
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
-          <TouchableOpacity
-            style={styles.closeButtonImage}
-            onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}
-          >
+          <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}>
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image
-              source={{ uri: currentImageUrl }}
-              style={styles.fullImage}
-              resizeMode="contain"
-              onError={(e) => Alert.alert('Error', 'Failed to load image')}
-            />
+            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} resizeMode="contain" onError={(e) => Alert.alert('Error', 'Failed to load image')} />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
           )}
@@ -743,10 +818,11 @@ const styles = StyleSheet.create({
   typeText: { color: '#fff', fontSize: 12, fontWeight: '500' },
   cardContent: { padding: 12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' },
-  rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' },
+  rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, alignItems: 'flex-start' },
+  rowDetailWithBorder: { flexDirection: "row", justifyContent: "space-between", paddingBottom: 10, marginBottom: 10, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   label: { color: '#555', fontWeight: '500', fontSize: 14 },
   value: { color: '#333', fontSize: 14, maxWidth: '65%', textAlign: 'right' },
-  statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 12, overflow: "hidden" },
+  statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
   totalContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
   totalText: { fontSize: 16, fontWeight: 'bold', color: '#2c5aa0' },
   noDataText: { textAlign: "center", marginTop: 20, color: "#777", fontSize: 16 },
@@ -759,24 +835,17 @@ const styles = StyleSheet.create({
   timelineButtonHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e3f2fd', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#2c5aa0' },
   timelineButtonText: { color: '#2c5aa0', fontSize: 14, fontWeight: '600', marginLeft: 6 },
   modalScrollContent: { padding: 16, paddingBottom: 30 },
-  cardDetail: { 
-    backgroundColor: "#fff", 
-    padding: 16, 
-    borderRadius: 8, 
-    marginBottom: 12, 
-    borderWidth: 1, 
-    borderColor: "#e0e0e0"
-  },
+  cardDetail: { backgroundColor: "#fff", padding: 16, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
   cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
   labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
   valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 14 },
-  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center', alignSelf: 'flex-end' },
+  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
   imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
   tapToEnlargeText: { color: '#2196F3', fontSize: 12, fontWeight: '500' },
   implementationImageSection: { marginTop: 12, marginBottom: 12 },
   imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
-  implementationImage: { width: '100%', height: 200, borderRadius: 8, resizeMode: 'cover' },
+  implementationImage: { width: '100%', height: 200, borderRadius: 8, resizeMode: 'cover', borderWidth: 1, borderColor: '#ddd' },
   remarkCard: { backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
   remarkTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c5aa0', marginBottom: 6 },
   remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
@@ -787,32 +856,21 @@ const styles = StyleSheet.create({
   closeButtonTimeline: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 18, width: 32, height: 32, justifyContent: "center", alignItems: "center" },
   timelineCardContainer: { backgroundColor: "#fff", padding: 16, borderRadius: 10, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
   timelineContainer: { paddingLeft: 4, paddingTop: 4 },
+  timelineItem: { flexDirection: "row", marginBottom: 20 },
+  timelineLeft: { alignItems: "center", marginRight: 15, width: 20 },
+  timelineCircle: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: "#fff", elevation: 2 },
+  timelineLine: { width: 3, backgroundColor: "#E0E0E0", flex: 1, marginTop: 4 },
+  timelineContent: { flex: 1, paddingBottom: 5 },
+  timelineStatus: { fontSize: 15, fontWeight: "bold", color: "#333", marginBottom: 4 },
+  timelineDescription: { fontSize: 13, color: "#666", marginBottom: 6, lineHeight: 18 },
+  timelineDate: { fontSize: 12, color: "#999", fontStyle: "italic" },
   noTimelineContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
   noTimelineText: { color: "#999", textAlign: "center", marginTop: 10, fontSize: 15, fontStyle: 'italic' },
   imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
   closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
-  fullImage: { width: "90%", height: "70%" },
-  collapsibleHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    backgroundColor: '#fff', 
-    padding: 16, 
-    borderRadius: 8, 
-    marginBottom: 8, 
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    elevation: 1, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 1 }, 
-    shadowOpacity: 0.05, 
-    shadowRadius: 2 
-  },
-  collapsibleHeaderText: { 
-    fontSize: 16, 
-    fontWeight: '600', 
-    color: '#2c5aa0' 
-  },
+  fullImage: { width: "80%", height: "60%" },
+  collapsibleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#e0e0e0', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+  collapsibleHeaderText: { fontSize: 16, fontWeight: '600', color: '#2c5aa0' },
 });
 
 export default ApprovedScreen;

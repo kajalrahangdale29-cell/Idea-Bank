@@ -8,6 +8,7 @@
 //   StyleSheet,
 //   Alert,
 //   Linking,
+//   BackHandler,
 // } from "react-native";
 // import {
 //   createDrawerNavigator,
@@ -23,11 +24,7 @@
 // } from "@expo/vector-icons";
 // import AsyncStorage from "@react-native-async-storage/async-storage";
 // import axios from "axios";
-
-// // Import API
 // import { GET_PENDING_COUNT_URL } from "../src/context/api";
-
-// // Import Screens
 // import DashboardScreen from "./DashboardScreen";
 // import CreateIdeaScreen from "./CreateIdeaScreen";
 // import MyIdeasScreen from "./MyIdeasScreen";
@@ -48,11 +45,8 @@
 //   const [manageExpanded, setManageExpanded] = useState(false);
 //   const [approvalExpanded, setApprovalExpanded] = useState(false);
 //   const [logoutVisible, setLogoutVisible] = useState(false);
-
-//   // Counts state
 //   const [pendingCount, setPendingCount] = useState(0);
 //   const [holdCount, setHoldCount] = useState(0);
-//   const [rejectedCount, setRejectedCount] = useState(0);
 //   const [totalApprovalCount, setTotalApprovalCount] = useState(0);
 
 //   const [roleFlags, setRoleFlags] = useState({
@@ -60,8 +54,6 @@
 //     isHod: false,
 //     isBETeamMember: false,
 //   });
-
-//   // Fetch role flags once on mount
 //   useEffect(() => {
 //     const fetchRoleFlags = async () => {
 //       const isManager =
@@ -75,7 +67,6 @@
 //   }, []);
 
 //   useEffect(() => {
-
 //     if (roleFlags.isManager || roleFlags.isHod || roleFlags.isBETeamMember) {
 //       // Initial fetch
 //       fetchCounts();
@@ -125,14 +116,13 @@
 //       }
 
 //       const hold = response.data.pendingDetails?.holdCount || 0;
-//       const rejected = response.data.pendingDetails?.rejectedCount || 0;
       
 //       setPendingCount(pending);
 //       setHoldCount(hold);
-//       setRejectedCount(rejected);
-//       setTotalApprovalCount(pending + hold + rejected);
+//       setTotalApprovalCount(pending + hold);
 //     } catch (error) {
 //       if (error.response) {
+//         console.error("Error fetching counts:", error.response.data);
 //       }
 //     }
 //   };
@@ -142,7 +132,6 @@
 //       {...props}
 //       contentContainerStyle={{ paddingVertical: 10, backgroundColor: "#0f4c5c" }}
 //     >
-//       {/* Dashboard */}
 //       <TouchableOpacity
 //         style={{ flexDirection: "row", alignItems: "center", padding: 15 }}
 //         onPress={() => props.navigation.navigate("Dashboard")}
@@ -155,8 +144,6 @@
 //         />
 //         <Text style={{ fontSize: 16, color: "#fff" }}>Dashboard</Text>
 //       </TouchableOpacity>
-
-//       {/* Manage Idea (Expandable) */}
 //       <TouchableOpacity
 //         style={{ flexDirection: "row", alignItems: "center", padding: 15 }}
 //         onPress={() => setManageExpanded(!manageExpanded)}
@@ -174,7 +161,6 @@
 
 //       {manageExpanded && (
 //         <>
-//           {/* Create Idea - All roles */}
 //           <TouchableOpacity
 //             style={{
 //               flexDirection: "row",
@@ -192,8 +178,6 @@
 //             />
 //             <Text style={{ fontSize: 14, color: "#fff" }}>Create Idea</Text>
 //           </TouchableOpacity>
-
-//           {/* My Ideas - All roles */}
 //           <TouchableOpacity
 //             style={{
 //               flexDirection: "row",
@@ -272,6 +256,7 @@
 //             <Text style={{ fontSize: 16, color: "#fff" }}>
 //               Approval {approvalExpanded ? "▲" : "▼"}
 //             </Text>
+           
 //             {totalApprovalCount > 0 && (
 //               <View style={styles.badge}>
 //                 <Text style={styles.badgeText}>{totalApprovalCount}</Text>
@@ -281,7 +266,6 @@
 
 //           {approvalExpanded && (
 //             <>
-//               {/* Approved Ideas */}
 //               <TouchableOpacity
 //                 style={{
 //                   flexDirection: "row",
@@ -299,8 +283,6 @@
 //                 />
 //                 <Text style={{ fontSize: 14, color: "#fff" }}>Approved</Text>
 //               </TouchableOpacity>
-
-//               {/* Rejected Ideas */}
 //               <TouchableOpacity
 //                 style={{
 //                   flexDirection: "row",
@@ -317,14 +299,7 @@
 //                   style={{ marginRight: 10 }}
 //                 />
 //                 <Text style={{ fontSize: 14, color: "#fff" }}>Rejected</Text>
-//                 {rejectedCount > 0 && (
-//                   <View style={styles.badge}>
-//                     <Text style={styles.badgeText}>{rejectedCount}</Text>
-//                   </View>
-//                 )}
 //               </TouchableOpacity>
-
-//               {/* Pending Ideas */}
 //               <TouchableOpacity
 //                 style={{
 //                   flexDirection: "row",
@@ -347,8 +322,6 @@
 //                   </View>
 //                 )}
 //               </TouchableOpacity>
-
-//               {/* Hold Ideas */}
 //               <TouchableOpacity
 //                 style={{
 //                   flexDirection: "row",
@@ -480,7 +453,6 @@
 //   );
 // }
 
-// // DrawerScreens Component
 // function DrawerScreens() {
 //   return (
 //     <Drawer.Navigator
@@ -496,13 +468,10 @@
 //         headerLeft: () =>
 //           route.name !== "Dashboard" ? (
 //             <TouchableOpacity
-//               onPress={() => {
-//                 if (navigation.canGoBack()) navigation.goBack();
-//                 else navigation.navigate("Dashboard");
-//               }}
+//               onPress={() => navigation.openDrawer()}
 //               style={{ marginLeft: 10 }}
 //             >
-//               <Ionicons name="arrow-back" size={24} color="#fff" />
+//               <Ionicons name="menu" size={24} color="#fff" />
 //             </TouchableOpacity>
 //           ) : null,
 //       })}
@@ -526,11 +495,48 @@
 //   );
 // }
 
-// // Main App Component
+// function DrawerScreensWithBackHandler() {
+//   const navigationRef = React.useRef();
+
+//   useEffect(() => {
+//     const backAction = () => {
+//       if (navigationRef.current) {
+//         const state = navigationRef.current.getState();
+//         const currentRoute = state.routes[state.index];
+        
+     
+//         if (currentRoute.name === 'Dashboard') {
+//           Alert.alert(
+//             'Exit App',
+//             'Are you sure you want to exit?',
+//             [
+//               { text: 'Cancel', style: 'cancel' },
+//               { text: 'Exit', onPress: () => BackHandler.exitApp() }
+//             ]
+//           );
+//           return true;
+//         }
+        
+//         navigationRef.current.openDrawer();
+//         return true;
+//       }
+//       return false;
+//     };
+
+//     const backHandler = BackHandler.addEventListener(
+//       'hardwareBackPress',
+//       backAction
+//     );
+
+//     return () => backHandler.remove();
+//   }, []);
+
+//   return <DrawerScreens ref={navigationRef} />;
+// }
 // export default function MainApp() {
 //   return (
 //     <Stack.Navigator screenOptions={{ headerShown: false }}>
-//       <Stack.Screen name="HomeDrawer" component={DrawerScreens} />
+//       <Stack.Screen name="HomeDrawer" component={DrawerScreensWithBackHandler} />
 //       <Stack.Screen
 //         name="Edit Idea"
 //         component={EditIdeaScreen}
@@ -540,6 +546,18 @@
 //           headerStyle: { backgroundColor: "#0f4c5c" },
 //           headerTintColor: "#fff",
 //           headerTitleStyle: { fontWeight: "bold" },
+//           headerLeft: ({ canGoBack }) => (
+//             <TouchableOpacity
+//               onPress={() => {
+//                 if (canGoBack) {
+//                   navigation.goBack();
+//                 }
+//               }}
+//               style={{ marginLeft: 10 }}
+//             >
+//               <Ionicons name="arrow-back" size={24} color="#fff" />
+//             </TouchableOpacity>
+//           ),
 //         }}
 //       />
 //     </Stack.Navigator>
@@ -599,6 +617,7 @@ import {
   StyleSheet,
   Alert,
   Linking,
+  BackHandler,
 } from "react-native";
 import {
   createDrawerNavigator,
@@ -614,11 +633,7 @@ import {
 } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-
-// Import API
 import { GET_PENDING_COUNT_URL } from "../src/context/api";
-
-// Import Screens
 import DashboardScreen from "./DashboardScreen";
 import CreateIdeaScreen from "./CreateIdeaScreen";
 import MyIdeasScreen from "./MyIdeasScreen";
@@ -631,6 +646,7 @@ import RejectedScreen from "./RejectedScreen";
 import PendingScreen from "./PendingScreen";
 import HoldScreen from "./HoldScreen";
 import EditIdeaScreen from "./EditIdeaScreen";
+import ManagerEditIdeaScreen from "./ManagerEditIdeaScreen";
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
@@ -639,8 +655,6 @@ function CustomDrawerContent(props) {
   const [manageExpanded, setManageExpanded] = useState(false);
   const [approvalExpanded, setApprovalExpanded] = useState(false);
   const [logoutVisible, setLogoutVisible] = useState(false);
-
-  // Counts state - ONLY Pending and Hold
   const [pendingCount, setPendingCount] = useState(0);
   const [holdCount, setHoldCount] = useState(0);
   const [totalApprovalCount, setTotalApprovalCount] = useState(0);
@@ -650,8 +664,7 @@ function CustomDrawerContent(props) {
     isHod: false,
     isBETeamMember: false,
   });
-
-  // Fetch role flags once on mount
+  
   useEffect(() => {
     const fetchRoleFlags = async () => {
       const isManager =
@@ -666,7 +679,6 @@ function CustomDrawerContent(props) {
 
   useEffect(() => {
     if (roleFlags.isManager || roleFlags.isHod || roleFlags.isBETeamMember) {
-      // Initial fetch
       fetchCounts();
       const unsubscribeFocus = props.navigation.addListener('focus', () => {
         fetchCounts();
@@ -715,7 +727,6 @@ function CustomDrawerContent(props) {
 
       const hold = response.data.pendingDetails?.holdCount || 0;
       
-      // FIXED: Only Pending + Hold count, NO rejected count
       setPendingCount(pending);
       setHoldCount(hold);
       setTotalApprovalCount(pending + hold);
@@ -731,7 +742,6 @@ function CustomDrawerContent(props) {
       {...props}
       contentContainerStyle={{ paddingVertical: 10, backgroundColor: "#0f4c5c" }}
     >
-      {/* Dashboard */}
       <TouchableOpacity
         style={{ flexDirection: "row", alignItems: "center", padding: 15 }}
         onPress={() => props.navigation.navigate("Dashboard")}
@@ -744,8 +754,6 @@ function CustomDrawerContent(props) {
         />
         <Text style={{ fontSize: 16, color: "#fff" }}>Dashboard</Text>
       </TouchableOpacity>
-
-      {/* Manage Idea (Expandable) */}
       <TouchableOpacity
         style={{ flexDirection: "row", alignItems: "center", padding: 15 }}
         onPress={() => setManageExpanded(!manageExpanded)}
@@ -763,7 +771,6 @@ function CustomDrawerContent(props) {
 
       {manageExpanded && (
         <>
-          {/* Create Idea - All roles */}
           <TouchableOpacity
             style={{
               flexDirection: "row",
@@ -781,8 +788,6 @@ function CustomDrawerContent(props) {
             />
             <Text style={{ fontSize: 14, color: "#fff" }}>Create Idea</Text>
           </TouchableOpacity>
-
-          {/* My Ideas - All roles */}
           <TouchableOpacity
             style={{
               flexDirection: "row",
@@ -801,7 +806,6 @@ function CustomDrawerContent(props) {
             <Text style={{ fontSize: 14, color: "#fff" }}>My Ideas</Text>
           </TouchableOpacity>
 
-          {/* Team Ideas - Manager, HOD, or BE Team */}
           {(roleFlags.isManager || roleFlags.isHod || roleFlags.isBETeamMember) && (
             <TouchableOpacity
               style={{
@@ -822,7 +826,6 @@ function CustomDrawerContent(props) {
             </TouchableOpacity>
           )}
 
-          {/* All Ideas - Only BE Team Members */}
           {roleFlags.isBETeamMember && (
             <TouchableOpacity
               style={{
@@ -845,7 +848,6 @@ function CustomDrawerContent(props) {
         </>
       )}
 
-      {/* Approval Section - HOD, Manager, or BE Team */}
       {(roleFlags.isHod || roleFlags.isManager || roleFlags.isBETeamMember) && (
         <>
           <TouchableOpacity
@@ -861,7 +863,7 @@ function CustomDrawerContent(props) {
             <Text style={{ fontSize: 16, color: "#fff" }}>
               Approval {approvalExpanded ? "▲" : "▼"}
             </Text>
-            {/* FIXED: Only show badge if total count > 0 */}
+           
             {totalApprovalCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{totalApprovalCount}</Text>
@@ -871,7 +873,6 @@ function CustomDrawerContent(props) {
 
           {approvalExpanded && (
             <>
-              {/* Approved Ideas - NO BADGE */}
               <TouchableOpacity
                 style={{
                   flexDirection: "row",
@@ -889,8 +890,6 @@ function CustomDrawerContent(props) {
                 />
                 <Text style={{ fontSize: 14, color: "#fff" }}>Approved</Text>
               </TouchableOpacity>
-
-              {/* Rejected Ideas - NO BADGE */}
               <TouchableOpacity
                 style={{
                   flexDirection: "row",
@@ -908,8 +907,6 @@ function CustomDrawerContent(props) {
                 />
                 <Text style={{ fontSize: 14, color: "#fff" }}>Rejected</Text>
               </TouchableOpacity>
-
-              {/* Pending Ideas - WITH BADGE */}
               <TouchableOpacity
                 style={{
                   flexDirection: "row",
@@ -932,8 +929,6 @@ function CustomDrawerContent(props) {
                   </View>
                 )}
               </TouchableOpacity>
-
-              {/* Hold Ideas - WITH BADGE */}
               <TouchableOpacity
                 style={{
                   flexDirection: "row",
@@ -961,7 +956,6 @@ function CustomDrawerContent(props) {
         </>
       )}
 
-      {/* Help */}
       <TouchableOpacity
         style={{ flexDirection: "row", alignItems: "center", padding: 15 }}
         onPress={() =>
@@ -979,7 +973,6 @@ function CustomDrawerContent(props) {
         <Text style={{ fontSize: 16, color: "#fff" }}>Help</Text>
       </TouchableOpacity>
 
-      {/* Study Material */}
       <TouchableOpacity
         style={{ flexDirection: "row", alignItems: "center", padding: 15 }}
         onPress={() => {
@@ -1001,7 +994,6 @@ function CustomDrawerContent(props) {
         <Text style={{ fontSize: 16, color: "#fff" }}>Study Material</Text>
       </TouchableOpacity>
 
-      {/* Logout */}
       <TouchableOpacity
         style={{
           flexDirection: "row",
@@ -1020,7 +1012,6 @@ function CustomDrawerContent(props) {
         <Text style={{ fontSize: 16, color: "#fff" }}>Logout</Text>
       </TouchableOpacity>
 
-      {/* Logout Modal */}
       <Modal
         transparent
         visible={logoutVisible}
@@ -1065,7 +1056,6 @@ function CustomDrawerContent(props) {
   );
 }
 
-// DrawerScreens Component
 function DrawerScreens() {
   return (
     <Drawer.Navigator
@@ -1081,13 +1071,10 @@ function DrawerScreens() {
         headerLeft: () =>
           route.name !== "Dashboard" ? (
             <TouchableOpacity
-              onPress={() => {
-                if (navigation.canGoBack()) navigation.goBack();
-                else navigation.navigate("Dashboard");
-              }}
+              onPress={() => navigation.openDrawer()}
               style={{ marginLeft: 10 }}
             >
-              <Ionicons name="arrow-back" size={24} color="#fff" />
+              <Ionicons name="menu" size={24} color="#fff" />
             </TouchableOpacity>
           ) : null,
       })}
@@ -1111,21 +1098,89 @@ function DrawerScreens() {
   );
 }
 
-// Main App Component
+function DrawerScreensWithBackHandler() {
+  const navigationRef = React.useRef();
+
+  useEffect(() => {
+    const backAction = () => {
+      if (navigationRef.current) {
+        const state = navigationRef.current.getState();
+        const currentRoute = state.routes[state.index];
+        
+        if (currentRoute.name === 'Dashboard') {
+          Alert.alert(
+            'Exit App',
+            'Are you sure you want to exit?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Exit', onPress: () => BackHandler.exitApp() }
+            ]
+          );
+          return true;
+        }
+        
+        navigationRef.current.openDrawer();
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, []);
+
+  return <DrawerScreens ref={navigationRef} />;
+}
+
 export default function MainApp() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeDrawer" component={DrawerScreens} />
+      <Stack.Screen name="HomeDrawer" component={DrawerScreensWithBackHandler} />
+      
+      {/* ✅ Regular Employee Edit Screen */}
       <Stack.Screen
-        name="Edit Idea"
+        name="EditIdea"
         component={EditIdeaScreen}
-        options={{
+        options={({ navigation, route }) => ({
           headerShown: true,
-          title: "Edit Idea Form",
+          title: route.params?.isManagerEditing ? "Edit Idea (Manager)" : "Edit Idea Form",
           headerStyle: { backgroundColor: "#0f4c5c" },
           headerTintColor: "#fff",
           headerTitleStyle: { fontWeight: "bold" },
-        }}
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ marginLeft: 10 }}
+            >
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+
+      {/* ✅ Manager Edit Screen - Uses Manager-specific API */}
+      <Stack.Screen
+        name="ManagerEditIdea"
+        component={ManagerEditIdeaScreen}
+        options={({ navigation }) => ({
+          headerShown: true,
+          title: "Edit Idea (Manager)",
+          headerStyle: { backgroundColor: "#0f4c5c" },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ marginLeft: 10 }}
+            >
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+          ),
+        })}
       />
     </Stack.Navigator>
   );

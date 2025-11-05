@@ -38,17 +38,31 @@ const makeUrlSafe = (base64) => {
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 };
 
+const isValidEncryptedString = (str) => {
+  if (!str || typeof str !== 'string') return false;
+  const urlSafeBase64Regex = /^[A-Za-z0-9_-]+$/;
+  if (!urlSafeBase64Regex.test(str)) return false;
+  if (str.length < 24) return false;
+  
+  return true;
+};
+
 export const decrypt = (cipherText) => {
-  if (!cipherText || cipherText.trim() === '') {
-    return '';
+  if (!cipherText || typeof cipherText !== 'string' || cipherText.trim() === '') {
+    throw new Error('Cipher text is empty or invalid');
   }
 
+  const trimmedCipher = cipherText.trim();
+  if (!isValidEncryptedString(trimmedCipher)) {
+    throw new Error('Invalid encrypted string format');
+  }
   try {
-    const regularBase64 = makeUrlUnsafe(cipherText);
+    const regularBase64 = makeUrlUnsafe(trimmedCipher);
+    
     const fullCipherBytes = CryptoJS.enc.Base64.parse(regularBase64);
     
     if (fullCipherBytes.sigBytes < 16) {
-      return '';
+      throw new Error('Encrypted data is corrupted or too short');
     }
     
     const ivWords = fullCipherBytes.words.slice(0, 4);
@@ -71,10 +85,14 @@ export const decrypt = (cipherText) => {
     );
     
     const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+    
+    if (!decryptedText || decryptedText.trim() === '') {
+      throw new Error('Decryption failed - wrong key or corrupted data');
+    }
     return decryptedText;
     
   } catch (error) {
-    return '';
+    throw new Error(`Decryption failed: ${error.message}`);
   }
 };
 
@@ -82,17 +100,15 @@ export const encrypt = (plainText) => {
   if (!plainText || plainText.trim() === '') {
     throw new Error('Plain text cannot be null or empty');
   }
-
   try {
     const iv = CryptoJS.lib.WordArray.random(16);
     const key = prepareKey();
-    
     const encrypted = CryptoJS.AES.encrypt(plainText, key, {
       iv: iv,
       mode: CryptoJS.mode.CBC,
       padding: CryptoJS.pad.Pkcs7
     });
-    
+  
     const ivAndCipher = iv.clone().concat(encrypted.ciphertext);
     const base64 = ivAndCipher.toString(CryptoJS.enc.Base64);
     
@@ -102,13 +118,20 @@ export const encrypt = (plainText) => {
     throw error;
   }
 };
-
 export const testEncryption = (testString = 'test123') => {
   try {
     const encrypted = encrypt(testString);
     const decrypted = decrypt(encrypted);
-    return testString === decrypted;
+    const isValid = testString === decrypted;
+    return isValid;
   } catch (error) {
     return false;
+  }
+};
+export const safeDecrypt = (cipherText) => {
+  try {
+    return decrypt(cipherText);
+  } catch (error) {
+    return null;
   }
 };

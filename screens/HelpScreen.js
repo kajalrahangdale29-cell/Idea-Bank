@@ -3,7 +3,7 @@ import React from "react";
 
  export default function HelpScreen() {
    const openPDF = async () => {
-     const pdfUrl = "https://ideabank.abisaio.com/manuals/User_Manuals.pdf"; // 🔗 direct URL
+     const pdfUrl = "https://ideabank.abisaio.com/manuals/User_Manuals.pdf";
 
      try {
        const supported = await Linking.canOpenURL(pdfUrl);

@@ -17,6 +17,7 @@ export default function Navigation() {
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="MainApp" component={MainApp} options={{ headerShown: false }} />
         <Stack.Screen name="EditIdea" component={EditIdeaScreen}  />
+        
 
       </Stack.Navigator>
     </NavigationContainer>

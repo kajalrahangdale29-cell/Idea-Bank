@@ -5,8 +5,28 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import Toast from 'react-native-root-toast';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { decrypt } from './EncryptionHelper'; 
+import { decrypt, safeDecrypt } from './EncryptionHelper'; 
 import { DASHBOARD_URL, NOTIFICATION_USER_URL, NOTIFICATION_COUNT_URL, MARK_READ_URL, CLEAR_ALL_URL, REDIRECT_NOTIFICATION_URL, IDEA_DETAIL_URL, PENDING_APPROVALS_URL } from '../src/context/api'; 
+
+const formatDateTime = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = date.toLocaleString('en-IN', { month: 'short' });
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day} ${month} ${year}, ${hours}:${minutes}`;
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
@@ -34,6 +54,14 @@ const DashboardScreen = () => {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showImage, setShowImage] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState(null);
+
+  const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
+  const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
+  const [showImplementationDetails, setShowImplementationDetails] = useState(false);
+
+  const NOTIFICATIONS_STORAGE_KEY = 'user_notifications_7day';
+  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -47,9 +75,11 @@ const DashboardScreen = () => {
           setToken(parsed.token);
           fetchDashboard(parsed.token);
           fetchUnreadCount(parsed.employee.id, parsed.token);
+          
+          loadStoredNotifications(parsed.employee.id);
         }
       } catch (error) {
-
+        console.error("Error loading user data:", error);
       }
     };
     loadUserData();
@@ -59,9 +89,53 @@ const DashboardScreen = () => {
     React.useCallback(() => {
       if (employeeSystemId && token) {
         fetchUnreadCount(employeeSystemId, token);
+        loadStoredNotifications(employeeSystemId);
       }
     }, [employeeSystemId, token])
   );
+
+  const loadStoredNotifications = async (systemId) => {
+    try {
+      const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
+      const storedData = await AsyncStorage.getItem(key);
+      
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        const currentTime = Date.now();
+        
+        const validNotifications = parsedData.filter(notif => {
+          const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
+          return (currentTime - notifTime) < SEVEN_DAYS_MS;
+        });
+        
+        if (validNotifications.length !== parsedData.length) {
+          await AsyncStorage.setItem(key, JSON.stringify(validNotifications));
+        }
+        
+        setNotifications(validNotifications);
+        
+        const unread = validNotifications.filter(n => !n.isRead).length;
+        setUnreadCount(unread);
+      }
+    } catch (error) {
+      console.error("Error loading stored notifications:", error);
+    }
+  };
+  const saveNotificationsToStorage = async (systemId, notificationsList) => {
+    try {
+      const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
+      const currentTime = Date.now();
+      
+      const notificationsWithTimestamp = notificationsList.map(notif => ({
+        ...notif,
+        storedAt: notif.storedAt || currentTime
+      }));
+      
+      await AsyncStorage.setItem(key, JSON.stringify(notificationsWithTimestamp));
+    } catch (error) {
+      console.error("Error saving notifications:", error);
+    }
+  };
 
   const fetchDashboard = async (token) => {
     try {
@@ -78,7 +152,7 @@ const DashboardScreen = () => {
       try {
         jsonData = JSON.parse(text);
       } catch (e) {
-
+        console.error("JSON parse error:", e);
       }
 
       if (response.ok && jsonData.success) {
@@ -92,7 +166,7 @@ const DashboardScreen = () => {
         setCardData(updatedCards);
       }
     } catch (err) {
-      // Silent fail
+      console.error("Dashboard fetch error:", err);
     }
   };
 
@@ -117,12 +191,12 @@ const DashboardScreen = () => {
             const data = JSON.parse(text);
             setUnreadCount(data.data?.unreadCount || data.unreadCount || 0);
           } catch (e) {
-            // Silent fail
+            console.error("Count parse error:", e);
           }
         }
       }
     } catch (error) {
-      // Silent fail
+      console.error("Fetch unread count error:", error);
     }
   };
 
@@ -141,47 +215,70 @@ const DashboardScreen = () => {
       });
 
       if (!response.ok) {
-        setNotifications([]);
+     
+        await loadStoredNotifications(employeeSystemId);
         return;
       }
 
       const data = await response.json();
+      let newNotifications = [];
+      
       if (Array.isArray(data)) {
-        setNotifications(data);
+        newNotifications = data;
       } else if (data.data && Array.isArray(data.data)) {
-        setNotifications(data.data);
-      } else {
-        setNotifications([]);
+        newNotifications = data.data;
       }
+
+      const key = `${NOTIFICATIONS_STORAGE_KEY}_${employeeSystemId}`;
+      const storedData = await AsyncStorage.getItem(key);
+      
+      if (storedData) {
+        const storedNotifications = JSON.parse(storedData);
+        const currentTime = Date.now();
+        
+        // Keep stored notifications that are less than 7 days old
+        const validStoredNotifs = storedNotifications.filter(notif => {
+          const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
+          return (currentTime - notifTime) < SEVEN_DAYS_MS;
+        });
+        
+        const mergedNotifications = [...newNotifications];
+        validStoredNotifs.forEach(storedNotif => {
+          const exists = mergedNotifications.find(n => n.id === storedNotif.id);
+          if (!exists) {
+            mergedNotifications.push(storedNotif);
+          }
+        });
+        
+        mergedNotifications.sort((a, b) => {
+          const dateA = new Date(a.createdOn || a.storedAt).getTime();
+          const dateB = new Date(b.createdOn || b.storedAt).getTime();
+          return dateB - dateA;
+        });
+        
+        setNotifications(mergedNotifications);
+        await saveNotificationsToStorage(employeeSystemId, mergedNotifications);
+      } else {
+        setNotifications(newNotifications);
+        await saveNotificationsToStorage(employeeSystemId, newNotifications);
+      }
+      
     } catch (error) {
-      setNotifications([]);
+      console.error("Fetch notifications error:", error);
+
+      await loadStoredNotifications(employeeSystemId);
     } finally {
       setLoadingNotifications(false);
     }
   };
 
-  // Check if user has pending approvals access
-  const checkPendingAccess = async (encryptedId) => {
-    try {
-      const decryptedId = decrypt(encryptedId);
-      
-      // Fetch pending approvals to check if this idea exists
-      const response = await axios.get(`${PENDING_APPROVALS_URL}?page=1&pageSize=100`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.data?.data?.items) {
-        const pendingIdea = response.data.data.items.find(
-          item => item.ideaId === decryptedId || item.id === decryptedId
-        );
-        
-        return !!pendingIdea;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error checking pending access:', error);
-      return false;
+  const shouldShowImplementationDetails = (ideaDetail) => {
+    if (!ideaDetail) return false;
+    if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
+      return true;
     }
+    const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
+    return type === "implementation" || type === "implement";
   };
 
   const fetchIdeaDetail = async (encryptedId) => {
@@ -196,22 +293,36 @@ const DashboardScreen = () => {
     try {
       setLoadingDetail(true);
 
-      const decryptedId = decrypt(encryptedId);
-
-      if (!decryptedId || decryptedId.trim() === '') {
-        throw new Error('Failed to decrypt idea ID');
+      let decryptedId;
+      try {
+        decryptedId = decrypt(encryptedId);  
+        if (!decryptedId || decryptedId.trim() === '') {
+          throw new Error('Decryption returned empty value');
+        }
+      } catch (decryptError) {
+        console.error("Decryption error:", decryptError);
+        Toast.show('Invalid idea ID - Unable to decrypt', {
+          duration: Toast.durations.LONG,
+          position: Toast.positions.BOTTOM,
+        });
+        setLoadingDetail(false);
+        return;
       }
 
-      const apiUrl = `${IDEA_DETAIL_URL}/${decryptedId}`;
-      
+      const apiUrl = `${IDEA_DETAIL_URL}/${decryptedId}`; 
       const { data: response } = await axios.get(apiUrl, { 
-        headers: { Authorization: `Bearer ${token}` } 
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 15000
       });
 
       if (response?.success && response?.data) {
         setIdeaDetail(response.data);
         setSelectedIdea(response.data);
         setShowNotificationModal(false);
+        
+        if (shouldShowImplementationDetails(response.data)) {
+          setShowImplementationDetails(true);
+        }
       } else {
         Toast.show(response?.message || 'Idea details not found', {
           duration: Toast.durations.LONG,
@@ -219,16 +330,23 @@ const DashboardScreen = () => {
         });
       }
     } catch (error) {
-      console.error('❌ Error Details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
+      console.error("Fetch idea detail error:", error);
       
-      const errorMsg = error.response?.data?.message || 
-                       error.message || 
-                       'Failed to fetch idea details';
+      let errorMsg = 'Failed to fetch idea details';
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMsg = 'Request timeout - please try again';
+      } else if (error.response?.status === 401) {
+        errorMsg = 'Session expired - please login again';
+      } else if (error.response?.status === 403) {
+        errorMsg = 'Access denied - you do not have permission';
+      } else if (error.response?.status === 404) {
+        errorMsg = 'Idea not found';
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message && !error.message.includes('decrypt')) {
+        errorMsg = error.message;
+      }
       
       Toast.show(errorMsg, {
         duration: Toast.durations.LONG,
@@ -251,17 +369,21 @@ const DashboardScreen = () => {
       });
 
       if (response.ok) {
-        setNotifications(prev => 
-          prev.map(notif => 
-            notif.id === notificationId 
-              ? { ...notif, isRead: true } 
-              : notif
-          )
+        const updatedNotifications = notifications.map(notif => 
+          notif.id === notificationId 
+            ? { ...notif, isRead: true } 
+            : notif
         );
-        fetchUnreadCount(employeeSystemId, token);
+        
+        setNotifications(updatedNotifications);
+        
+        await saveNotificationsToStorage(employeeSystemId, updatedNotifications);
+        
+        const unread = updatedNotifications.filter(n => !n.isRead).length;
+        setUnreadCount(unread);
       }
     } catch (error) {
-      // Silent fail
+      console.error("Mark as read error:", error);
     }
   };
 
@@ -279,6 +401,10 @@ const DashboardScreen = () => {
       if (response.ok) {
         setNotifications([]);
         setUnreadCount(0);
+        
+        const key = `${NOTIFICATIONS_STORAGE_KEY}_${employeeSystemId}`;
+        await AsyncStorage.removeItem(key);
+        
         Toast.show('All notifications cleared!', {
           duration: Toast.durations.SHORT,
           position: Toast.positions.BOTTOM,
@@ -302,6 +428,19 @@ const DashboardScreen = () => {
     fetchNotifications();
   };
 
+  const closeModal = () => {
+    setSelectedIdea(null);
+    setIdeaDetail(null);
+    setEmployeeInfoExpanded(false);
+    setIdeaInfoExpanded(true);
+    setShowImplementationDetails(false);
+  };
+
+  const openImagePreview = (imageUrl) => {
+    setCurrentImageUrl(imageUrl);
+    setShowImage(true);
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       if (route.params?.showToast) {
@@ -323,9 +462,9 @@ const DashboardScreen = () => {
     if (s === "draft") return "blue";
     if (s === "published") return "green";
     if (s === "pending") return "orange";
-    if (s === "approved" || s === "closed") return "gray";
+    if (s === "approved" || s === "closed") return "#00ACC1";
     if (s === "rejected") return "red";
-    if (s === "hold" || s === "on hold") return "yellow";
+    if (s === "hold" || s === "on hold") return "#191970";
     return "gray";
   };
 
@@ -366,24 +505,12 @@ const DashboardScreen = () => {
         encryptedId = urlParts[urlParts.length - 1];
       }
       
-      if (encryptedId) {
-        // Check if user has access to pending approvals
-        const hasPendingAccess = await checkPendingAccess(encryptedId);
-        
+      if (encryptedId && encryptedId.trim() !== '') {
         setShowNotificationModal(false);
         
-        if (hasPendingAccess) {
-          // Redirect to Pending Screen
-          navigation.navigate('Pending', { 
-            fromNotification: true,
-            encryptedIdeaId: encryptedId 
-          });
-        } else {
-          // Show in detail modal
-          await fetchIdeaDetail(encryptedId);
-        }
+        await fetchIdeaDetail(encryptedId);
       } else {
-        Toast.show('Redirect URL not found in notification', {
+        Toast.show('Invalid notification - redirect URL missing', {
           duration: Toast.durations.LONG,
           position: Toast.positions.BOTTOM,
         });
@@ -432,7 +559,7 @@ const DashboardScreen = () => {
       if (s.includes('edited')) return "#9C27B0";
       if (s.includes('approved')) return "#4CAF50";
       if (s.includes('pending')) return "#FF9800";
-      if (s.includes('implementation')) return "#9C27B0";
+      if (s.includes('implementation')) return "#3F51B5";
       if (s.includes('rejected')) return "#F44336";
       return "#9E9E9E";
     };
@@ -448,13 +575,7 @@ const DashboardScreen = () => {
           {description && <Text style={styles.timelineDescription}>{description}</Text>}
           {date && (
             <Text style={styles.timelineDate}>
-              {new Date(date).toLocaleDateString('en-IN', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              {formatDateTime(date)}
             </Text>
           )}
         </View>
@@ -498,7 +619,10 @@ const DashboardScreen = () => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.cardsContainer}>
           <View style={styles.row}>
             <View style={styles.cardWrapper}>
@@ -538,6 +662,7 @@ const DashboardScreen = () => {
         </View>
       </ScrollView>
 
+      {/* Notification Modal */}
       <Modal visible={showNotificationModal} animationType="slide" transparent={true} onRequestClose={() => setShowNotificationModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -577,6 +702,7 @@ const DashboardScreen = () => {
         </View>
       </Modal>
 
+      {/* Loading Overlay */}
       {loadingDetail && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#004d61" />
@@ -584,12 +710,13 @@ const DashboardScreen = () => {
         </View>
       )}
 
+      {/* Idea Detail Modal - Team Ideas Design Style */}
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.modalHeaderDetail}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
-              <TouchableOpacity style={styles.closeButton} onPress={() => { setSelectedIdea(null); setIdeaDetail(null); }}>
+              <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
                 <Ionicons name="close" size={20} color="#666" />
               </TouchableOpacity>
             </View>
@@ -602,121 +729,200 @@ const DashboardScreen = () => {
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             {selectedIdea && ideaDetail && (
               <>
-                <View style={styles.cardDetail}>
-                  <Text style={styles.cardHeading}>Employee Information</Text>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Employee Name:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || ideaDetail.ownerName || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Employee Number:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmployeeNo || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Employee Email:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmail || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Department:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || ideaDetail.department || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Mobile:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Reporting Manager:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.reportingManagerName || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Manager Email:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.managerEmail || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Employee Location:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.location || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Sub Department:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerSubDepartment || "N/A"}</Text>
-                  </View>
-                </View>
+                {/* Employee Information - Collapsible */}
+                <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} activeOpacity={0.7}>
+                  <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
+                  <Ionicons name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
+                </TouchableOpacity>
 
-                <View style={styles.cardDetail}>
-                  <Text style={styles.cardHeading}>Idea Information</Text>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Idea No:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaNumber || "N/A"}</Text>
+                {employeeInfoExpanded && (
+                  <View style={styles.cardDetail}>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Employee Name:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || ideaDetail.ownerName || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Employee Number:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmployeeNo || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Employee Email:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmail || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Department:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || ideaDetail.department || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Mobile:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Reporting Manager:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.reportingManagerName || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Manager Email:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.managerEmail || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Employee Location:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.location || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Sub Department:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerSubDepartment || "N/A"}</Text>
+                    </View>
                   </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Solution Category:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.solutionCategory || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Creation Date:</Text>
-                    <Text style={styles.valueDetail}>
-                      {ideaDetail.ideaCreationDate || ideaDetail.creationDate ? 
-                        new Date(ideaDetail.ideaCreationDate || ideaDetail.creationDate).toLocaleDateString() : "N/A"}
-                    </Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Planned Completion:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.plannedImplementationDuration
-                      ? new Date(ideaDetail.plannedImplementationDuration).toLocaleDateString()
-                      : "N/A"}</Text>
-                  </View>
+                )}
 
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Before Implementation:</Text>
-                    {ideaDetail.beforeImplementationImagePath ? (
-                      <TouchableOpacity style={styles.imagePreviewContainer} onPress={() => setShowImage(true)}>
-                        <Image source={{ uri: ideaDetail.beforeImplementationImagePath }} style={styles.thumbnailSmall} />
-                        <Text style={styles.tapToEnlargeText}>Tap to image</Text>
-                      </TouchableOpacity>
-                    ) : <Text style={styles.valueDetail}>N/A</Text>}
-                  </View>
-                 
-                  
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Status:</Text>
-                    <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus || ideaDetail.status) }]}>
-                      {ideaDetail.ideaStatus || ideaDetail.status || "N/A"}
-                    </Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Idea Description:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || ideaDetail.description || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Proposed Solution:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Team Members:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Idea Theme:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Type:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.type || "N/A"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>BE Team Support Needed:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}</Text>
-                  </View>
-                  <View style={styles.rowDetail}>
-                    <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
-                    <Text style={styles.valueDetail}>{ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}</Text>
-                  </View>
-                </View>
+                {/* Idea Information - Collapsible */}
+                <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} activeOpacity={0.7}>
+                  <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
+                  <Ionicons name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
+                </TouchableOpacity>
 
+                {ideaInfoExpanded && (
+                  <View style={styles.cardDetail}>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Idea No:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaNumber || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Solution Category:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.solutionCategory || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Creation Date:</Text>
+                      <Text style={styles.valueDetail}>
+                        {ideaDetail.ideaCreationDate || ideaDetail.creationDate ? 
+                          formatDate(ideaDetail.ideaCreationDate || ideaDetail.creationDate) : "N/A"}
+                      </Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Planned Completion:</Text>
+                      <Text style={styles.valueDetail}>
+                        {ideaDetail.plannedImplementationDuration ? formatDate(ideaDetail.plannedImplementationDuration) : "N/A"}
+                      </Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Before Implementation:</Text>
+                      {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
+                        <TouchableOpacity style={styles.imagePreviewContainer} onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
+                          <Image source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.thumbnailSmall} />
+                          <Text style={styles.tapToEnlargeText}></Text>
+                        </TouchableOpacity>
+                      ) : (<Text style={styles.valueDetail}>N/A</Text>)}
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Status:</Text>
+                      <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus || ideaDetail.status) }]}>
+                        {ideaDetail.ideaStatus || ideaDetail.status || "N/A"}
+                      </Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Idea Description:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || ideaDetail.description || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Proposed Solution:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Team Members:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Idea Theme:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Type:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaType || ideaDetail.type || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>BE Team Support Needed:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Implementation Details - Show if available */}
+                {shouldShowImplementationDetails(ideaDetail) && (
+                  <>
+                    <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setShowImplementationDetails(!showImplementationDetails)} activeOpacity={0.7}>
+                      <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
+                      <Ionicons name={showImplementationDetails ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
+                    </TouchableOpacity>
+                    
+                    {showImplementationDetails && (
+                      <View style={styles.cardDetail}>
+                        <View style={styles.rowDetailWithBorder}>
+                          <Text style={styles.labelDetail}>Implementation Status:</Text>
+                          <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.implementationCycle?.status) }]}>
+                            {ideaDetail.implementationCycle?.status || "N/A"}
+                          </Text>
+                        </View>
+                        <View style={styles.rowDetailWithBorder}>
+                          <Text style={styles.labelDetail}>Implementation Details:</Text>
+                          <Text style={styles.valueDetail}>
+                            {ideaDetail.implementationCycle?.implementation || ideaDetail.implementationDetail || ideaDetail.implementation || "Not provided"}
+                          </Text>
+                        </View>
+                        <View style={styles.rowDetailWithBorder}>
+                          <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
+                          <Text style={styles.valueDetail}>
+                            {ideaDetail.implementationCycle?.outcome || ideaDetail.implementationOutcome || ideaDetail.outcome || "Not provided"}
+                          </Text>
+                        </View>
+                        {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
+                          <View style={styles.rowDetailWithBorder}>
+                            <Text style={styles.labelDetail}>Submitted On:</Text>
+                            <Text style={styles.valueDetail}>
+                              {formatDate(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate)}
+                            </Text>
+                          </View>
+                        )}
+                        
+                        {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
+                          <View style={styles.implementationImageSection}>
+                            <Text style={styles.imageLabel}>Before Implementation:</Text>
+                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
+                              <Image source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }} style={styles.implementationImage} />
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                        
+                        {ideaDetail.implementationCycle?.afterImplementationImagePath && (
+                          <View style={styles.implementationImageSection}>
+                            <Text style={styles.imageLabel}>After Implementation:</Text>
+                            <TouchableOpacity onPress={() => {
+                              const imagePath = ideaDetail.implementationCycle.afterImplementationImagePath;
+                              const fullUrl = imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
+                              openImagePreview(fullUrl);
+                            }}>
+                              <Image source={{ 
+                                uri: ideaDetail.implementationCycle.afterImplementationImagePath.startsWith('http')
+                                  ? ideaDetail.implementationCycle.afterImplementationImagePath
+                                  : `https://ideabank-api-dev.abisaio.com${ideaDetail.implementationCycle.afterImplementationImagePath}`
+                              }} style={styles.implementationImage} />
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </>
+                )}
+
+                {/* Remarks Section */}
                 <View style={styles.cardDetail}>
                   <Text style={styles.cardHeading}>Remarks</Text>
                   {(() => {
@@ -729,31 +935,18 @@ const DashboardScreen = () => {
                         key={index}
                         title={remark.approverName || remark.title || "Unknown"}
                         comment={remark.comments || remark.comment || "No comment"}
-                        date={remark.approvalDate || remark.date ? 
-                          new Date(remark.approvalDate || remark.date).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          }) : ""}
+                        date={remark.approvalDate || remark.date ? formatDateTime(remark.approvalDate || remark.date) : ""}
                       />
                     ));
                   })()}
                 </View>
-
-                {/* {ideaDetail.beforeImplementationImagePath && (
-                  <TouchableOpacity style={styles.imageWrapper} onPress={() => setShowImage(true)}>
-                    <Image source={{ uri: ideaDetail.beforeImplementationImagePath }} style={styles.thumbnail} />
-                    <Text style={styles.viewImageText}>Tap to view full image</Text>
-                  </TouchableOpacity>
-                )} */}
               </>
             )}
           </ScrollView>
         </View>
       </Modal>
 
+      {/* Timeline Modal */}
       <Modal visible={showTimelineModal} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
@@ -788,16 +981,17 @@ const DashboardScreen = () => {
         </View>
       </Modal>
 
+      {/* Image Viewer Modal */}
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
-          <TouchableOpacity style={styles.closeButtonImage} onPress={() => setShowImage(false)}>
+          <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}>
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
-          <Image
-            source={{ uri: ideaDetail?.beforeImplementationImagePath }}
-            style={styles.fullImage}
-            resizeMode="contain"
-          />
+          {currentImageUrl ? (
+            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} resizeMode="contain" onError={() => Toast.show('Failed to load image', { duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM })} />
+          ) : (
+            <Text style={{ color: '#fff' }}>No image available</Text>
+          )}
         </View>
       </Modal>
     </View>
@@ -848,7 +1042,7 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     paddingHorizontal: 15,
-    marginVertical: 15,
+    marginTop: 15,
   },
   row: {
     flexDirection: 'row',
@@ -861,13 +1055,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cardWrapper: {
-    width: '46%', 
+    width: '48%', 
   },
   rejectedWrapper: {
-    width: '46%', 
+    width: '48%', 
   },
   card: {
-    width: '99%',
+    width: '100%',
     borderRadius: 15,
     alignItems: 'center',
     paddingVertical: 25, 
@@ -903,7 +1097,7 @@ const styles = StyleSheet.create({
   overviewCard: {
     backgroundColor: '#fff',
     marginHorizontal: 20,
-    marginTop: 0.3, 
+    marginTop: 10, 
     padding: 20,
     borderRadius: 20,
     alignItems: 'center',
@@ -1069,6 +1263,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.8)',
+    zIndex: 9999,
   },
   fullModal: {
     flex: 1,
@@ -1122,6 +1317,27 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 30,
   },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  collapsibleHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c5aa0',
+  },
   cardDetail: {
     backgroundColor: '#fff',
     padding: 16,
@@ -1141,7 +1357,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
-    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+  },
+  rowDetailWithBorder: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 10,
+    marginBottom: 10,
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   labelDetail: {
     fontWeight: '600',
@@ -1157,12 +1382,48 @@ const styles = StyleSheet.create({
   },
   statusBadgeDetail: {
     color: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 12,
+    fontSize: 11,
+    fontWeight: '600',
+    maxWidth: 200,
+    textAlign: 'center',
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  thumbnailSmall: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  tapToEnlargeText: {
+    color: '#2196F3',
     fontSize: 12,
-    overflow: 'hidden',
-    alignSelf: 'flex-end',
+    fontWeight: '500',
+  },
+  implementationImageSection: {
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  imageLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
+  },
+  implementationImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    resizeMode: 'cover',
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   remarkCard: {
     backgroundColor: '#f8f9fa',
@@ -1286,26 +1547,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 15,
     fontStyle: 'italic',
-  },
-  imageWrapper: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    elevation: 2,
-  },
-  thumbnail: {
-    width: 150,
-    height: 150,
-    borderRadius: 8,
-  },
-  viewImageText: {
-    marginTop: 8,
-    color: '#2c5aa0',
-    fontSize: 14,
-    fontWeight: '500',
   },
   imageModal: {
     flex: 1,
