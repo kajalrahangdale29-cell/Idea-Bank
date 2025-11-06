@@ -20,12 +20,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { 
-  SUBMIT_IMPLEMENTATION_URL, 
   EDIT_IMPLEMENTATION_URL,
   IDEA_DETAIL_URL 
-} from '../src/context/api';
+} from './api';
 
-// Format date helper
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
   const date = new Date(dateString);
@@ -46,7 +44,15 @@ const formatDateTime = (dateString) => {
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
 
-// Check if implementation exists
+const normalizeImagePath = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+};
+
 const hasExistingImplementation = (ideaDetail) => {
   if (!ideaDetail) return false;
   if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
@@ -58,7 +64,6 @@ const hasExistingImplementation = (ideaDetail) => {
   return false;
 };
 
-// Timeline Component
 function TimelineItem({ status, date, description, isLast }) {
   const getCircleColor = (status) => {
     if (!status) return "#9E9E9E";
@@ -87,7 +92,6 @@ function TimelineItem({ status, date, description, isLast }) {
   );
 }
 
-// Remarks Card Component
 function RemarksCard({ title, comment, date }) {
   return (
     <View style={styles.remarkCard}>
@@ -144,17 +148,17 @@ export default function ImplementationDetailsScreen() {
   const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [imageScale, setImageScale] = useState(1);
 
   const isEditMode = hasExistingImplementation(ideaDetail);
 
-  // Fetch full idea details if not provided
   useEffect(() => {
     if (!ideaData && ideaId) {
       fetchIdeaDetail();
     }
   }, [ideaId]);
 
-  // Load existing implementation data
   useEffect(() => {
     if (isEditMode && ideaDetail) {
       const implData = ideaDetail.implementationCycle || ideaDetail;
@@ -166,7 +170,8 @@ export default function ImplementationDetailsScreen() {
                            ideaDetail.afterImplementationImagePath;
       
       if (existingImage) {
-        setExistingImageUrl(existingImage);
+        const normalizedUrl = normalizeImagePath(existingImage);
+        setExistingImageUrl(normalizedUrl);
         setKeepExistingImage(true);
         setAfterImageName('Existing image on server');
       }
@@ -193,6 +198,7 @@ export default function ImplementationDetailsScreen() {
         navigation.goBack();
       }
     } catch (error) {
+      console.error('Fetch idea detail error:', error);
       Alert.alert("Error", "Failed to fetch idea details.");
       navigation.goBack();
     } finally {
@@ -266,7 +272,6 @@ export default function ImplementationDetailsScreen() {
   };
 
   const handleSubmit = async () => {
-    // Validation
     if (!implementationDetails.trim()) {
       Alert.alert('Error', 'Please enter implementation details');
       return;
@@ -292,18 +297,12 @@ export default function ImplementationDetailsScreen() {
       const token = await AsyncStorage.getItem('token');
       const formData = new FormData();
 
-      const apiUrl = isEditMode 
-        ? EDIT_IMPLEMENTATION_URL(ideaDetail.id)
-        : SUBMIT_IMPLEMENTATION_URL;
-
-      console.log('🎯 API Endpoint:', apiUrl);
-      console.log('📝 Mode:', isEditMode ? 'EDIT' : 'CREATE');
+      const apiUrl = EDIT_IMPLEMENTATION_URL(ideaDetail.id);
 
       formData.append('IdeaId', ideaDetail.id);
       formData.append('Implementation', implementationDetails.trim());
       formData.append('Outcome', outcomesBenefits.trim());
 
-      // Handle image upload
       if (!keepExistingImage && afterImage && afterImageName) {
         let fileUri = afterImage;
         
@@ -329,36 +328,28 @@ export default function ImplementationDetailsScreen() {
 
         const cleanName = afterImageName.replace(/[^a-zA-Z0-9._-]/g, '_');
 
-        console.log('📎 Uploading NEW file:', cleanName);
-
         formData.append('AfterImplementationImage', {
           uri: fileInfo.uri,
           type: mimeType,
           name: cleanName,
         });
-      } else if (keepExistingImage) {
-        console.log('✅ Keeping existing image');
       }
 
-      const response = await axios.post(apiUrl, formData, {
+      const response = await axios.put(apiUrl, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      console.log('✅ Response:', response.data);
-
       if (response.data?.success) {
         Alert.alert(
           'Success',
-          response.data?.message || 
-          `Implementation ${isEditMode ? 'updated' : 'submitted'} successfully!`,
+          response.data?.message || 'Implementation updated successfully!',
           [
             {
               text: 'OK',
               onPress: () => {
-                // Call success callback if provided
                 if (route.params?.onSuccess) {
                   route.params.onSuccess();
                 }
@@ -370,14 +361,13 @@ export default function ImplementationDetailsScreen() {
       } else {
         Alert.alert(
           'Error',
-          response.data?.message || 
-          `Failed to ${isEditMode ? 'update' : 'submit'} implementation`
+          response.data?.message || 'Failed to update implementation'
         );
       }
     } catch (error) {
       console.error('❌ Submit error:', error);
       
-      let errorMessage = `Failed to ${isEditMode ? 'update' : 'submit'} implementation.`;
+      let errorMessage = 'Failed to update implementation.';
       
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
@@ -390,6 +380,9 @@ export default function ImplementationDetailsScreen() {
       setIsSubmitting(false);
     }
   };
+
+  const handleZoomIn = () => { setImageScale(prev => Math.min(prev + 0.2, 3)); };
+  const handleZoomOut = () => { setImageScale(prev => Math.max(prev - 0.2, 0.5)); };
 
   if (loading) {
     return (
@@ -417,16 +410,14 @@ export default function ImplementationDetailsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#2c5aa0" />
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isEditMode ? 'Edit Implementation' : 'Submit Implementation'}
-        </Text>
+        <Text style={styles.headerTitle}>Implementation Details</Text>
         <TouchableOpacity 
           style={styles.timelineButton}
           onPress={() => setShowTimelineModal(true)}
         >
-          <Ionicons name="time-outline" size={24} color="#2c5aa0" />
+          <Ionicons name="time-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -435,6 +426,7 @@ export default function ImplementationDetailsScreen() {
         <TouchableOpacity 
           style={styles.collapsibleHeader} 
           onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)}
+          activeOpacity={0.7}
         >
           <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
           <Ionicons 
@@ -455,12 +447,32 @@ export default function ImplementationDetailsScreen() {
               <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmployeeNo || "N/A"}</Text>
             </View>
             <View style={styles.rowDetailWithBorder}>
+              <Text style={styles.labelDetail}>Employee Email:</Text>
+              <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmail || "N/A"}</Text>
+            </View>
+            <View style={styles.rowDetailWithBorder}>
               <Text style={styles.labelDetail}>Department:</Text>
               <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || "N/A"}</Text>
             </View>
-            <View style={styles.rowDetail}>
-              <Text style={styles.labelDetail}>Location:</Text>
+            <View style={styles.rowDetailWithBorder}>
+              <Text style={styles.labelDetail}>Mobile:</Text>
+              <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
+            </View>
+            <View style={styles.rowDetailWithBorder}>
+              <Text style={styles.labelDetail}>Reporting Manager:</Text>
+              <Text style={styles.valueDetail}>{ideaDetail.reportingManagerName || "N/A"}</Text>
+            </View>
+            <View style={styles.rowDetailWithBorder}>
+              <Text style={styles.labelDetail}>Manager Email:</Text>
+              <Text style={styles.valueDetail}>{ideaDetail.managerEmail || "N/A"}</Text>
+            </View>
+            <View style={styles.rowDetailWithBorder}>
+              <Text style={styles.labelDetail}>Employee Location:</Text>
               <Text style={styles.valueDetail}>{ideaDetail.location || "N/A"}</Text>
+            </View>
+            <View style={styles.rowDetail}>
+              <Text style={styles.labelDetail}>Sub Department:</Text>
+              <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerSubDepartment || "N/A"}</Text>
             </View>
           </View>
         )}
@@ -469,6 +481,7 @@ export default function ImplementationDetailsScreen() {
         <TouchableOpacity 
           style={styles.collapsibleHeader} 
           onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)}
+          activeOpacity={0.7}
         >
           <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
           <Ionicons 
@@ -485,8 +498,16 @@ export default function ImplementationDetailsScreen() {
               <Text style={styles.valueDetail}>{ideaDetail.ideaNumber || "N/A"}</Text>
             </View>
             <View style={styles.rowDetailWithBorder}>
+              <Text style={styles.labelDetail}>Solution Category:</Text>
+              <Text style={styles.valueDetail}>{ideaDetail.solutionCategory || "N/A"}</Text>
+            </View>
+            <View style={styles.rowDetailWithBorder}>
               <Text style={styles.labelDetail}>Creation Date:</Text>
               <Text style={styles.valueDetail}>{formatDate(ideaDetail.ideaCreationDate)}</Text>
+            </View>
+            <View style={styles.rowDetailWithBorder}>
+              <Text style={styles.labelDetail}>Planned Completion:</Text>
+              <Text style={styles.valueDetail}>{formatDate(ideaDetail.plannedImplementationDuration)}</Text>
             </View>
             <View style={styles.rowDetailWithBorder}>
               <Text style={styles.labelDetail}>Status:</Text>
@@ -498,9 +519,21 @@ export default function ImplementationDetailsScreen() {
               <Text style={styles.labelDetail}>Description:</Text>
               <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || "N/A"}</Text>
             </View>
-            <View style={styles.rowDetail}>
+            <View style={styles.rowDetailWithBorder}>
               <Text style={styles.labelDetail}>Proposed Solution:</Text>
               <Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text>
+            </View>
+            <View style={styles.rowDetailWithBorder}>
+              <Text style={styles.labelDetail}>Process Improvement:</Text>
+              <Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
+            </View>
+            <View style={styles.rowDetailWithBorder}>
+              <Text style={styles.labelDetail}>Team Members:</Text>
+              <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
+            </View>
+            <View style={styles.rowDetail}>
+              <Text style={styles.labelDetail}>Idea Theme:</Text>
+              <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
             </View>
           </View>
         )}
@@ -510,7 +543,7 @@ export default function ImplementationDetailsScreen() {
           <View style={styles.cardDetail}>
             <Text style={styles.cardHeading}>Before Implementation</Text>
             <Image 
-              source={{ uri: ideaDetail.beforeImplementationImagePath }} 
+              source={{ uri: normalizeImagePath(ideaDetail.beforeImplementationImagePath) }} 
               style={styles.beforeImage} 
               resizeMode="cover"
             />
@@ -521,7 +554,7 @@ export default function ImplementationDetailsScreen() {
         <View style={styles.cardDetail}>
           <Text style={styles.cardHeading}>Remarks</Text>
           {(() => {
-            const remarks = parseRemarks(ideaDetail.remark || ideaDetail.remarks);
+            const remarks = parseRemarks(ideaDetail.remarks || ideaDetail.remark);
             if (remarks.length === 0) {
               return <Text style={styles.noRemarksText}>No remarks available</Text>;
             }
@@ -580,10 +613,14 @@ export default function ImplementationDetailsScreen() {
 
           {isEditMode && existingImageUrl && (
             <View style={styles.existingImageContainer}>
-              <Image
-                source={{ uri: existingImageUrl }}
-                style={styles.existingImageThumbnail}
-              />
+              <TouchableOpacity onPress={() => {
+                setShowImagePreview(true);
+              }}>
+                <Image
+                  source={{ uri: existingImageUrl }}
+                  style={styles.existingImageThumbnail}
+                />
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setKeepExistingImage(!keepExistingImage)}
                 style={styles.checkboxButton}
@@ -615,17 +652,17 @@ export default function ImplementationDetailsScreen() {
             </Text>
           </View>
 
+          {afterImage && afterImageType === 'image' && !keepExistingImage && (
+            <TouchableOpacity onPress={() => setShowImagePreview(true)} style={styles.eyeIconContainer}>
+              <Feather name="eye" size={20} color="#2196F3" />
+              <Text style={styles.previewText}>Preview Image</Text>
+            </TouchableOpacity>
+          )}
+
           {afterImage && afterImageType === 'pdf' && !keepExistingImage && (
             <View style={styles.pdfInfoContainer}>
               <Feather name="file-text" size={20} color="#FF5722" />
               <Text style={styles.pdfInfoText}>PDF Selected</Text>
-            </View>
-          )}
-
-          {afterImage && afterImageType === 'image' && !keepExistingImage && (
-            <View style={styles.newImagePreview}>
-              <Text style={styles.previewLabel}>New Image Preview:</Text>
-              <Image source={{ uri: afterImage }} style={styles.newImageThumbnail} />
             </View>
           )}
         </View>
@@ -639,12 +676,9 @@ export default function ImplementationDetailsScreen() {
           {isSubmitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={styles.submitButtonText}>
-                {isEditMode ? 'Update Implementation' : 'Submit Implementation'}
-              </Text>
-            </>
+            <Text style={styles.submitButtonText}>
+              {isEditMode ? 'Update Implementation' : 'Submit Implementation'}
+            </Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -677,6 +711,35 @@ export default function ImplementationDetailsScreen() {
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal visible={showImagePreview} transparent animationType="fade">
+        <View style={styles.imagePreviewModal}>
+          <View style={styles.imagePreviewHeader}>
+            <TouchableOpacity onPress={() => setShowImagePreview(false)}>
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.zoomControls}>
+              <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut}>
+                <Ionicons name="remove" size={24} color="#fff" />
+              </TouchableOpacity>
+              <Text style={styles.zoomText}>{Math.round(imageScale * 100)}%</Text>
+              <TouchableOpacity style={styles.zoomButton} onPress={handleZoomIn}>
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <ScrollView contentContainerStyle={styles.imageScrollContent} maximumZoomScale={3} minimumZoomScale={0.5}>
+            {(afterImage || existingImageUrl) && (
+              <Image 
+                source={{ uri: afterImage || existingImageUrl }} 
+                style={[styles.fullImagePreview, { transform: [{ scale: imageScale }] }]} 
+                resizeMode="contain" 
+              />
+            )}
+          </ScrollView>
         </View>
       </Modal>
 
@@ -727,19 +790,28 @@ const styles = StyleSheet.create({
   goBackButton: { marginTop: 20, backgroundColor: '#2c5aa0', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   goBackText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   header: { 
-    backgroundColor: '#fff', 
+    backgroundColor: '#0f4c5c', 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
     paddingHorizontal: 16, 
     paddingVertical: 16,
     paddingTop: 50,
-    borderBottomWidth: 1, 
-    borderBottomColor: '#e0e0e0',
-    elevation: 4
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   backButton: { padding: 8 },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: 'bold', color: '#2c5aa0', marginLeft: 12 },
+  headerTitle: { 
+    flex: 1, 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: '#fff', 
+    marginLeft: 12,
+    textAlign: 'center'
+  },
   timelineButton: { padding: 8 },
   scrollContent: { padding: 16, paddingBottom: 30 },
   collapsibleHeader: { 
@@ -752,7 +824,11 @@ const styles = StyleSheet.create({
     marginBottom: 8, 
     borderWidth: 1,
     borderColor: '#e0e0e0',
-    elevation: 1
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   collapsibleHeaderText: { fontSize: 16, fontWeight: '600', color: '#2c5aa0' },
   cardDetail: { 
@@ -762,7 +838,11 @@ const styles = StyleSheet.create({
     marginBottom: 12, 
     borderWidth: 1, 
     borderColor: "#E0E0E0", 
-    elevation: 2 
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
   rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, alignItems: 'flex-start' },
@@ -812,9 +892,27 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top', 
     minHeight: 100 
   },
-  existingImageContainer: { marginVertical: 12, padding: 12, backgroundColor: '#f8f9fa', borderRadius: 8 },
-  existingImageThumbnail: { width: '100%', height: 150, borderRadius: 8, marginBottom: 12 },
-  checkboxButton: { flexDirection: 'row', alignItems: 'center' },
+  existingImageContainer: { 
+    marginVertical: 12, 
+    padding: 12, 
+    backgroundColor: '#f8f9fa', 
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0'
+  },
+  existingImageThumbnail: { 
+    width: '100%', 
+    height: 150, 
+    borderRadius: 8, 
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#ddd'
+  },
+  checkboxButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    paddingVertical: 8
+  },
   checkboxLabel: { marginLeft: 8, fontSize: 14, color: '#333', fontWeight: '500' },
   fileInputRow: { 
     flexDirection: 'row', 
@@ -823,46 +921,62 @@ const styles = StyleSheet.create({
     borderRadius: 8, 
     borderWidth: 1, 
     borderColor: '#ddd', 
-    overflow: 'hidden' 
+    overflow: 'hidden',
+    marginVertical: 8
   },
   chooseFileButton: { 
     backgroundColor: '#e0e0e0', 
     paddingHorizontal: 16, 
     paddingVertical: 12, 
     borderRightWidth: 1, 
-    borderRightColor: '#ccc' 
+    borderRightColor: '#ccc'
   },
   chooseFileText: { color: '#333', fontSize: 14, fontWeight: '500' },
-  fileNameDisplay: { flex: 1, paddingHorizontal: 12, color: '#666', fontSize: 14 },
-  pdfInfoContainer: { 
+  fileNameDisplay: { 
+    flex: 1, 
+    paddingHorizontal: 12, 
+    color: '#666', 
+    fontSize: 13 
+  },
+  eyeIconContainer: { 
     marginTop: 8, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    alignSelf: 'flex-start' 
+  },
+  previewText: { marginLeft: 6, color: '#2196F3', fontSize: 14, fontWeight: '500' },
+  pdfInfoContainer: { 
+    marginTop: 12, 
     flexDirection: 'row', 
     alignItems: 'center', 
     backgroundColor: '#FFF3E0', 
     paddingHorizontal: 12, 
-    paddingVertical: 8, 
-    borderRadius: 6, 
-    alignSelf: 'flex-start' 
+    paddingVertical: 10, 
+    borderRadius: 8, 
+    borderWidth: 1,
+    borderColor: '#FFE0B2'
   },
-  pdfInfoText: { marginLeft: 8, color: '#FF5722', fontSize: 14, fontWeight: '500' },
-  newImagePreview: { marginTop: 12 },
-  previewLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
-  newImageThumbnail: { width: '100%', height: 150, borderRadius: 8, borderWidth: 1, borderColor: '#ddd' },
+  pdfInfoText: { marginLeft: 8, color: '#FF5722', fontSize: 13, fontWeight: '500' },
   submitButton: { 
     backgroundColor: '#1976D2', 
     paddingVertical: 14, 
     borderRadius: 8, 
     alignItems: 'center', 
-    marginTop: 16,
+    marginTop: 8,
     marginBottom: 16,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    elevation: 3
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   submitButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   submitButtonDisabled: { backgroundColor: '#9E9E9E' },
-  imageOptionsContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  imageOptionsContainer: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'flex-end' 
+  },
   imageOptionsContent: { 
     backgroundColor: '#fff', 
     borderTopLeftRadius: 20, 
@@ -870,7 +984,13 @@ const styles = StyleSheet.create({
     padding: 20, 
     paddingBottom: 40 
   },
-  imageOptionsTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 20, textAlign: 'center' },
+  imageOptionsTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#333', 
+    marginBottom: 20, 
+    textAlign: 'center' 
+  },
   imageOptionButton: { 
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -879,9 +999,61 @@ const styles = StyleSheet.create({
     borderRadius: 12, 
     marginBottom: 12 
   },
-  imageOptionText: { fontSize: 16, color: '#333', fontWeight: '600', marginLeft: 15 },
-  cancelButton: { backgroundColor: '#FFE5E5', marginTop: 10, justifyContent: 'center' },
-  cancelButtonText: { fontSize: 16, color: '#FF3B30', fontWeight: '600', textAlign: 'center' },
+  imageOptionText: { 
+    fontSize: 16, 
+    color: '#333', 
+    fontWeight: '600', 
+    marginLeft: 15 
+  },
+  cancelButton: { 
+    backgroundColor: '#FFE5E5', 
+    marginTop: 10, 
+    justifyContent: 'center' 
+  },
+  cancelButtonText: { 
+    fontSize: 16, 
+    color: '#FF3B30', 
+    fontWeight: '600', 
+    textAlign: 'center' 
+  },
+  imagePreviewModal: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.95)'
+  },
+  imagePreviewHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 20, 
+    paddingTop: 50, 
+    paddingBottom: 15 
+  },
+  zoomControls: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(255,255,255,0.2)', 
+    borderRadius: 20, 
+    paddingHorizontal: 10, 
+    paddingVertical: 5 
+  },
+  zoomButton: { padding: 8 },
+  zoomText: { 
+    color: '#fff', 
+    fontSize: 14, 
+    fontWeight: 'bold', 
+    marginHorizontal: 15, 
+    minWidth: 50, 
+    textAlign: 'center' 
+  },
+  imageScrollContent: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  fullImagePreview: { 
+    width: 350, 
+    height: 500 
+  },
   timelineModal: { flex: 1, backgroundColor: '#f5f5f5' },
   timelineHeader: { 
     flexDirection: 'row', 
@@ -903,15 +1075,38 @@ const styles = StyleSheet.create({
     alignItems: "center" 
   },
   timelineScrollContent: { padding: 16 },
-  timelineContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 10, borderWidth: 1, borderColor: '#E0E0E0' },
+  timelineContainer: { 
+    backgroundColor: '#fff', 
+    padding: 16, 
+    borderRadius: 10, 
+    borderWidth: 1, 
+    borderColor: '#E0E0E0' 
+  },
   timelineItem: { flexDirection: "row", marginBottom: 20 },
   timelineLeft: { alignItems: "center", marginRight: 15, width: 20 },
-  timelineCircle: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: "#fff", elevation: 2 },
+  timelineCircle: { 
+    width: 14, 
+    height: 14, 
+    borderRadius: 7, 
+    borderWidth: 3, 
+    borderColor: "#fff", 
+    elevation: 2 
+  },
   timelineLine: { width: 3, backgroundColor: "#E0E0E0", flex: 1, marginTop: 4 },
   timelineContent: { flex: 1, paddingBottom: 5 },
   timelineStatus: { fontSize: 15, fontWeight: "bold", color: "#333", marginBottom: 4 },
   timelineDescription: { fontSize: 13, color: "#666", marginBottom: 6, lineHeight: 18 },
   timelineDate: { fontSize: 12, color: "#999", fontStyle: "italic" },
-  noTimelineContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
-  noTimelineText: { color: "#999", textAlign: "center", marginTop: 10, fontSize: 15, fontStyle: 'italic' },
+  noTimelineContainer: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 40 
+  },
+  noTimelineText: { 
+    color: "#999", 
+    textAlign: "center", 
+    marginTop: 10, 
+    fontSize: 15, 
+    fontStyle: 'italic' 
+  },
 });

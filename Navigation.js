@@ -7,6 +7,8 @@ import LoginScreen from './screens/LoginScreen';
 import MainApp from './screens/MainApp';
 import EditIdeaScreen from './screens/EditIdeaScreen'; 
 
+import EditImplementationScreen from './src/context/ImplementationDetailsScreen';
+
 const Stack = createNativeStackNavigator();
 
 export default function Navigation() {
@@ -16,7 +18,7 @@ export default function Navigation() {
         <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="MainApp" component={MainApp} options={{ headerShown: false }} />
-        <Stack.Screen name="EditIdea" component={EditIdeaScreen}  />
+        <Stack.Screen name="EditImplementation" component={EditImplementationScreen} />
         
 
       </Stack.Navigator>

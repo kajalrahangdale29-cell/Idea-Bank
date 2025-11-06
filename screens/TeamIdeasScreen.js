@@ -148,7 +148,6 @@ export default function MyTeamIdeasScreen() {
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
 
-  // Remark modal states
   const [showRemarkModal, setShowRemarkModal] = useState(false);
   const [remarkType, setRemarkType] = useState("");
   const [remarkText, setRemarkText] = useState("");
@@ -158,7 +157,6 @@ export default function MyTeamIdeasScreen() {
     fetchAllIdeas();
   }, []);
 
-  // Handle hardware back button
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (showImage) {
@@ -448,11 +446,11 @@ export default function MyTeamIdeasScreen() {
   const handleEdit = () => {
     if (ideaDetail) {
       closeModal();
-      // Pass isManagerEditing as true since this is Team Ideas screen
+     
       navigation.navigate('EditIdea', { 
         ideaId: ideaDetail.id || ideaDetail.ideaId,
         ideaData: ideaDetail,
-        isManagerEditing: true // Manager is editing team member's idea
+        isManagerEditing: true 
       });
     }
   };
@@ -658,14 +656,12 @@ export default function MyTeamIdeasScreen() {
         </ScrollView>
       )}
 
-      {/* Loading overlay */}
       {loadingDetail && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#2c5aa0" />
         </View>
       )}
 
-      {/* Fullscreen Modal with Details */}
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.modalHeader}>
@@ -961,26 +957,6 @@ export default function MyTeamIdeasScreen() {
               </>
             )}
           </ScrollView>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtonsContainer}>
-            <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-              <Ionicons name="create-outline" size={18} color="#fff" />
-              <Text style={styles.actionButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.approveButton} onPress={handleApprove}>
-              <Ionicons name="checkmark-circle" size={18} color="#fff" />
-              <Text style={styles.actionButtonText}>Approve</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.rejectButton} onPress={handleReject}>
-              <Ionicons name="close-circle" size={18} color="#fff" />
-              <Text style={styles.actionButtonText}>Reject</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.holdButton} onPress={handleHold}>
-              <Ionicons name="pause-circle" size={18} color="#fff" />
-              <Text style={styles.actionButtonText}>Hold</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </Modal>
 

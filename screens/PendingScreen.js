@@ -104,38 +104,36 @@ const getStatusColor = (status) => {
   return "gray";
 };
 
-// ✅ CRITICAL: Check if idea is in implementation phase
-const isImplementationPhase = (status) => {
-  if (!status) return false;
-  const s = status.toLowerCase();
-  return s.includes("approved by be team") || 
-         s.includes("ready for implementation") || 
-         s.includes("implementation");
-};
+  const isImplementationPhase = (status) => {
+    if (!status) return false;
+    const s = status.toLowerCase();
+    return s.includes("approved by be team") || 
+          s.includes("ready for implementation") || 
+          s.includes("implementation");
+  };
 
-const shouldShowImplementationDetails = (ideaDetail) => {
-  if (!ideaDetail) return false;
-  if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
-    return true;
-  }
-  const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
-  return type === "implementation" || type === "implement";
-};
-
-const parseRemarks = (remarkData) => {
-  if (!remarkData) return [];
-  if (Array.isArray(remarkData)) return remarkData;
-  if (typeof remarkData === "object") {
-    const keys = Object.keys(remarkData);
-    if (keys.length > 0 && keys.every(k => !isNaN(k))) {
-      return Object.values(remarkData);
+  const shouldShowImplementationDetails = (ideaDetail) => {
+    if (!ideaDetail) return false;
+    if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
+      return true;
     }
-    return [remarkData];
-  }
-  return [];
-};
+    const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
+    return type === "implementation" || type === "implement";
+  };
 
-// ✅ Implementation Form Component
+  const parseRemarks = (remarkData) => {
+    if (!remarkData) return [];
+    if (Array.isArray(remarkData)) return remarkData;
+    if (typeof remarkData === "object") {
+      const keys = Object.keys(remarkData);
+      if (keys.length > 0 && keys.every(k => !isNaN(k))) {
+        return Object.values(remarkData);
+      }
+      return [remarkData];
+    }
+    return [];
+  };
+
 function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
   const [implementationDetails, setImplementationDetails] = useState('');
   const [outcomesBenefits, setOutcomesBenefits] = useState('');
@@ -554,75 +552,42 @@ export default function PendingScreen() {
   const handleApprove = () => openRemarkModal("approve");
   const handleReject = () => openRemarkModal("reject");
   const handleHold = () => openRemarkModal("hold");
-  // const handleEdit = () => {
-  //   if (!ideaDetail) {
-  //     Alert.alert('Error', 'Idea details not loaded');
-  //     return;
-  //   }
-
-  //   console.log('🔍 Checking idea status:', ideaDetail.ideaStatus);
-  //   console.log('✅ Is implementation phase?', isImplementationPhase(ideaDetail.ideaStatus));
-
-  //   if (isImplementationPhase(ideaDetail.ideaStatus)) {
-  //     console.log('📝 Opening Implementation Form in modal...');
-  //     setShowImplementationForm(true);
-  //   } else {
-  //     console.log('✏️ Navigating to Manager Edit screen...');
-  //     closeModal();
-  //     setTimeout(() => {
-  //       navigation.navigate('ManagerEditIdea', { 
-  //         ideaId: ideaDetail.id || ideaDetail.ideaId,
-  //         ideaData: ideaDetail,
-  //         onSuccess: () => {
-  //           console.log('✅ Edit success! Refreshing list...');
-  //           fetchIdeas();
-  //         }
-  //       });
-  //     }, 100);
-  //   }
-  // };
-
 
   const handleEdit = () => {
     if (!ideaDetail) {
       Alert.alert('Error', 'Idea details not loaded');
       return;
     }
+    const ideaIdFromDetail = ideaDetail.id || ideaDetail.ideaId;
+    const originalIdea = ideas.find(i => i.ideaId === ideaIdFromDetail);
   
-    console.log('🔍 Checking idea status:', ideaDetail.ideaStatus);
-    console.log('✅ Is implementation phase?', isImplementationPhase(ideaDetail.ideaStatus));
+    const hasImplementationCycle = !!ideaDetail.implementationCycle;
   
-    // Check if it's implementation phase
-    if (isImplementationPhase(ideaDetail.ideaStatus)) {
-      console.log('📝 Navigating to Implementation Details Screen...');
-      // ✅ Navigate to ImplementationDetailsScreen (NOT modal, NOT ManagerEdit)
+    if (hasImplementationCycle) {
       closeModal();
       setTimeout(() => {
         navigation.navigate('ImplementationDetails', {
-          ideaId: ideaDetail.id || ideaDetail.ideaId,
+          ideaId: ideaIdFromDetail,
           ideaData: ideaDetail,
           onSuccess: () => {
-            console.log('✅ Implementation submitted! Refreshing list...');
             fetchIdeas();
           }
         });
       }, 100);
     } else {
-      console.log('✏️ Navigating to Manager Edit screen...');
-      // ✅ Regular Edit → Navigate to ManagerEditIdea
       closeModal();
       setTimeout(() => {
         navigation.navigate('ManagerEditIdea', { 
-          ideaId: ideaDetail.id || ideaDetail.ideaId,
+          ideaId: ideaIdFromDetail,
           ideaData: ideaDetail,
           onSuccess: () => {
-            console.log('✅ Edit success! Refreshing list...');
             fetchIdeas();
           }
         });
       }, 100);
     }
   };
+  
 
 
   const applyFilters = () => {
@@ -720,14 +685,13 @@ export default function PendingScreen() {
     return "Enter Remark";
   };
 
-  // ✅ CRITICAL: Close modal properly
   const closeModal = () => {
     setSelectedIdea(null);
     setIdeaDetail(null);
     setEmployeeInfoExpanded(false);
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
-    setShowImplementationForm(false); // ✅ Reset implementation form state
+    setShowImplementationForm(false); 
   };
 
   const openImagePreview = (imageUrl) => {
@@ -877,8 +841,6 @@ export default function PendingScreen() {
           <ActivityIndicator size="large" color="#2c5aa0" />
         </View>
       )}
-
-      {/* ✅ MODAL 1: Implementation Form - Opens when implementation phase */}
       <Modal visible={showImplementationForm && !!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.modalHeader}>
@@ -906,7 +868,6 @@ export default function PendingScreen() {
         </View>
       </Modal>
 
-      {/* ✅ MODAL 2: Idea Details - Opens for regular ideas */}
       <Modal visible={!!selectedIdea && !showImplementationForm} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.modalHeader}>
@@ -1120,12 +1081,17 @@ export default function PendingScreen() {
             )}
           </ScrollView>
 
-          {/* ✅ ACTION BUTTONS - Dynamic text based on status */}
           <View style={styles.actionButtonsContainer}>
             <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
               <Ionicons name="create-outline" size={18} color="#fff" />
               <Text style={styles.actionButtonText}>
-                {isImplementationPhase(ideaDetail?.ideaStatus) ? 'Implementation' : 'Edit'}
+                {(() => {
+                  if (!ideaDetail) return 'Edit';
+                  const ideaIdFromDetail = ideaDetail.id || ideaDetail.ideaId;
+                  const originalIdea = ideas.find(i => i.ideaId === ideaIdFromDetail);
+                  const ideaType = (ideaDetail?.ideaType || ideaDetail?.type || originalIdea?.type || '').toLowerCase();
+                  return ideaType.includes('implementation') || ideaType.includes('implement') ? 'Implementation' : 'Edit';
+                })()}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.approveButton} onPress={handleApprove}>
