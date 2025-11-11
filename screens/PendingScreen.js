@@ -104,35 +104,27 @@ const getStatusColor = (status) => {
   return "gray";
 };
 
-  const isImplementationPhase = (status) => {
-    if (!status) return false;
-    const s = status.toLowerCase();
-    return s.includes("approved by be team") || 
-          s.includes("ready for implementation") || 
-          s.includes("implementation");
-  };
+const shouldShowImplementationDetails = (ideaDetail) => {
+  if (!ideaDetail) return false;
+  if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
+    return true;
+  }
+  const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
+  return type === "implementation" || type === "implement";
+};
 
-  const shouldShowImplementationDetails = (ideaDetail) => {
-    if (!ideaDetail) return false;
-    if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
-      return true;
+const parseRemarks = (remarkData) => {
+  if (!remarkData) return [];
+  if (Array.isArray(remarkData)) return remarkData;
+  if (typeof remarkData === "object") {
+    const keys = Object.keys(remarkData);
+    if (keys.length > 0 && keys.every(k => !isNaN(k))) {
+      return Object.values(remarkData);
     }
-    const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
-    return type === "implementation" || type === "implement";
-  };
-
-  const parseRemarks = (remarkData) => {
-    if (!remarkData) return [];
-    if (Array.isArray(remarkData)) return remarkData;
-    if (typeof remarkData === "object") {
-      const keys = Object.keys(remarkData);
-      if (keys.length > 0 && keys.every(k => !isNaN(k))) {
-        return Object.values(remarkData);
-      }
-      return [remarkData];
-    }
-    return [];
-  };
+    return [remarkData];
+  }
+  return [];
+};
 
 function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
   const [implementationDetails, setImplementationDetails] = useState('');
@@ -332,7 +324,6 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         )}
       </TouchableOpacity>
 
-      {/* File Options Modal */}
       <Modal visible={showFileOptions} transparent={true} animationType="slide">
         <View style={styles.imageOptionsContainer}>
           <View style={styles.imageOptionsContent}>
@@ -365,9 +356,8 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
 export default function PendingScreen() {
   const navigation = useNavigation();
   const [ideas, setIdeas] = useState([]);
+  const [allIdeasOriginal, setAllIdeasOriginal] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [searchIdeaNumber, setSearchIdeaNumber] = useState("");
@@ -384,7 +374,7 @@ export default function PendingScreen() {
   const [showTimelineModal, setShowTimelineModal] = useState(false);
 
   const [showRemarkModal, setShowRemarkModal] = useState(false);
-  const [remarkType, setRemarkType] = useState(""); 
+  const [remarkType, setRemarkType] = useState("");
   const [remarkText, setRemarkText] = useState("");
   const [submittingStatus, setSubmittingStatus] = useState(false);
 
@@ -394,48 +384,126 @@ export default function PendingScreen() {
   const [showImplementationForm, setShowImplementationForm] = useState(false);
 
   useEffect(() => {
-    fetchIdeas();
-  }, [page, searchIdeaNumber, fromDate, toDate]);
+    fetchAllIdeas();
+  }, []);
 
-  const fetchIdeas = async () => {
+  const fetchAllIdeas = async () => {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem("token");
       const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
-      let url = `${PENDING_APPROVALS_URL}?page=${page}&pageSize=${pageSize}`;
-      if (searchIdeaNumber.trim()) {
-        url += `&ideaNumber=${searchIdeaNumber.trim()}`;
-      }
-      if (fromDate) {
-        url += `&fromDate=${fromDate.toISOString().split('T')[0]}`;
-      }
-      if (toDate) {
-        url += `&toDate=${toDate.toISOString().split('T')[0]}`;
+      let allIdeas = [];
+      let currentPage = 1;
+      let hasMorePages = true;
+      let apiTotalItems = 0;
+
+      while (hasMorePages) {
+        const baseUrl = PENDING_APPROVALS_URL.split('?')[0];
+        let url = `${baseUrl}?page=${currentPage}&pageSize=10`;
+        
+        const response = await axios.get(url, { headers: authHeaders });
+
+        if (response.data && response.data.data && Array.isArray(response.data.data.items)) {
+          const { items, totalPages, totalItems, hasNextPage } = response.data.data;
+          
+          if (currentPage === 1 && totalItems !== undefined) {
+            apiTotalItems = totalItems;
+          }
+          
+          if (items.length > 0) {
+            allIdeas = [...allIdeas, ...items];
+          }
+          
+          if (hasNextPage === false || items.length === 0 || (totalPages && currentPage >= totalPages)) {
+            hasMorePages = false;
+          }
+        } else {
+          hasMorePages = false;
+        }
+        
+        currentPage++;
+        
+        if (currentPage > 100) {
+          hasMorePages = false;
+        }
       }
 
-      const response = await axios.get(url, {
-        headers: authHeaders,
-      });
-
-      if (
-        response.data &&
-        response.data.data &&
-        Array.isArray(response.data.data.items)
-      ) {
-        const items = response.data.data.items;
-        setIdeas(items);
-        setTotalItems(items.length);
-      } else {
-        setIdeas([]);
-        setTotalItems(0);
-      }
+      console.log(`✅ Fetch complete: ${allIdeas.length} total pending ideas`);
+      
+      setAllIdeasOriginal(allIdeas);
+      setIdeas(allIdeas);
+      setTotalItems(apiTotalItems || allIdeas.length);
+      
     } catch (error) {
-      console.error('Fetch error:', error);
-      Alert.alert("Error", "Failed to load pending ideas.");
+      console.error("❌ Error fetching pending ideas:", error);
+      setIdeas([]);
+      setAllIdeasOriginal([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyFilters = () => {
+    setLoading(true);
+    
+    try {
+      let filteredIdeas = [...allIdeasOriginal];
+
+      if (searchIdeaNumber.trim()) {
+        const searchTerm = searchIdeaNumber.trim().toLowerCase();
+        filteredIdeas = filteredIdeas.filter(idea => 
+          (idea.ideaNumber && idea.ideaNumber.toLowerCase().includes(searchTerm)) ||
+          (idea.ownerName && idea.ownerName.toLowerCase().includes(searchTerm)) ||
+          (idea.description && idea.description.toLowerCase().includes(searchTerm))
+        );
+      }
+
+      if (fromDate || toDate) {
+        filteredIdeas = filteredIdeas.filter(idea => {
+          if (!idea.creationDate) return false;
+          
+          const ideaDate = new Date(idea.creationDate);
+          ideaDate.setHours(0, 0, 0, 0);
+          
+          if (fromDate && toDate) {
+            const from = new Date(fromDate);
+            from.setHours(0, 0, 0, 0);
+            const to = new Date(toDate);
+            to.setHours(23, 59, 59, 999);
+            return ideaDate >= from && ideaDate <= to;
+          } else if (fromDate) {
+            const from = new Date(fromDate);
+            from.setHours(0, 0, 0, 0);
+            return ideaDate >= from;
+          } else if (toDate) {
+            const to = new Date(toDate);
+            to.setHours(23, 59, 59, 999);
+            return ideaDate <= to;
+          }
+          return true;
+        });
+      }
+      
+      setIdeas(filteredIdeas);
+      setTotalItems(filteredIdeas.length);
+      setShowFilters(false);
+      
+    } catch (error) {
+      console.error("Filter error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchIdeaNumber("");
+    setFromDate(null);
+    setToDate(null);
+    
+    setIdeas(allIdeasOriginal);
+    setTotalItems(allIdeasOriginal.length);
   };
 
   const fetchIdeaDetail = async (ideaId) => {
@@ -527,7 +595,7 @@ export default function PendingScreen() {
               onPress: () => {
                 closeRemarkModal();
                 closeModal();
-                fetchIdeas();
+                fetchAllIdeas();
               }
             }
           ]
@@ -559,8 +627,6 @@ export default function PendingScreen() {
       return;
     }
     const ideaIdFromDetail = ideaDetail.id || ideaDetail.ideaId;
-    const originalIdea = ideas.find(i => i.ideaId === ideaIdFromDetail);
-  
     const hasImplementationCycle = !!ideaDetail.implementationCycle;
   
     if (hasImplementationCycle) {
@@ -570,7 +636,7 @@ export default function PendingScreen() {
           ideaId: ideaIdFromDetail,
           ideaData: ideaDetail,
           onSuccess: () => {
-            fetchIdeas();
+            fetchAllIdeas();
           }
         });
       }, 100);
@@ -579,103 +645,10 @@ export default function PendingScreen() {
       setTimeout(() => {
         navigation.navigate('ManagerEditIdea', { 
           ideaId: ideaIdFromDetail,
-          ideaData: ideaDetail,
-          onSuccess: () => {
-            fetchIdeas();
-          }
+          ideaData: ideaDetail
         });
       }, 100);
     }
-  };
-  
-
-
-  const applyFilters = () => {
-    fetchIdeas();
-    setShowFilters(false);
-  };
-
-  const clearFilters = () => {
-    setSearchIdeaNumber("");
-    setFromDate(null);
-    setToDate(null);
-    setPage(1);
-  };
-
-  const totalPages = Math.ceil(totalItems / pageSize);
-
-  const renderPagination = () => {
-    if (totalPages <= 1) return null;
-
-    const maxButtonsToShow = 5;
-    const pageButtons = [];
-    
-    let startPage = Math.max(1, page - Math.floor(maxButtonsToShow / 2));
-    let endPage = Math.min(totalPages, startPage + maxButtonsToShow - 1);
-    
-    if (endPage - startPage < maxButtonsToShow - 1) {
-      startPage = Math.max(1, endPage - maxButtonsToShow + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pageButtons.push(
-        <TouchableOpacity
-          key={i}
-          style={[styles.pageButton, page === i && styles.pageButtonActive]}
-          onPress={() => setPage(i)}
-        >
-          <Text style={page === i ? styles.pageButtonTextActive : styles.pageButtonText}>
-            {i}
-          </Text>
-        </TouchableOpacity>
-      );
-    }
-
-    return (
-      <View style={styles.paginationContainer}>
-        <TouchableOpacity
-          disabled={page === 1}
-          onPress={() => setPage((prev) => Math.max(prev - 1, 1))}
-          style={[styles.pageButton, page === 1 && { opacity: 0.5 }]}
-        >
-          <Text style={styles.pageButtonText}>Previous</Text>
-        </TouchableOpacity>
-
-        {startPage > 1 && (
-          <>
-            <TouchableOpacity style={styles.pageButton} onPress={() => setPage(1)}>
-              <Text style={styles.pageButtonText}>1</Text>
-            </TouchableOpacity>
-            {startPage > 2 && <Text style={styles.pageButtonText}>...</Text>}
-          </>
-        )}
-
-        {pageButtons}
-
-        {endPage < totalPages && (
-          <>
-            {endPage < totalPages - 1 && <Text style={styles.pageButtonText}>...</Text>}
-            <TouchableOpacity style={styles.pageButton} onPress={() => setPage(totalPages)}>
-              <Text style={styles.pageButtonText}>{totalPages}</Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        <TouchableOpacity
-          disabled={page === totalPages}
-          onPress={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-          style={[styles.pageButton, page === totalPages && { opacity: 0.5 }]}
-        >
-          <Text style={styles.pageButtonText}>Next</Text>
-        </TouchableOpacity>
-        
-        <View style={styles.pageInfo}>
-          <Text style={styles.pageInfoText}>
-            Page {page} of {totalPages} ({totalItems} items)
-          </Text>
-        </View>
-      </View>
-    );
   };
 
   const getRemarkModalTitle = () => {
@@ -691,7 +664,7 @@ export default function PendingScreen() {
     setEmployeeInfoExpanded(false);
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
-    setShowImplementationForm(false); 
+    setShowImplementationForm(false);
   };
 
   const openImagePreview = (imageUrl) => {
@@ -734,16 +707,16 @@ export default function PendingScreen() {
               value={fromDate || new Date()}
               mode="date"
               display="default"
-              onChange={(e, date) => { 
-                setShowFromPicker(false); 
-                if (date) { 
-                  setFromDate(date); 
-                  if (toDate && date > toDate) { 
-                    setToDate(null) 
-                  } 
-                } 
+              onChange={(e, date) => {
+                setShowFromPicker(false);
+                if (date) {
+                  setFromDate(date);
+                  if (toDate && date > toDate) {
+                    setToDate(null)
+                  }
+                }
               }}
-              maximumDate={toDate || undefined}
+              maximumDate={toDate || new Date()}
             />
           )}
 
@@ -755,13 +728,14 @@ export default function PendingScreen() {
               value={toDate || (fromDate || new Date())}
               mode="date"
               display="default"
-              onChange={(e, date) => { 
-                setShowToPicker(false); 
-                if (date) { 
-                  setToDate(date) 
-                } 
+              onChange={(e, date) => {
+                setShowToPicker(false);
+                if (date) {
+                  setToDate(date)
+                }
               }}
               minimumDate={fromDate || undefined}
+              maximumDate={new Date()}
             />
           )}
 
@@ -834,13 +808,12 @@ export default function PendingScreen() {
         </ScrollView>
       )}
 
-      {renderPagination()}
-
       {loadingDetail && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#2c5aa0" />
         </View>
       )}
+
       <Modal visible={showImplementationForm && !!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.modalHeader}>
@@ -863,7 +836,7 @@ export default function PendingScreen() {
               setShowImplementationForm(false);
               closeModal();
             }} 
-            refreshIdeas={fetchIdeas} 
+            refreshIdeas={fetchAllIdeas} 
           />
         </View>
       </Modal>
@@ -1110,7 +1083,6 @@ export default function PendingScreen() {
         </View>
       </Modal>
 
-      {/* Remark Modal */}
       <Modal visible={showRemarkModal} transparent animationType="fade">
         <View style={styles.remarkModalOverlay}>
           <View style={styles.remarkModalContainer}>
@@ -1162,7 +1134,6 @@ export default function PendingScreen() {
         </View>
       </Modal>
 
-      {/* Timeline Modal */}
       <Modal visible={showTimelineModal} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
@@ -1200,7 +1171,6 @@ export default function PendingScreen() {
         </View>
       </Modal>
 
-      {/* Image Viewer Modal */}
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
           <TouchableOpacity
@@ -1260,13 +1230,6 @@ const styles = StyleSheet.create({
   totalContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
   totalText: { fontSize: 16, fontWeight: 'bold', color: '#2c5aa0' },
   noDataText: { textAlign: "center", marginTop: 20, color: "#777", fontSize: 16 },
-  paginationContainer: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginVertical: 15, flexWrap: "wrap", paddingBottom: 10, paddingHorizontal: 10 },
-  pageButton: { marginHorizontal: 5, marginVertical: 3, backgroundColor: "#ddd", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 4 },
-  pageButtonActive: { backgroundColor: "#0A5064" },
-  pageButtonText: { color: "#000", fontWeight: "bold" },
-  pageButtonTextActive: { color: "#fff", fontWeight: "bold" },
-  pageInfo: { width: "100%", alignItems: "center", marginTop: 8 },
-  pageInfoText: { fontSize: 12, color: "#666", fontWeight: "500" },
   loadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(255,255,255,0.6)" },
   fullModal: { flex: 1, backgroundColor: "#f5f5f5" },
   modalHeader: { backgroundColor: '#fff', paddingTop: 24, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', elevation: 4 },

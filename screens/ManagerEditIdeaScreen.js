@@ -293,7 +293,6 @@ export default function ManagerEditIdeaScreen() {
               name: fileName || `file_${Date.now()}.${fileExtension}`,
             });
             
-            console.log('✅ New file attached for upload');
           } catch (fileError) {
             console.error('❌ File error:', fileError);
             Alert.alert('File Error', 'Unable to process selected file. Please try again.');
@@ -351,22 +350,66 @@ export default function ManagerEditIdeaScreen() {
         return;
       }
 
+      // let data;
+      // try {
+      //   data = JSON.parse(responseText);
+      // } catch (parseError) {
+      //   if (response.ok || response.status === 200) {
+      //     setIsSubmitting(false);
+      //     Alert.alert(
+      //       'Success', 
+      //       'Idea updated successfully!',
+      //       [{
+      //         text: 'OK',
+      //         onPress: () => {
+      //           if (onSuccess) onSuccess();
+      //           navigation.goBack();
+      //         }
+      //       }]
+      //     );
+      //     return;
+      //   } else {
+      //     throw new Error('Invalid server response format');
+      //   }
+      // }
+      
+      // setIsSubmitting(false);
+
+      // if (response.ok && (data.success === true || data.success === 'true')) {
+      //   Alert.alert(
+      //     'Success', 
+      //     data.message || 'Idea updated successfully!',
+      //     [{
+      //       text: 'OK',
+      //       onPress: () => {
+      //         if (onSuccess) onSuccess();
+      //         navigation.goBack();
+      //       }
+      //     }]
+      //   );
+      // } else {
+      //   Alert.alert('Error', data?.message || data?.error || 'Failed to update idea.');
+      // }
+
+
       let data;
+
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
         if (response.ok || response.status === 200) {
           setIsSubmitting(false);
           Alert.alert(
-            'Success', 
+            'Success',
             'Idea updated successfully!',
-            [{
-              text: 'OK',
-              onPress: () => {
-                if (onSuccess) onSuccess();
-                navigation.goBack();
-              }
-            }]
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.goBack(); 
+                },
+              },
+            ]
           );
           return;
         } else {
@@ -375,22 +418,26 @@ export default function ManagerEditIdeaScreen() {
       }
       
       setIsSubmitting(false);
-
       if (response.ok && (data.success === true || data.success === 'true')) {
         Alert.alert(
-          'Success', 
+          'Success',
           data.message || 'Idea updated successfully!',
-          [{
-            text: 'OK',
-            onPress: () => {
-              if (onSuccess) onSuccess();
-              navigation.goBack();
-            }
-          }]
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.goBack(); 
+              },
+            },
+          ]
         );
       } else {
-        Alert.alert('Error', data?.message || data?.error || 'Failed to update idea.');
+        Alert.alert(
+          'Error',
+          data?.message || data?.error || 'Failed to update idea.'
+        );
       }
+      
 
     } catch (error) {
       console.error('❌ Submit error:', error);

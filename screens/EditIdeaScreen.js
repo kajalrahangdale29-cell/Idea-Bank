@@ -27,7 +27,7 @@
 //   const route = useRoute();
 //   const ideaData = route.params?.ideaData || {};
 //   const ideaId = route.params?.ideaId;
-//   const isManagerEditing = route.params?.isManagerEditing || false; // New parameter
+//   const isManagerEditing = route.params?.isManagerEditing || false; 
 
 //   useEffect(() => {
 //     navigation.setOptions({
@@ -1134,7 +1134,6 @@
 //   },
 // });
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
@@ -1150,16 +1149,15 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { EDIT_IDEA_URL } from '../src/context/api';
+import { EDIT_IDEA_URL, EMPLOYEE_GET_URL } from '../src/context/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
-
-const EMPLOYEE_GET_URL = "https://ideabank-api-dev.abisaio.com/EmployeeInfo";
 
 export default function EditIdeaScreen() {
   const navigation = useNavigation();
@@ -1209,19 +1207,25 @@ export default function EditIdeaScreen() {
     if (!existingFile) return 'image';
     return existingFile.toLowerCase().includes('.pdf') ? 'pdf' : 'image';
   });
+  const [isNewFile, setIsNewFile] = useState(false);
   
   const [fullScreen, setFullScreen] = useState(false);
   const [imageScale, setImageScale] = useState(1);
+  
   const [beSupportNeeded, setBeSupportNeeded] = useState(() => {
-    if (ideaData.isBETeamSupportNeeded === true || ideaData.isBETeamSupportNeeded === 'true' || ideaData.isBETeamSupportNeeded === 'Yes') return 'Yes';
-    if (ideaData.isBETeamSupportNeeded === false || ideaData.isBETeamSupportNeeded === 'false' || ideaData.isBETeamSupportNeeded === 'No') return 'No';
-    return null;
+    const value = ideaData.isBETeamSupportNeeded;
+    if (value === true || value === 'true' || value === 'Yes' || value === 'yes') return 'Yes';
+    if (value === false || value === 'false' || value === 'No' || value === 'no') return 'No';
+    return 'No';
   });
+  
   const [canImplementOtherLocation, setCanImplementOtherLocation] = useState(() => {
-    if (ideaData.canBeImplementedToOtherLocations === true || ideaData.canBeImplementedToOtherLocations === 'true' || ideaData.canBeImplementedToOtherLocations === 'Yes' || ideaData.canBeImplementedToOtherLocation === true || ideaData.canBeImplementedToOtherLocation === 'Yes') return 'Yes';
-    if (ideaData.canBeImplementedToOtherLocations === false || ideaData.canBeImplementedToOtherLocations === 'false' || ideaData.canBeImplementedToOtherLocations === 'No' || ideaData.canBeImplementedToOtherLocation === false || ideaData.canBeImplementedToOtherLocation === 'No') return 'No';
-    return null;
+    const value = ideaData.canBeImplementedToOtherLocations || ideaData.canBeImplementedToOtherLocation;
+    if (value === true || value === 'true' || value === 'Yes' || value === 'yes') return 'Yes';
+    if (value === false || value === 'false' || value === 'No' || value === 'no') return 'No';
+    return 'No';
   });
+  
   const [showConfirm, setShowConfirm] = useState(false);
   const [showFileOptions, setShowFileOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1256,7 +1260,7 @@ export default function EditIdeaScreen() {
         reportingManagerEmail: data.data.managerEmail || '',
       });
     } catch (error) {
-      console.error('Error fetching employee details:', error);
+      console.error('❌ Error fetching employee details:', error);
     }
   }, [activeTab]);
 
@@ -1271,7 +1275,7 @@ export default function EditIdeaScreen() {
   const pickImageFromGallery = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      alert('Permission required!');
+      Alert.alert('Permission Required', 'Please allow gallery access to select images.');
       return;
     }
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -1280,19 +1284,22 @@ export default function EditIdeaScreen() {
       quality: 1,
     });
     if (!result.canceled) {
-      setFile(result.assets[0].uri);
+      const asset = result.assets[0];
+      setFile(asset.uri);
       setFileType('image');
-      const uriParts = result.assets[0].uri.split('/');
-      setFileName(uriParts[uriParts.length - 1]);
+      setIsNewFile(true);
+      const timestamp = Date.now();
+      const extension = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const cleanFileName = `image_${timestamp}.${extension}`;
+      setFileName(cleanFileName);
       setShowFileOptions(false);
-      console.log('✅ New image selected from gallery:', result.assets[0].uri);
     }
   };
 
   const pickImageFromCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) {
-      alert('Camera permission required!');
+      Alert.alert('Permission Required', 'Please allow camera access to take photos.');
       return;
     }
     let result = await ImagePicker.launchCameraAsync({
@@ -1300,12 +1307,16 @@ export default function EditIdeaScreen() {
       quality: 1,
     });
     if (!result.canceled) {
-      setFile(result.assets[0].uri);
+      const asset = result.assets[0];
+      setFile(asset.uri);
       setFileType('image');
-      const uriParts = result.assets[0].uri.split('/');
-      setFileName(uriParts[uriParts.length - 1]);
+      setIsNewFile(true);
+      const timestamp = Date.now();
+      const extension = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const cleanFileName = `camera_${timestamp}.${extension}`;
+      setFileName(cleanFileName);
       setShowFileOptions(false);
-      console.log('✅ New image captured from camera:', result.assets[0].uri);
+      console.log('✅ New photo captured');
     }
   };
 
@@ -1320,12 +1331,13 @@ export default function EditIdeaScreen() {
         const selectedFile = result.assets ? result.assets[0] : result;
         setFile(selectedFile.uri);
         setFileType('pdf');
+        setIsNewFile(true);
         setFileName(selectedFile.name);
         setShowFileOptions(false);
-        console.log('✅ New PDF selected:', selectedFile.uri);
+        console.log('✅ PDF selected');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick PDF file');
+      Alert.alert('Error', 'Failed to select PDF file');
     }
   };
 
@@ -1374,80 +1386,91 @@ export default function EditIdeaScreen() {
       
       const netInfo = await NetInfo.fetch();
       if (!netInfo.isConnected) {
-        Alert.alert('No Internet', 'Please check your internet connection and try again.');
+        Alert.alert('No Internet', 'Please check your internet connection.');
         setIsSubmitting(false);
         return;
       }
 
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        Alert.alert('Error', 'User token missing. Please login again.');
+        Alert.alert('Error', 'Session expired. Please login again.');
         setIsSubmitting(false);
         return;
       }
 
       const formData = new FormData();
-      formData.append('IdeaDescription', ideaDescription || '');
-      formData.append('ProposedSolution', proposedSolution || '');
-      formData.append('TentativeBenefit', benefit || '');
-      formData.append('TeamMembers', teamMembers || '');
-      formData.append('MobileNumber', mobileNumber || '');
-      formData.append('SolutionCategory', solutionCategory || '');
-      formData.append('IdeaTheme', ideaTheme || '');
+      formData.append('IdeaDescription', ideaDescription.trim());
+      formData.append('ProposedSolution', proposedSolution.trim());
+      formData.append('TentativeBenefit', benefit.trim());
+      formData.append('TeamMembers', teamMembers.trim());
+      formData.append('MobileNumber', mobileNumber.trim());
+      formData.append('SolutionCategory', solutionCategory);
+      formData.append('IdeaTheme', ideaTheme);
       formData.append('PlannedImplementationDuration', date ? date.toISOString().split('T')[0] : '');
-      formData.append('IsBETeamSupportNeeded', beSupportNeeded || '');
-      formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation || '');
+      formData.append('IsBETeamSupportNeeded', beSupportNeeded === 'Yes' ? 'true' : 'false');
+      formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation === 'Yes' ? 'true' : 'false');
 
-      if (file) {
-        const isNewFile = file.startsWith('file://') || 
-                          file.startsWith('content://') || 
-                          file.startsWith('ph://');
-        
-        console.log('📎 File info:', { 
-          file: file.substring(0, 50) + '...', 
-          isNewFile, 
-          fileName, 
-          fileType 
-        });
-        
-        if (isNewFile) {
-          const fileExtension = fileName.split('.').pop().toLowerCase();
-          
-          if (fileType === 'pdf') {
-            formData.append('image', {
-              uri: Platform.OS === 'android' ? file : file.replace('file://', ''),
-              type: 'application/pdf',
-              name: fileName || `document_${Date.now()}.pdf`,
-            });
-            console.log('📄 Uploading new PDF');
-          } else {
-            let mimeType = 'image/jpeg';
-            if (fileExtension === 'png') mimeType = 'image/png';
-            else if (fileExtension === 'jpg' || fileExtension === 'jpeg') mimeType = 'image/jpeg';
-            
-            formData.append('image', {
-              uri: Platform.OS === 'android' ? file : file.replace('file://', ''),
-              type: mimeType,
-              name: fileName || `image_${Date.now()}.${fileExtension}`,
-            });
-            console.log('🖼️ Uploading new image with type:', mimeType);
-          }
-        } else {
-          console.log('✅ Keeping existing server file - not uploading');
-        }
+      if (submitType === 'publish') {
+        formData.append('SubmitType', 'publish');
+      } else {
+        formData.append('SubmitType', 'draft');
       }
-
-      // ✅ FIXED: Base URL banao with query parameter if needed
-      let apiUrl = EDIT_IDEA_URL(ideaId);
       
-      // Manager editing ya publish - dono cases mein query param add karo
-      if (submitType === 'publish' || isManagerEditing) {
-        apiUrl = `${apiUrl}?SubmitType=publish`;
+      if (file && isNewFile) {
+        try {
+          let fileUri = file;
+          if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+            fileUri = `file://${fileUri}`;
+          }
+
+          const fileInfo = await FileSystem.getInfoAsync(fileUri);
+          
+          if (!fileInfo.exists) {
+            throw new Error('File not found on device');
+          }
+
+          console.log('✅ File verified:', {
+            uri: fileInfo.uri,
+            size: fileInfo.size,
+            exists: fileInfo.exists,
+            fileName: fileName,
+          });
+
+          let mimeType = 'application/octet-stream';
+          const extension = fileName.split('.').pop()?.toLowerCase();
+          
+          if (fileType === 'pdf' || extension === 'pdf') {
+            mimeType = 'application/pdf';
+          } else if (extension === 'png') {
+            mimeType = 'image/png';
+          } else if (extension === 'jpg' || extension === 'jpeg') {
+            mimeType = 'image/jpeg';
+          } else if (extension === 'gif') {
+            mimeType = 'image/gif';
+          } else if (extension === 'webp') {
+            mimeType = 'image/webp';
+          }
+
+          const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+          formData.append('BeforeImplementationImage', {
+            uri: fileUri,
+            type: mimeType,
+            name: cleanFileName,
+          });
+          
+        } catch (fileError) {
+          console.error('❌ File error:', fileError);
+          Alert.alert('File Error', 'Unable to process selected file. Please try again.');
+          setIsSubmitting(false);
+          return;
+        }
+      } else if (file && !isNewFile) {
+        console.log('ℹ️ Using existing server file (no upload needed)');
       }
 
-      console.log('🌐 API URL:', apiUrl);
-      console.log('📦 Submit Type:', submitType);
-      console.log('👔 Is Manager Editing:', isManagerEditing);
+      const apiUrl = EDIT_IDEA_URL(ideaId);
+      console.log('🚀 Submitting to:', apiUrl);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -1457,59 +1480,17 @@ export default function EditIdeaScreen() {
         body: formData,
       });
 
-      console.log('📡 Response Status:', response.status);
+      console.log('📡 Response status:', response.status);
       
       const responseText = await response.text();
-      console.log('📥 Raw Response (first 500 chars):', responseText.substring(0, 500));
-      
-      if (response.status === 403) {
-        setIsSubmitting(false);
-        Alert.alert(
-          'Permission Denied',
-          'You do not have permission to edit this idea. Only the idea owner or their manager can edit it.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
-        return;
-      }
-
-      if (response.status === 401) {
-        setIsSubmitting(false);
-        Alert.alert(
-          'Session Expired',
-          'Your session has expired. Please login again.',
-          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-        );
-        return;
-      }
-
-      if (response.status >= 500) {
-        setIsSubmitting(false);
-        Alert.alert(
-          'Server Error',
-          'Server is experiencing issues. Please try again later or contact support.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
+      console.log('📥 Response preview:', responseText.substring(0, 300));
 
       let data;
       try {
         data = JSON.parse(responseText);
-        console.log('✅ Parsed JSON:', data);
+        console.log('✅ Parsed response:', data);
       } catch (parseError) {
-        console.error('❌ JSON Parse Error:', parseError);
-        
-        if (responseText.includes("don't have permission") || 
-            responseText.includes("Permission denied") ||
-            responseText.includes("Forbidden")) {
-          setIsSubmitting(false);
-          Alert.alert(
-            'Permission Denied',
-            'You do not have permission to edit this idea.',
-            [{ text: 'OK', onPress: () => navigation.goBack() }]
-          );
-          return;
-        }
+        console.error('⚠️ JSON parse error:', parseError.message);
         if (response.ok || response.status === 200) {
           setIsSubmitting(false);
           Alert.alert(
@@ -1517,47 +1498,45 @@ export default function EditIdeaScreen() {
             'Idea updated successfully!',
             [{
               text: 'OK',
-              onPress: () => navigation.goBack()
+              onPress: () => {
+                navigation.goBack();
+              }
             }]
           );
           return;
         } else {
-          throw new Error(`Server returned non-JSON response. Status: ${response.status}`);
+          throw new Error('Invalid server response format');
         }
       }
       
       setIsSubmitting(false);
 
-      if (response.ok && (data.success === true || data.success === 'true' || response.status === 200)) {
+      if (response.ok && (data.success === true || data.success === 'true')) {
         Alert.alert(
           'Success', 
           data.message || 'Idea updated successfully!',
           [{
             text: 'OK',
-            onPress: () => navigation.goBack()
+            onPress: () => {
+              navigation.goBack();
+            }
           }]
         );
       } else {
-        console.error('❌ Update failed:', data);
-        Alert.alert(
-          'Error', 
-          data?.message || data?.error || `Failed to update idea. Status: ${response.status}`
-        );
+        Alert.alert('Error', data?.message || data?.error || 'Failed to update idea.');
       }
 
     } catch (error) {
       console.error('❌ Submit error:', error);
       
-      let errorMessage = 'Network error, please try again.';
+      let errorMessage = 'Network error. Please try again.';
       
       if (error.message) {
         if (error.message.includes('Network request failed')) {
-          errorMessage = 'Cannot connect to server. Please check your internet connection.';
+          errorMessage = 'Cannot connect to server. Check your internet connection.';
         } else if (error.message.includes('timeout')) {
-          errorMessage = 'Request timeout. Please check your internet connection.';
-        } else if (error.message.includes('JSON')) {
-          errorMessage = 'Server response format error. Please contact support.';
-        } else {
+          errorMessage = 'Request timeout. Please try again.';
+        } else if (!error.message.includes('Invalid server response')) {
           errorMessage = error.message;
         }
       }
@@ -1703,7 +1682,7 @@ export default function EditIdeaScreen() {
                   <Text style={styles.chooseFileText}>Choose File</Text>
                 </TouchableOpacity>
                 <Text style={styles.fileNameDisplay} numberOfLines={1}>
-                  {fileName || (file ? (fileType === 'pdf' ? 'PDF selected' : 'Image selected') : 'No file chosen')}
+                  {fileName || 'No file chosen'}
                 </Text>
               </View>
 
@@ -1721,7 +1700,7 @@ export default function EditIdeaScreen() {
               {file && fileType === 'pdf' && (
                 <View style={styles.pdfInfoContainer}>
                   <Feather name="file-text" size={20} color="#FF5722" />
-                  <Text style={styles.pdfInfoText}>PDF Selected: {fileName}</Text>
+                  <Text style={styles.pdfInfoText} numberOfLines={1}>PDF: {fileName}</Text>
                 </View>
               )}
 
@@ -1771,6 +1750,33 @@ export default function EditIdeaScreen() {
                     
                     <TouchableOpacity 
                       activeOpacity={0.7}
+                      style={styles.imageOptionButton} 
+                      onPress={pickImageFromCamera}
+                    >
+                      <Feather name="camera" size={24} color="#2196F3" />
+                      <Text style={styles.imageOptionText}>Take Photo</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      activeOpacity={0.7}
+                      style={styles.imageOptionButton} 
+                      onPress={pickImageFromGallery}
+                    >
+                      <Feather name="image" size={24} color="#4CAF50" />
+                      <Text style={styles.imageOptionText}>Choose Image from Gallery</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      activeOpacity={0.7}
+                      style={styles.imageOptionButton} 
+                      onPress={pickPDF}
+                    >
+                      <Feather name="file-text" size={24} color="#FF5722" />
+                      <Text style={styles.imageOptionText}>Choose PDF Document</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      activeOpacity={0.7}
                       style={[styles.imageOptionButton, styles.cancelButton]} 
                       onPress={() => setShowFileOptions(false)}
                     >
@@ -1793,7 +1799,7 @@ export default function EditIdeaScreen() {
               </TouchableOpacity>
               {date && getRemainingDays(date) !== null && (
                 <Text style={styles.daysRemainingText}>
-                  ({getRemainingDays(date)} days)
+                  ({getRemainingDays(date)} days remaining)
                 </Text>
               )}
             </View>
@@ -1816,10 +1822,20 @@ export default function EditIdeaScreen() {
               value={mobileNumber}
               onChangeText={setMobileNumber}
               maxLength={10}
+              keyboardType="numeric"
             />
 
-            <RadioField label="Is BE Team Support Needed?" value={beSupportNeeded} setValue={setBeSupportNeeded} />
-            <RadioField label="Can Be Implemented To Other Location?" value={canImplementOtherLocation} setValue={setCanImplementOtherLocation} />
+            <RadioField 
+              label="Is BE Team Support Needed?" 
+              value={beSupportNeeded} 
+              setValue={setBeSupportNeeded} 
+            />
+            
+            <RadioField 
+              label="Can Be Implemented To Other Location?" 
+              value={canImplementOtherLocation} 
+              setValue={setCanImplementOtherLocation} 
+            />
 
             <View style={styles.buttonRow}>
               {showDraftOption && (
@@ -1840,9 +1856,8 @@ export default function EditIdeaScreen() {
                 onPress={() => handleBeforeSubmit('publish')}
                 disabled={isSubmitting}
               >
-                <Text style={styles.submitText}>
-                  {isManagerEditing ? 'Update Idea' : 'Update & Publish'}
-                </Text>
+                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                <Text style={styles.submitText}>Update & Publish</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1863,10 +1878,10 @@ export default function EditIdeaScreen() {
           <View style={styles.confirmModalContent}>
             <Feather name="check-circle" size={40} color="#2196F3" />
             <Text style={styles.confirmModalTitle}>
-              {submitType === 'draft' ? 'Update as Draft' : isManagerEditing ? 'Update Idea' : 'Update & Publish'}
+              {submitType === 'draft' ? 'Update as Draft' : 'Update & Publish'}
             </Text>
             <Text style={styles.confirmModalText}>
-              Are you sure you want to {submitType === 'draft' ? 'save as draft' : 'update'} this record?
+              Are you sure you want to {submitType === 'draft' ? 'save as draft' : 'update and publish'} this record?
             </Text>
             <View style={styles.confirmModalButtons}>
               <TouchableOpacity
@@ -1893,8 +1908,7 @@ export default function EditIdeaScreen() {
   );
 }
 
-
-const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, maxLength, required }) => (
+const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, maxLength, required, keyboardType }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>{label} {required && <Text style={styles.required}>*</Text>}</Text>
     <View style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline]}>
@@ -1906,7 +1920,7 @@ const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, 
         onChangeText={onChangeText}
         multiline={multiline}
         placeholderTextColor="#999"
-        keyboardType={label === 'Mobile Number' ? 'numeric' : 'default'}
+        keyboardType={keyboardType || 'default'}
         maxLength={maxLength}
       />
     </View>
@@ -1919,9 +1933,16 @@ const PickerField = ({ label, icon, selectedValue, onValueChange, options }) => 
     <Text style={styles.label}>{label}</Text>
     <View style={styles.inputWrapper}>
       {icon}
-      <Picker selectedValue={selectedValue} onValueChange={onValueChange} style={styles.picker} dropdownIconColor="#666">
+      <Picker 
+        selectedValue={selectedValue} 
+        onValueChange={onValueChange} 
+        style={styles.picker} 
+        dropdownIconColor="#666"
+      >
         <Picker.Item label="Select" value="" />
-        {options.map((option, index) => <Picker.Item label={option} value={option} key={index} />)}
+        {options.map((option, index) => (
+          <Picker.Item label={option} value={option} key={index} />
+        ))}
       </Picker>
     </View>
   </View>
@@ -1934,7 +1955,7 @@ const RadioField = ({ label, value, setValue }) => (
       <TouchableOpacity 
         activeOpacity={0.7}
         style={styles.radioOption} 
-        onPress={() => setValue(value === 'Yes' ? null : 'Yes')}
+        onPress={() => setValue('Yes')}
       >
         <View style={[styles.radioCircle, value === 'Yes' && styles.radioSelected]} />
         <Text style={styles.radioText}>Yes</Text>
@@ -1942,7 +1963,7 @@ const RadioField = ({ label, value, setValue }) => (
       <TouchableOpacity 
         activeOpacity={0.7}
         style={styles.radioOption} 
-        onPress={() => setValue(value === 'No' ? null : 'No')}
+        onPress={() => setValue('No')}
       >
         <View style={[styles.radioCircle, value === 'No' && styles.radioSelected]} />
         <Text style={styles.radioText}>No</Text>
@@ -1997,18 +2018,9 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5
   },
-  inputBlock: { 
-    marginBottom: 16 
-  },
-  label: { 
-    fontSize: 14, 
-    fontWeight: '600', 
-    marginBottom: 6, 
-    color: '#333' 
-  },
-  required: { 
-    color: 'red' 
-  },
+  inputBlock: { marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: '600', marginBottom: 6, color: '#333' },
+  required: { color: 'red' },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2017,30 +2029,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10
   },
-  inputWrapperMultiline: { 
-    alignItems: 'flex-start' 
-  },
-  input: { 
-    flex: 1, 
-    fontSize: 14, 
-    marginLeft: 10, 
-    color: '#333' 
-  },
-  picker: { 
-    flex: 1, 
-    marginLeft: 10, 
-    color: '#333' 
-  },
-  textArea: { 
-    height: 100, 
-    textAlignVertical: 'top' 
-  },
-  charCount: { 
-    alignSelf: 'flex-end', 
-    fontSize: 12, 
-    color: '#888', 
-    marginTop: 4 
-  },
+  inputWrapperMultiline: { alignItems: 'flex-start' },
+  input: { flex: 1, fontSize: 14, marginLeft: 10, color: '#333' },
+  picker: { flex: 1, marginLeft: 10, color: '#333' },
+  textArea: { height: 100, textAlignVertical: 'top' },
+  charCount: { alignSelf: 'flex-end', fontSize: 12, color: '#888', marginTop: 4 },
   fileInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2144,13 +2137,15 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   },
   submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#00B894',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
     flex: 1,
+    gap: 6,
   },
   submitButtonFullWidth: {
     flex: 1,
@@ -2363,7 +2358,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     color: '#666',
-    marginBottom: 8,
   },
   confirmModalButtons: {
     flexDirection: 'row',

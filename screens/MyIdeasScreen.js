@@ -18,7 +18,7 @@ const normalizeImagePath = (path) => {
   }
 
   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
- 
+
   const fullUrl = `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 };
 const getAlternateImageUrl = (url) => {
@@ -134,8 +134,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
-  const [imageRetryUrl, setImageRetryUrl] = useState(null); 
-  const [imageLoadError, setImageLoadError] = useState(false); 
+  const [imageRetryUrl, setImageRetryUrl] = useState(null);
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   const fetchIdeaDetail = async (ideaId) => {
     if (!ideaId) return;
@@ -147,20 +147,20 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
 
       if (response?.success && response?.data) {
         const detail = response.data;
-        
+
         const imagePath = detail.beforeImplementationImagePath || detail.imagePath || detail.beforeImplementationImage;
         const normalizedImagePath = normalizeImagePath(imagePath);
-        
+
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizedImagePath,
           imagePath: normalizedImagePath,
         };
-        
-        
+
+
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
-        
+
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
@@ -191,8 +191,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
         'This is a PDF document. Would you like to open it?',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Open', 
+          {
+            text: 'Open',
             onPress: () => {
               Linking.openURL(finalUrl).catch(err => {
                 Alert.alert('Error', 'Unable to open PDF. Please try accessing it from a web browser.');
@@ -203,19 +203,19 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       );
       return;
     }
-    
+
     setCurrentImageUrl(finalUrl);
-    setImageRetryUrl(getAlternateImageUrl(finalUrl)); 
+    setImageRetryUrl(getAlternateImageUrl(finalUrl));
     setShowImage(true);
   };
 
   const handleImageError = (error) => {
     if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
       setCurrentImageUrl(imageRetryUrl);
-      setImageRetryUrl(null); 
+      setImageRetryUrl(null);
     } else {
       Alert.alert(
-        'Image Upload Issue Detected', 
+        'Image Upload Issue Detected',
         '⚠️ The image was uploaded but is not accessible on the server.\n\n' +
         'This is a backend configuration issue:\n' +
         '• Files are not being saved to disk\n' +
@@ -227,8 +227,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
         '3. Enable static file serving\n\n' +
         'Idea was created successfully, but image needs to be re-uploaded once fixed.',
         [
-          { 
-            text: 'Copy URL for Backend Team', 
+          {
+            text: 'Copy URL for Backend Team',
             onPress: () => {
               console.log('📋 Backend team needs to check this URL:', currentImageUrl);
               Alert.alert('URL Copied to Console', 'Check your development console for the URL');
@@ -328,7 +328,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                   <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
                   <Ionicons name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                 </TouchableOpacity>
-                
+
                 {employeeInfoExpanded && (
                   <View style={styles.cardDetail}>
                     <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Employee Name:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || "N/A"}</Text></View>
@@ -358,8 +358,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
                       {ideaDetail.beforeImplementationImagePath ? (
-                        <TouchableOpacity 
-                          style={styles.imagePreviewContainer} 
+                        <TouchableOpacity
+                          style={styles.imagePreviewContainer}
                           onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath)}
                         >
                           {ideaDetail.beforeImplementationImagePath.toLowerCase().includes('.pdf') ? (
@@ -368,8 +368,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                               <Text style={styles.pdfThumbnailText}>PDF</Text>
                             </View>
                           ) : !imageLoadError ? (
-                            <Image 
-                              source={{ uri: ideaDetail.beforeImplementationImagePath }} 
+                            <Image
+                              source={{ uri: ideaDetail.beforeImplementationImagePath }}
                               style={styles.thumbnailSmall}
                               onError={(e) => {
                                 const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
@@ -411,7 +411,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
                       <Ionicons name={showImplementationDetails ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                     </TouchableOpacity>
-                    
+
                     {showImplementationDetails && (
                       <View style={styles.cardDetail}>
                         <View style={styles.rowDetailWithBorder}>
@@ -440,7 +440,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                             </Text>
                           </View>
                         )}
-                        
+
                         {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>Before Implementation:</Text>
@@ -449,7 +449,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                             </TouchableOpacity>
                           </View>
                         )}
-                        
+
                         {/* {ideaDetail.implementationCycle?.afterImplementationImagePath && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>After Implementation:</Text>
@@ -459,7 +459,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                           </View>
                         )} */}
 
-{(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
+                        {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>After Implementation:</Text>
                             <TouchableOpacity onPress={() => {
@@ -467,7 +467,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                               const fullUrl = imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
                               openImagePreview(fullUrl);
                             }}>
-                              <Image source={{ 
+                              <Image source={{
                                 uri: (() => {
                                   const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
                                   return imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
@@ -500,7 +500,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                   const canEdit = canEditIdea(status);
                   const canDelete = status === "draft" || status === "published";
                   const inImplementation = isImplementationPhase(status);
-                  
+
                   return (canEdit || canDelete || inImplementation) && (
                     <View style={styles.buttonRow}>
                       {(canEdit || inImplementation) && (
@@ -555,19 +555,19 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       {/* Image Viewer Modal */}
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
-          <TouchableOpacity style={styles.closeButtonImage} onPress={() => { 
-            setShowImage(false); 
+          <TouchableOpacity style={styles.closeButtonImage} onPress={() => {
+            setShowImage(false);
             setCurrentImageUrl(null);
-            setImageRetryUrl(null); 
+            setImageRetryUrl(null);
           }}>
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image 
-              source={{ uri: currentImageUrl }} 
-              style={styles.fullImage} 
-              resizeMode="contain" 
-              onError={handleImageError} 
+            <Image
+              source={{ uri: currentImageUrl }}
+              style={styles.fullImage}
+              resizeMode="contain"
+              onError={handleImageError}
             />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
@@ -583,14 +583,16 @@ export default function MyIdeasScreen() {
   const navigation = useNavigation();
   const [ideas, setIdeas] = useState([]);
 
+
   const fetchIdeas = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.get(MY_IDEAS_URL, { headers });
-      
+      //const response = await axios.get(`${MY_IDEAS_URL}?page=1&pageSize=100`, { headers });
+      const response = await axios.get(`${MY_IDEAS_URL}?page=1&pageSize=1000`, { headers });
+
       if (response.data && response.data.data && Array.isArray(response.data.data.ideas)) {
-       
+
         const normalizedIdeas = response.data.data.ideas.map(idea => {
           const imagePath = idea.beforeImplementationImagePath || idea.imagePath || idea.beforeImplementationImage;
           return {
@@ -599,7 +601,7 @@ export default function MyIdeasScreen() {
             imagePath: normalizeImagePath(imagePath),
           };
         });
-        
+
         setIdeas(normalizedIdeas);
       } else {
         setIdeas([]);
@@ -617,22 +619,24 @@ export default function MyIdeasScreen() {
   const deleteIdea = async (idea, callback) => {
     Alert.alert("Delete Idea", "Are you sure you want to delete this idea?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => {
-        try {
-          const token = await AsyncStorage.getItem('token');
-          const headers = token ? { Authorization: `Bearer ${token}` } : {};
-          const response = await axios.post(DELETE_IDEA_URL(idea.id), {}, { headers });
-          if (response.data?.success) {
-            Alert.alert("Success", "Idea deleted successfully!");
-            if (callback) callback();
-            fetchIdeas();
-          } else {
-            Alert.alert("Error", response.data?.message || "Failed to delete idea.");
+      {
+        text: "Delete", style: "destructive", onPress: async () => {
+          try {
+            const token = await AsyncStorage.getItem('token');
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            const response = await axios.post(DELETE_IDEA_URL(idea.id), {}, { headers });
+            if (response.data?.success) {
+              Alert.alert("Success", "Idea deleted successfully!");
+              if (callback) callback();
+              fetchIdeas();
+            } else {
+              Alert.alert("Error", response.data?.message || "Failed to delete idea.");
+            }
+          } catch (error) {
+            Alert.alert("Error", "Failed to delete idea. Please try again.");
           }
-        } catch (error) {
-          Alert.alert("Error", "Failed to delete idea. Please try again.");
         }
-      }}
+      }
     ]);
   };
 
@@ -674,7 +678,7 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
   const [imageScale, setImageScale] = useState(1);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showFileOptions, setShowFileOptions] = useState(false);
-  
+
   const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [remarksExpanded, setRemarksExpanded] = useState(false);
@@ -784,7 +788,7 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
         <Ionicons name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
       </TouchableOpacity>
-      
+
       {employeeInfoExpanded && (
         <View style={styles.cardDetail}>
           <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Employee Name:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || "N/A"}</Text></View>
@@ -840,11 +844,11 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
           const remarks = parseRemarks(ideaDetail.remark || ideaDetail.remarks);
           if (remarks.length === 0) return <Text style={styles.noRemarksText}>No remarks available</Text>;
           return remarks.map((remark, index) => (
-            <RemarksCard 
-              key={index} 
-              title={remark.approverName || remark.title || "Unknown"} 
-              comment={remark.comments || remark.comment || "No comment"} 
-              date={remark.approvalDate || remark.date ? formatDateTime(remark.approvalDate || remark.date) : ""} 
+            <RemarksCard
+              key={index}
+              title={remark.approverName || remark.title || "Unknown"}
+              comment={remark.comments || remark.comment || "No comment"}
+              date={remark.approvalDate || remark.date ? formatDateTime(remark.approvalDate || remark.date) : ""}
             />
           ));
         })()}
@@ -861,29 +865,29 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
           <View style={styles.rowDetailWithBorder}>
             <Text style={styles.labelDetail}>Implementation Details<Text style={styles.requiredStar}>*</Text></Text>
           </View>
-          <TextInput 
-            style={styles.textInputArea} 
-            multiline 
-            numberOfLines={5} 
-            value={implementationDetails} 
-            onChangeText={setImplementationDetails} 
-            placeholder="Enter implementation details..." 
-            placeholderTextColor="#999" 
+          <TextInput
+            style={styles.textInputArea}
+            multiline
+            numberOfLines={5}
+            value={implementationDetails}
+            onChangeText={setImplementationDetails}
+            placeholder="Enter implementation details..."
+            placeholderTextColor="#999"
           />
-          
+
           <View style={[styles.rowDetailWithBorder, { marginTop: 16 }]}>
             <Text style={styles.labelDetail}>Outcome/Benefits Achieved<Text style={styles.requiredStar}>*</Text></Text>
           </View>
-          <TextInput 
-            style={styles.textInputArea} 
-            multiline 
-            numberOfLines={5} 
-            value={outcomesBenefits} 
-            onChangeText={setOutcomesBenefits} 
-            placeholder="Enter outcome/benefits achieved..." 
-            placeholderTextColor="#999" 
+          <TextInput
+            style={styles.textInputArea}
+            multiline
+            numberOfLines={5}
+            value={outcomesBenefits}
+            onChangeText={setOutcomesBenefits}
+            placeholder="Enter outcome/benefits achieved..."
+            placeholderTextColor="#999"
           />
-          
+
           <View style={[styles.rowDetailWithBorder, { marginTop: 16 }]}>
             <Text style={styles.labelDetail}>After Implementation Image<Text style={styles.requiredStar}>*</Text></Text>
           </View>
@@ -893,14 +897,14 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
             </TouchableOpacity>
             <Text style={styles.fileNameDisplay}>{afterImageName || 'No file chosen'}</Text>
           </View>
-          
+
           {afterImage && afterImageType === 'image' && (
             <TouchableOpacity onPress={() => setShowImagePreview(true)} style={styles.eyeIconContainer}>
               <Feather name="eye" size={20} color="#2196F3" />
               <Text style={styles.previewText}>Preview Image</Text>
             </TouchableOpacity>
           )}
-          
+
           {afterImage && afterImageType === 'pdf' && (
             <View style={styles.pdfInfoContainer}>
               <Feather name="file-text" size={20} color="#FF5722" />
@@ -911,9 +915,9 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
       )}
 
       {/* Submit Button */}
-      <TouchableOpacity 
-        style={[styles.submitImplementButton, isSubmitting && styles.submitButtonDisabled]} 
-        onPress={handleSubmit} 
+      <TouchableOpacity
+        style={[styles.submitImplementButton, isSubmitting && styles.submitButtonDisabled]}
+        onPress={handleSubmit}
         disabled={isSubmitting}
       >
         {isSubmitting ? (
@@ -961,12 +965,12 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
               <View style={styles.timelineContainer}>
                 {ideaDetail?.timeline && Array.isArray(ideaDetail.timeline) && ideaDetail.timeline.length > 0 ? (
                   ideaDetail.timeline.map((item, idx) => (
-                    <TimelineItem 
-                      key={idx} 
-                      status={item.status || item.approvalStage || "N/A"} 
-                      date={item.date || item.approvalDate} 
-                      description={item.description || item.comments} 
-                      isLast={idx === ideaDetail.timeline.length - 1} 
+                    <TimelineItem
+                      key={idx}
+                      status={item.status || item.approvalStage || "N/A"}
+                      date={item.date || item.approvalDate}
+                      description={item.description || item.comments}
+                      isLast={idx === ideaDetail.timeline.length - 1}
                     />
                   ))
                 ) : (
@@ -1000,10 +1004,10 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
           </View>
           <ScrollView contentContainerStyle={styles.imageScrollContent} maximumZoomScale={3} minimumZoomScale={0.5}>
             {afterImage && (
-              <Image 
-                source={{ uri: afterImage }} 
-                style={[styles.fullImagePreview, { transform: [{ scale: imageScale }] }]} 
-                resizeMode="contain" 
+              <Image
+                source={{ uri: afterImage }}
+                style={[styles.fullImagePreview, { transform: [{ scale: imageScale }] }]}
+                resizeMode="contain"
               />
             )}
           </ScrollView>
