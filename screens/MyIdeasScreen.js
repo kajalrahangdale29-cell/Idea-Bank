@@ -20,6 +20,7 @@ const normalizeImagePath = (path) => {
   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
 
   const fullUrl = `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  return fullUrl;//cc
 };
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
@@ -594,6 +595,7 @@ export default function MyIdeasScreen() {
       if (response.data && response.data.data && Array.isArray(response.data.data.ideas)) {
 
         const normalizedIdeas = response.data.data.ideas.map(idea => {
+          console.log("BEFORE PATH:", idea.beforeImplementationImagePath); 
           const imagePath = idea.beforeImplementationImagePath || idea.imagePath || idea.beforeImplementationImage;
           return {
             ...idea,

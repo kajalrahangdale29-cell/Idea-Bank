@@ -88,6 +88,7 @@ const DashboardScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       if (employeeSystemId && token) {
+        fetchDashboard(token);
         fetchUnreadCount(employeeSystemId, token);
         loadStoredNotifications(employeeSystemId);
       }

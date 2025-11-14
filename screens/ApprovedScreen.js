@@ -182,7 +182,6 @@ const ApprovedScreen = () => {
           
           currentPage++;
           if (currentPage > 100) {
-            console.log("⚠️ Reached safety limit of 100 pages");
             hasMorePages = false;
           }
         } catch (pageError) {

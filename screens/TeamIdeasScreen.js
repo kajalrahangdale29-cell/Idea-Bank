@@ -17,8 +17,29 @@
 // import AsyncStorage from "@react-native-async-storage/async-storage";
 // import DateTimePicker from '@react-native-community/datetimepicker';
 // import { useNavigation } from '@react-navigation/native';
+// import { SafeAreaView } from 'react-native-safe-area-context';
+
 // import { TEAM_IDEAS_URL, IDEA_DETAIL_URL, UPDATE_STATUS_URL } from "../src/context/api";
 
+// // ✅ Helper function for image URL normalization
+// // const normalizeImagePath = (path) => {
+// //   if (!path) return null;
+// //   if (path.startsWith('http://') || path.startsWith('https://')) {
+// //     return path;
+// //   }
+// //   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+// //   return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+// // };
+
+
+// const normalizeImagePath = (path) => {
+//   if (!path) return null;
+//   if (path.startsWith('http://') || path.startsWith('https://')) {
+//     return path;
+//   }
+//   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+//   return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+// };
 // function TimelineItem({ status, date, description, isLast, isFirst }) {
 //   const getCircleColor = (status) => {
 //     const s = status?.toLowerCase() || '';
@@ -39,9 +60,7 @@
 //       </View>
 //       <View style={styles.timelineContent}>
 //         <Text style={styles.timelineStatus}>{status}</Text>
-//         {description && (
-//           <Text style={styles.timelineDescription}>{description}</Text>
-//         )}
+//         {description && <Text style={styles.timelineDescription}>{description}</Text>}
 //         {date && (
 //           <Text style={styles.timelineDate}>
 //             {new Date(date).toLocaleDateString('en-IN', {
@@ -102,11 +121,9 @@
 
 // const shouldShowImplementationDetails = (ideaDetail) => {
 //   if (!ideaDetail) return false;
-
 //   if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
 //     return true;
 //   }
-
 //   const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
 //   return type === "implementation" || type === "implement";
 // };
@@ -197,6 +214,7 @@
 //       let currentPage = 1;
 //       let hasMorePages = true;
 //       let apiTotalItems = 0;
+
 //       while (hasMorePages) {
 //         const baseUrl = TEAM_IDEAS_URL.split('?')[0];
 //         let url = `${baseUrl}?page=${currentPage}&pageSize=10`;
@@ -228,14 +246,12 @@
 //         }
 //       }
 
-//       console.log(`✅ Fetch complete: ${allIdeas.length} total ideas`);
-
 //       setAllIdeasOriginal(allIdeas);
 //       setIdeas(allIdeas);
 //       setTotalItems(apiTotalItems || allIdeas.length);
 
 //     } catch (error) {
-//       console.error("❌ Error fetching team ideas:", error);
+//       console.error("Error fetching team ideas:", error);
 //       setIdeas([]);
 //       setAllIdeasOriginal([]);
 //       setTotalItems(0);
@@ -252,7 +268,7 @@
 
 //       if (searchIdeaNumber.trim()) {
 //         const searchTerm = searchIdeaNumber.trim().toLowerCase();
-//         filteredIdeas = filteredIdeas.filter(idea => 
+//         filteredIdeas = filteredIdeas.filter(idea =>
 //           (idea.ideaNumber && idea.ideaNumber.toLowerCase().includes(searchTerm)) ||
 //           (idea.ownerName && idea.ownerName.toLowerCase().includes(searchTerm)) ||
 //           (idea.description && idea.description.toLowerCase().includes(searchTerm))
@@ -297,6 +313,7 @@
 //       setShowFilters(false);
 
 //     } catch (error) {
+//       console.error("Filter error:", error);
 //     } finally {
 //       setLoading(false);
 //     }
@@ -376,8 +393,8 @@
 //       return;
 //     }
 
-//     const originalIdea = ideas.find(i => 
-//       i.ideaId === (ideaDetail?.ideaId || ideaDetail?.id) || 
+//     const originalIdea = ideas.find(i =>
+//       i.ideaId === (ideaDetail?.ideaId || ideaDetail?.id) ||
 //       i.id === (ideaDetail?.ideaId || ideaDetail?.id)
 //     );
 
@@ -452,11 +469,10 @@
 //   const handleEdit = () => {
 //     if (ideaDetail) {
 //       closeModal();
-
-//       navigation.navigate('EditIdea', { 
+//       navigation.navigate('EditIdea', {
 //         ideaId: ideaDetail.id || ideaDetail.ideaId,
 //         ideaData: ideaDetail,
-//         isManagerEditing: true 
+//         isManagerEditing: true
 //       });
 //     }
 //   };
@@ -485,7 +501,8 @@
 //   };
 
 //   const openImagePreview = (imageUrl) => {
-//     setCurrentImageUrl(imageUrl);
+//     const finalUrl = normalizeImagePath(imageUrl);
+//     setCurrentImageUrl(finalUrl);
 //     setShowImage(true);
 //   };
 
@@ -498,7 +515,6 @@
 
 //   return (
 //     <View style={styles.container}>
-//       {/* Header */}
 //       <View style={styles.header}>
 //         <Text style={styles.headerTitle}>My Team Ideas</Text>
 //         <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters(!showFilters)}>
@@ -507,7 +523,6 @@
 //         </TouchableOpacity>
 //       </View>
 
-//       {/* Search Section */}
 //       <View style={styles.searchSection}>
 //         <View style={styles.searchContainer}>
 //           <Text style={styles.searchLabel}>Search:</Text>
@@ -521,7 +536,6 @@
 //         </View>
 //       </View>
 
-//       {/* Filters Section */}
 //       {showFilters && (
 //         <View style={styles.filtersContainer}>
 //           <Text style={styles.filterLabel}>Create Date Range</Text>
@@ -567,8 +581,8 @@
 //           )}
 
 //           <Text style={[styles.filterLabel, { marginTop: 16, marginBottom: 10 }]}>Status</Text>
-//           <TouchableOpacity 
-//             style={styles.statusDropdown} 
+//           <TouchableOpacity
+//             style={styles.statusDropdown}
 //             onPress={() => setShowStatusDropdown(!showStatusDropdown)}
 //           >
 //             <Text style={styles.statusDropdownText}>
@@ -620,7 +634,6 @@
 //         </View>
 //       )}
 
-//       {/* Cards List */}
 //       {loading ? (
 //         <ActivityIndicator size="large" color="#2c5aa0" style={{ marginTop: 20 }} />
 //       ) : (
@@ -690,17 +703,11 @@
 //           <View style={styles.modalHeader}>
 //             <View style={styles.modalHeaderContent}>
 //               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
-//               <TouchableOpacity
-//                 style={styles.closeButton}
-//                 onPress={closeModal}
-//               >
+//               <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
 //                 <Ionicons name="close" size={20} color="#666" />
 //               </TouchableOpacity>
 //             </View>
-//             <TouchableOpacity
-//               style={styles.timelineButtonHeader}
-//               onPress={() => setShowTimelineModal(true)}
-//             >
+//             <TouchableOpacity style={styles.timelineButtonHeader} onPress={() => setShowTimelineModal(true)}>
 //               <Ionicons name="time-outline" size={18} color="#2c5aa0" />
 //               <Text style={styles.timelineButtonText}>View Progress Timeline</Text>
 //             </TouchableOpacity>
@@ -709,16 +716,16 @@
 //           <ScrollView contentContainerStyle={styles.modalScrollContent}>
 //             {selectedIdea && ideaDetail && (
 //               <>
-//                 <TouchableOpacity 
-//                   style={styles.collapsibleHeader} 
-//                   onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} 
+//                 <TouchableOpacity
+//                   style={styles.collapsibleHeader}
+//                   onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)}
 //                   activeOpacity={0.7}
 //                 >
 //                   <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
-//                   <Ionicons 
-//                     name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} 
-//                     size={24} 
-//                     color="#2c5aa0" 
+//                   <Ionicons
+//                     name={employeeInfoExpanded ? "chevron-up" : "chevron-down"}
+//                     size={24}
+//                     color="#2c5aa0"
 //                   />
 //                 </TouchableOpacity>
 
@@ -763,16 +770,16 @@
 //                   </View>
 //                 )}
 
-//                 <TouchableOpacity 
-//                   style={styles.collapsibleHeader} 
-//                   onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} 
+//                 <TouchableOpacity
+//                   style={styles.collapsibleHeader}
+//                   onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)}
 //                   activeOpacity={0.7}
 //                 >
 //                   <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
-//                   <Ionicons 
-//                     name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} 
-//                     size={24} 
-//                     color="#2c5aa0" 
+//                   <Ionicons
+//                     name={ideaInfoExpanded ? "chevron-up" : "chevron-down"}
+//                     size={24}
+//                     color="#2c5aa0"
 //                   />
 //                 </TouchableOpacity>
 
@@ -801,20 +808,21 @@
 //                     </View>
 //                     <View style={styles.rowDetailWithBorder}>
 //                       <Text style={styles.labelDetail}>Before Implementation:</Text>
-//                       {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
-//                         <TouchableOpacity 
-//                           style={styles.imagePreviewContainer} 
-//                           onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
-//                         >
-//                           <Image 
-//                             source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
-//                             style={styles.thumbnailSmall} 
-//                           />
-//                           <Text style={styles.tapToEnlargeText}></Text>
-//                         </TouchableOpacity>
-//                       ) : (
-//                         <Text style={styles.valueDetail}>N/A</Text>
-//                       )}
+//                       <View style={{ flex: 1, alignItems: 'flex-end' }}>
+//                         {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
+//                           <TouchableOpacity
+//                             style={styles.imagePreviewContainer}
+//                             onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+//                           >
+//                             <Image
+//                               source={{ uri: normalizeImagePath(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) }}
+//                               style={styles.thumbnailSmall}
+//                             />
+//                           </TouchableOpacity>
+//                         ) : (
+//                           <Text style={styles.valueDetail}>N/A</Text>
+//                         )}
+//                       </View>
 //                     </View>
 //                     <View style={styles.rowDetailWithBorder}>
 //                       <Text style={styles.labelDetail}>Status:</Text>
@@ -867,20 +875,20 @@
 
 //                 {shouldShowImplementationDetails(ideaDetail) && (
 //                   <>
-//                     <TouchableOpacity 
-//                       style={styles.collapsibleHeader} 
-//                       onPress={() => setShowImplementationDetails(!showImplementationDetails)} 
+//                     <TouchableOpacity
+//                       style={styles.collapsibleHeader}
+//                       onPress={() => setShowImplementationDetails(!showImplementationDetails)}
 //                       activeOpacity={0.7}
 //                     >
 //                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
-//                       <Ionicons 
-//                         name={showImplementationDetails ? "chevron-up" : "chevron-down"} 
-//                         size={24} 
-//                         color="#2c5aa0" 
+//                       <Ionicons
+//                         name={showImplementationDetails ? "chevron-up" : "chevron-down"}
+//                         size={24}
+//                         color="#2c5aa0"
 //                       />
 //                     </TouchableOpacity>
 
-//                     {showImplementationDetails && 
+//                     {showImplementationDetails && (
 //                       <View style={styles.cardDetail}>
 //                         <View style={styles.rowDetailWithBorder}>
 //                           <Text style={styles.labelDetail}>Implementation Status:</Text>
@@ -891,19 +899,19 @@
 //                         <View style={styles.rowDetailWithBorder}>
 //                           <Text style={styles.labelDetail}>Implementation Details:</Text>
 //                           <Text style={styles.valueDetail}>
-//                             {ideaDetail.implementationCycle?.implementation || 
-//                              ideaDetail.implementationDetail || 
-//                              ideaDetail.implementation || 
-//                              "Not provided"}
+//                             {ideaDetail.implementationCycle?.implementation ||
+//                               ideaDetail.implementationDetail ||
+//                               ideaDetail.implementation ||
+//                               "Not provided"}
 //                           </Text>
 //                         </View>
 //                         <View style={styles.rowDetailWithBorder}>
 //                           <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
 //                           <Text style={styles.valueDetail}>
-//                             {ideaDetail.implementationCycle?.outcome || 
-//                              ideaDetail.implementationOutcome || 
-//                              ideaDetail.outcome || 
-//                              "Not provided"}
+//                             {ideaDetail.implementationCycle?.outcome ||
+//                               ideaDetail.implementationOutcome ||
+//                               ideaDetail.outcome ||
+//                               "Not provided"}
 //                           </Text>
 //                         </View>
 //                         {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
@@ -914,13 +922,22 @@
 //                             </Text>
 //                           </View>
 //                         )}
+
 //                         {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
 //                           <View style={styles.implementationImageSection}>
 //                             <Text style={styles.imageLabel}>Before Implementation:</Text>
-//                             <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
-//                               <Image 
-//                                 source={{ uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
-//                                 style={styles.implementationImage} 
+//                             <TouchableOpacity onPress={() => {
+//                               const imagePath = ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath;
+//                               openImagePreview(imagePath);
+//                             }}>
+//                               <Image
+//                                 source={{
+//                                   uri: normalizeImagePath(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)
+//                                 }}
+//                                 style={styles.implementationImage}
+//                                 onError={(e) => {
+//                                   console.log('Before image load error:', e.nativeEvent.error);
+//                                 }}
 //                               />
 //                             </TouchableOpacity>
 //                           </View>
@@ -930,20 +947,22 @@
 //                             <Text style={styles.imageLabel}>After Implementation:</Text>
 //                             <TouchableOpacity onPress={() => {
 //                               const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
-//                               const fullUrl = imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
-//                               openImagePreview(fullUrl);
+//                               openImagePreview(imagePath);
 //                             }}>
-//                               <Image source={{ 
-//                                 uri: (() => {
-//                                   const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
-//                                   return imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
-//                                 })()
-//                               }} style={styles.implementationImage} />
+//                               <Image
+//                                 source={{
+//                                   uri: normalizeImagePath(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath)
+//                                 }}
+//                                 style={styles.implementationImage}
+//                                 onError={(e) => {
+//                                   console.log('After image load error:', e.nativeEvent.error);
+//                                 }}
+//                               />
 //                             </TouchableOpacity>
 //                           </View>
 //                         )}
 //                       </View>
-//                     }
+//                     )}
 //                   </>
 //                 )}
 
@@ -970,16 +989,12 @@
 //         </View>
 //       </Modal>
 
-//       {/* Remark Modal */}
 //       <Modal visible={showRemarkModal} transparent animationType="fade">
 //         <View style={styles.remarkModalOverlay}>
 //           <View style={styles.remarkModalContainer}>
 //             <View style={styles.remarkModalHeader}>
 //               <Text style={styles.remarkModalTitle}>{getRemarkModalTitle()}</Text>
-//               <TouchableOpacity
-//                 style={styles.remarkCloseButton}
-//                 onPress={closeRemarkModal}
-//               >
+//               <TouchableOpacity style={styles.remarkCloseButton} onPress={closeRemarkModal}>
 //                 <Ionicons name="close" size={20} color="#fff" />
 //               </TouchableOpacity>
 //             </View>
@@ -999,18 +1014,10 @@
 //             </View>
 
 //             <View style={styles.remarkModalFooter}>
-//               <TouchableOpacity
-//                 style={styles.remarkCancelButton}
-//                 onPress={closeRemarkModal}
-//                 disabled={submittingStatus}
-//               >
+//               <TouchableOpacity style={styles.remarkCancelButton} onPress={closeRemarkModal} disabled={submittingStatus}>
 //                 <Text style={styles.remarkCancelText}>Cancel</Text>
 //               </TouchableOpacity>
-//               <TouchableOpacity
-//                 style={styles.remarkSubmitButton}
-//                 onPress={submitStatusUpdate}
-//                 disabled={submittingStatus}
-//               >
+//               <TouchableOpacity style={styles.remarkSubmitButton} onPress={submitStatusUpdate} disabled={submittingStatus}>
 //                 {submittingStatus ? (
 //                   <ActivityIndicator size="small" color="#fff" />
 //                 ) : (
@@ -1022,15 +1029,11 @@
 //         </View>
 //       </Modal>
 
-//       {/* Progress Timeline Modal */}
 //       <Modal visible={showTimelineModal} animationType="slide">
 //         <View style={styles.fullModal}>
 //           <View style={styles.timelineModalHeader}>
 //             <Text style={styles.timelineModalTitle}>Progress Timeline</Text>
-//             <TouchableOpacity
-//               style={styles.closeButtonTimeline}
-//               onPress={() => setShowTimelineModal(false)}
-//             >
+//             <TouchableOpacity style={styles.closeButtonTimeline} onPress={() => setShowTimelineModal(false)}>
 //               <Ionicons name="close" size={20} color="#fff" />
 //             </TouchableOpacity>
 //           </View>
@@ -1061,13 +1064,9 @@
 //         </View>
 //       </Modal>
 
-//       {/* Image Modal */}
 //       <Modal visible={showImage} transparent animationType="fade">
 //         <View style={styles.imageModal}>
-//           <TouchableOpacity
-//             style={styles.closeButtonImage}
-//             onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}
-//           >
+//           <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}>
 //             <Ionicons name="close" size={24} color="#fff" />
 //           </TouchableOpacity>
 //           {currentImageUrl ? (
@@ -1101,54 +1100,14 @@
 //   filterLabel: { fontSize: 16, fontWeight: '500', marginBottom: 8, color: '#333' },
 //   dateInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 12, backgroundColor: '#f9f9f9', marginBottom: 10 },
 //   dateInputText: { fontSize: 14, color: '#333' },
-//   statusDropdown: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     alignItems: 'center',
-//     borderWidth: 1,
-//     borderColor: '#ddd',
-//     borderRadius: 6,
-//     padding: 12,
-//     backgroundColor: '#fff',
-//     marginBottom: 10,
-//   },
-//   statusDropdownText: {
-//     fontSize: 14,
-//     color: '#333',
-//     flex: 1,
-//   },
-//   statusDropdownList: {
-//     borderWidth: 1,
-//     borderColor: '#ddd',
-//     borderRadius: 6,
-//     backgroundColor: '#fff',
-//     marginBottom: 10,
-//     maxHeight: 250,
-//     elevation: 3,
-//     shadowColor: '#000',
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 4,
-//   },
-//   statusDropdownScroll: {
-//     maxHeight: 250,
-//   },
-//   statusDropdownItem: {
-//     padding: 12,
-//     borderBottomWidth: 1,
-//     borderBottomColor: '#f0f0f0',
-//   },
-//   statusDropdownItemActive: {
-//     backgroundColor: '#2c5aa0',
-//   },
-//   statusDropdownItemText: {
-//     fontSize: 14,
-//     color: '#333',
-//   },
-//   statusDropdownItemTextActive: {
-//     color: '#fff',
-//     fontWeight: '600',
-//   },
+//   statusDropdown: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 12, backgroundColor: '#fff', marginBottom: 10 },
+//   statusDropdownText: { fontSize: 14, color: '#333', flex: 1 },
+//   statusDropdownList: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, backgroundColor: '#fff', marginBottom: 10, maxHeight: 250, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+//   statusDropdownScroll: { maxHeight: 250 },
+//   statusDropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+//   statusDropdownItemActive: { backgroundColor: '#2c5aa0' },
+//   statusDropdownItemText: { fontSize: 14, color: '#333' },
+//   statusDropdownItemTextActive: { color: '#fff', fontWeight: '600' },
 //   filterButtons: { flexDirection: 'row', marginTop: 12 },
 //   applyBtn: { flex: 1, backgroundColor: '#0A5064', padding: 12, borderRadius: 6, alignItems: 'center', marginRight: 8 },
 //   resetBtn: { flex: 1, backgroundColor: '#6c757d', padding: 12, borderRadius: 6, alignItems: 'center' },
@@ -1185,7 +1144,6 @@
 //   statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
 //   imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 //   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
-//   tapToEnlargeText: { color: '#2196F3', fontSize: 12, fontWeight: '500' },
 //   implementationImageSection: { marginTop: 12, marginBottom: 12 },
 //   imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
 //   implementationImage: { width: '100%', height: 200, borderRadius: 8, resizeMode: 'cover', borderWidth: 1, borderColor: '#ddd' },
@@ -1212,117 +1170,23 @@
 //   imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
 //   closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
 //   fullImage: { width: "80%", height: "60%" },
-//   collapsibleHeader: { 
-//     flexDirection: 'row', 
-//     justifyContent: 'space-between', 
-//     alignItems: 'center', 
-//     backgroundColor: '#fff', 
-//     padding: 16, 
-//     borderRadius: 8, 
-//     marginBottom: 8, 
-//     borderWidth: 1,
-//     borderColor: '#e0e0e0',
-//     elevation: 1, 
-//     shadowColor: '#000', 
-//     shadowOffset: { width: 0, height: 1 }, 
-//     shadowOpacity: 0.05, 
-//     shadowRadius: 2 
-//   },
-//   collapsibleHeaderText: { 
-//     fontSize: 16, 
-//     fontWeight: '600', 
-//     color: '#2c5aa0' 
-//   },
-//   remarkModalOverlay: { 
-//     flex: 1, 
-//     backgroundColor: 'rgba(0,0,0,0.5)', 
-//     justifyContent: 'center', 
-//     alignItems: 'center', 
-//     padding: 20 
-//   },
-//   remarkModalContainer: { 
-//     backgroundColor: '#fff', 
-//     borderRadius: 12, 
-//     width: '100%', 
-//     maxWidth: 500, 
-//     overflow: 'hidden', 
-//     elevation: 5 
-//   },
-//   remarkModalHeader: { 
-//     backgroundColor: '#2c5aa0', 
-//     flexDirection: 'row', 
-//     justifyContent: 'space-between', 
-//     alignItems: 'center', 
-//     paddingHorizontal: 20, 
-//     paddingVertical: 16 
-//   },
-//   remarkModalTitle: { 
-//     fontSize: 18, 
-//     fontWeight: 'bold', 
-//     color: '#fff', 
-//     flex: 1 
-//   },
-//   remarkCloseButton: { 
-//     backgroundColor: 'rgba(255,255,255,0.2)', 
-//     borderRadius: 15, 
-//     width: 30, 
-//     height: 30, 
-//     justifyContent: 'center', 
-//     alignItems: 'center' 
-//   },
-//   remarkModalBody: { 
-//     padding: 20 
-//   },
-//   remarkLabel: { 
-//     fontSize: 16, 
-//     fontWeight: '600', 
-//     color: '#333', 
-//     marginBottom: 10 
-//   },
-//   remarkTextArea: { 
-//     borderWidth: 1, 
-//     borderColor: '#ddd', 
-//     borderRadius: 8, 
-//     padding: 12, 
-//     fontSize: 14, 
-//     color: '#333', 
-//     minHeight: 120, 
-//     backgroundColor: '#f9f9f9' 
-//   },
-//   remarkModalFooter: { 
-//     flexDirection: 'row', 
-//     padding: 16, 
-//     borderTopWidth: 1, 
-//     borderTopColor: '#e0e0e0', 
-//     gap: 10 
-//   },
-//   remarkCancelButton: { 
-//     flex: 1, 
-//     backgroundColor: '#6c757d', 
-//     paddingVertical: 12, 
-//     borderRadius: 8, 
-//     alignItems: 'center', 
-//     justifyContent: 'center' 
-//   },
-//   remarkCancelText: { 
-//     color: '#fff', 
-//     fontSize: 14, 
-//     fontWeight: '600' 
-//   },
-//   remarkSubmitButton: { 
-//     flex: 1, 
-//     backgroundColor: '#2c5aa0', 
-//     paddingVertical: 12, 
-//     borderRadius: 8, 
-//     alignItems: 'center', 
-//     justifyContent: 'center' 
-//   },
-//   remarkSubmitText: { 
-//     color: '#fff', 
-//     fontSize: 14, 
-//     fontWeight: '600' 
-//   },
+//   collapsibleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#e0e0e0', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+//   collapsibleHeaderText: { fontSize: 16, fontWeight: '600', color: '#2c5aa0' },
+//   remarkModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+//   remarkModalContainer: { backgroundColor: '#fff', borderRadius: 12, width: '100%', maxWidth: 500, overflow: 'hidden', elevation: 5 },
+//   remarkModalHeader: { backgroundColor: '#2c5aa0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16 },
+//   remarkModalTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff', flex: 1 },
+//   remarkCloseButton: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 15, width: 30, height: 30, justifyContent: 'center', alignItems: 'center' },
+//   remarkModalBody: { padding: 20 },
+//   remarkLabel: { fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 10 },
+//   remarkTextArea: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 14, color: '#333', minHeight: 120, backgroundColor: '#f9f9f9' },
+//   remarkModalFooter: { flexDirection: 'row', padding: 16, borderTopWidth: 1, borderTopColor: '#e0e0e0', gap: 10 },
+//   remarkCancelButton: { flex: 1, backgroundColor: '#6c757d', paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+//   remarkCancelText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+//   remarkSubmitButton: { flex: 1, backgroundColor: '#2c5aa0', paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+//   remarkSubmitText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 // });
+
 
 
 import React, { useEffect, useState } from "react";
@@ -1348,17 +1212,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TEAM_IDEAS_URL, IDEA_DETAIL_URL, UPDATE_STATUS_URL } from "../src/context/api";
 
-// ✅ Helper function for image URL normalization
-// const normalizeImagePath = (path) => {
-//   if (!path) return null;
-//   if (path.startsWith('http://') || path.startsWith('https://')) {
-//     return path;
-//   }
-//   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
-//   return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
-// };
-
-
 const normalizeImagePath = (path) => {
   if (!path) return null;
   if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -1367,6 +1220,7 @@ const normalizeImagePath = (path) => {
   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
   return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 };
+
 function TimelineItem({ status, date, description, isLast, isFirst }) {
   const getCircleColor = (status) => {
     const s = status?.toLowerCase() || '';
@@ -1502,6 +1356,11 @@ export default function MyTeamIdeasScreen() {
     fetchAllIdeas();
   }, []);
 
+  // ✅ REAL-TIME SEARCH: Apply filters whenever search text changes
+  useEffect(() => {
+    applyFiltersRealTime();
+  }, [searchIdeaNumber]);
+
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (showStatusDropdown) {
@@ -1587,72 +1446,78 @@ export default function MyTeamIdeasScreen() {
     }
   };
 
-  const applyFilters = () => {
-    setLoading(true);
+  // ✅ FIXED: Real-time filter application for search
+  const applyFiltersRealTime = () => {
+    let filteredIdeas = [...allIdeasOriginal];
 
-    try {
-      let filteredIdeas = [...allIdeasOriginal];
-
-      if (searchIdeaNumber.trim()) {
-        const searchTerm = searchIdeaNumber.trim().toLowerCase();
-        filteredIdeas = filteredIdeas.filter(idea =>
-          (idea.ideaNumber && idea.ideaNumber.toLowerCase().includes(searchTerm)) ||
-          (idea.ownerName && idea.ownerName.toLowerCase().includes(searchTerm)) ||
-          (idea.description && idea.description.toLowerCase().includes(searchTerm))
-        );
-      }
-
-      if (fromDate || toDate) {
-        filteredIdeas = filteredIdeas.filter(idea => {
-          if (!idea.creationDate) return false;
-
-          const ideaDate = new Date(idea.creationDate);
-          ideaDate.setHours(0, 0, 0, 0);
-
-          if (fromDate && toDate) {
-            const from = new Date(fromDate);
-            from.setHours(0, 0, 0, 0);
-            const to = new Date(toDate);
-            to.setHours(23, 59, 59, 999);
-            return ideaDate >= from && ideaDate <= to;
-          } else if (fromDate) {
-            const from = new Date(fromDate);
-            from.setHours(0, 0, 0, 0);
-            return ideaDate >= from;
-          } else if (toDate) {
-            const to = new Date(toDate);
-            to.setHours(23, 59, 59, 999);
-            return ideaDate <= to;
-          }
-          return true;
-        });
-      }
-
-      if (selectedStatus && selectedStatus !== "") {
-        filteredIdeas = filteredIdeas.filter(idea => {
-          if (!idea.status) return false;
-          return idea.status.toLowerCase() === selectedStatus.toLowerCase();
-        });
-      }
-
-      setIdeas(filteredIdeas);
-      setTotalItems(filteredIdeas.length);
-      setShowFilters(false);
-
-    } catch (error) {
-      console.error("Filter error:", error);
-    } finally {
-      setLoading(false);
+    // Apply search filter
+    if (searchIdeaNumber.trim()) {
+      const searchTerm = searchIdeaNumber.trim().toLowerCase();
+      filteredIdeas = filteredIdeas.filter(idea => {
+        const ideaNum = (idea.ideaNumber || '').toLowerCase();
+        const ownerName = (idea.ownerName || '').toLowerCase();
+        const description = (idea.description || '').toLowerCase();
+        
+        return ideaNum.includes(searchTerm) || 
+               ownerName.includes(searchTerm) || 
+               description.includes(searchTerm);
+      });
     }
+
+    // Apply status filter (only if selected)
+    if (selectedStatus && selectedStatus !== "") {
+      filteredIdeas = filteredIdeas.filter(idea => {
+        if (!idea.status) return false;
+        return idea.status.toLowerCase() === selectedStatus.toLowerCase();
+      });
+    }
+
+    // Apply date filter
+    if (fromDate || toDate) {
+      filteredIdeas = filteredIdeas.filter(idea => {
+        if (!idea.creationDate) return false;
+
+        const ideaDate = new Date(idea.creationDate);
+        ideaDate.setHours(0, 0, 0, 0);
+
+        if (fromDate && toDate) {
+          const from = new Date(fromDate);
+          from.setHours(0, 0, 0, 0);
+          const to = new Date(toDate);
+          to.setHours(23, 59, 59, 999);
+          return ideaDate >= from && ideaDate <= to;
+        } else if (fromDate) {
+          const from = new Date(fromDate);
+          from.setHours(0, 0, 0, 0);
+          return ideaDate >= from;
+        } else if (toDate) {
+          const to = new Date(toDate);
+          to.setHours(23, 59, 59, 999);
+          return ideaDate <= to;
+        }
+        return true;
+      });
+    }
+
+    setIdeas(filteredIdeas);
+    setTotalItems(filteredIdeas.length);
   };
 
+  // ✅ FIXED: Apply button now uses the same logic
+  const applyFilters = () => {
+    applyFiltersRealTime();
+    setShowFilters(false);
+  };
+
+  // ✅ FIXED: Clear filters resets everything and re-applies
   const clearFilters = () => {
     setSearchIdeaNumber("");
     setFromDate(null);
     setToDate(null);
     setSelectedStatus("");
     setShowStatusDropdown(false);
-
+    
+    // Reset to original data
     setIdeas(allIdeasOriginal);
     setTotalItems(allIdeasOriginal.length);
   };
