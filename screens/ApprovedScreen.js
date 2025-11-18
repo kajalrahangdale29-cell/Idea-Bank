@@ -10,6 +10,7 @@ import {
   ScrollView,
   Modal,
   Alert,
+  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,28 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { APPROVED_BY_ME_URL, IDEA_DETAIL_URL } from '../src/context/api';
+
+const normalizeImagePath = (path) => {
+  if (!path) return null;
+  let cleanPath = path;
+  const basePattern = 'https://ideabank-api-dev.abisaio.com';
+  const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
+  if (occurrences > 1) {
+    const lastIndex = cleanPath.lastIndexOf(basePattern);
+    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+  }
+  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+    return cleanPath;
+  }
+  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+  return fullUrl;
+};
+
+const getAlternateImageUrl = (url) => {
+  if (!url) return null;
+  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -118,6 +141,8 @@ const ApprovedScreen = () => {
   const [toDate, setToDate] = useState(null);
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
+  const [imageRetryUrl, setImageRetryUrl] = useState(null);
+  const [imageLoadError, setImageLoadError] = useState({});
 
   const fetchApprovedIdeas = async () => {
     setLoading(true);
@@ -141,42 +166,31 @@ const ApprovedScreen = () => {
       let hasMorePages = true;
       let apiTotalItems = 0;
 
-      console.log("🔄 Starting to fetch approved ideas...");
-
       while (hasMorePages) {
         try {
           const baseUrl = APPROVED_BY_ME_URL.split('?')[0];
           const url = `${baseUrl}?sortOrder=desc&page=${currentPage}&pageSize=10`;
-          console.log(`📡 Fetching page ${currentPage}: ${url}`);
           
           const response = await axios.get(url, { 
             headers: authHeaders,
             timeout: 15000 
           });
 
-          console.log(`✅ Page ${currentPage} response:`, JSON.stringify(response.data).substring(0, 200));
-
           if (response.data && response.data.data) {
             const { items, totalPages, totalItems, hasNextPage } = response.data.data;
             
             if (currentPage === 1 && totalItems !== undefined) {
               apiTotalItems = totalItems;
-              console.log(`📊 Total items available: ${totalItems}`);
             }
             
             if (items && Array.isArray(items) && items.length > 0) {
               allIdeas = [...allIdeas, ...items];
-              console.log(`✅ Added ${items.length} ideas. Total so far: ${allIdeas.length}`);
-            } else {
-              console.log(`⚠️ No items in page ${currentPage}`);
             }
             
             if (hasNextPage === false || items.length === 0 || (totalPages && currentPage >= totalPages)) {
               hasMorePages = false;
-              console.log("🏁 No more pages to fetch");
             }
           } else {
-            console.log("⚠️ Unexpected response structure");
             hasMorePages = false;
           }
           
@@ -185,32 +199,16 @@ const ApprovedScreen = () => {
             hasMorePages = false;
           }
         } catch (pageError) {
-          console.error(`❌ Error fetching page ${currentPage}:`, pageError.message);
-          if (pageError.response) {
-            console.error("Response status:", pageError.response.status);
-            console.error("Response data:", pageError.response.data);
-          }
           hasMorePages = false;
         }
       }
 
-      console.log(`✅ Fetch complete: ${allIdeas.length} total approved ideas`);
       setAllIdeasOriginal(allIdeas);
       setIdeas(allIdeas);
       setTotalItems(apiTotalItems || allIdeas.length);
 
-      if (allIdeas.length === 0) {
-        console.log("ℹ️ No approved ideas found");
-      }
     } catch (error) {
-      console.error("❌ Error fetching approved ideas:", error);
-      if (error.response) {
-        console.error("Response status:", error.response.status);
-        console.error("Response data:", error.response.data);
-        Alert.alert("Error", `Failed to load approved ideas: ${error.response.data?.message || error.message}`);
-      } else {
-        Alert.alert("Error", "Failed to load approved ideas. Please check your connection.");
-      }
+      Alert.alert("Error", "Failed to load approved ideas. Please check your connection.");
       setIdeas([]);
       setAllIdeasOriginal([]);
       setTotalItems(0);
@@ -244,7 +242,6 @@ const ApprovedScreen = () => {
     
     try {
       setLoadingDetail(true);
-      console.log("🔍 Fetching idea detail for ID:", ideaId);
       
       const storedData = await AsyncStorage.getItem("userData");
       if (!storedData) {
@@ -260,35 +257,41 @@ const ApprovedScreen = () => {
       };
 
       const apiUrl = `${IDEA_DETAIL_URL}/${ideaId}`;
-      console.log("📡 Fetching from:", apiUrl);
       
       const response = await axios.get(apiUrl, { headers, timeout: 15000 });
-      console.log("✅ Response received:", JSON.stringify(response.data).substring(0, 200));
 
-      if (response?.data?.success && response?.data?.data) {
-        setIdeaDetail(response.data.data);
-        setSelectedIdea(response.data.data);
-        if (shouldShowImplementationDetails(response.data.data)) {
+      if (response?.data) {
+        const detail = response.data.success ? response.data.data : response.data;
+
+        const beforeImagePath = detail.beforeImplementationImagePath || detail.imagePath || detail.beforeImplementationImage;
+        const normalizedBeforeImagePath = normalizeImagePath(beforeImagePath);
+
+        const afterImagePath = detail.afterImplementationImagePath || detail.implementationCycle?.afterImplementationImagePath;
+        const normalizedAfterImagePath = normalizeImagePath(afterImagePath);
+
+        const normalizedDetail = {
+          ...detail,
+          beforeImplementationImagePath: normalizedBeforeImagePath,
+          imagePath: normalizedBeforeImagePath,
+          afterImplementationImagePath: normalizedAfterImagePath,
+          implementationCycle: detail.implementationCycle ? {
+            ...detail.implementationCycle,
+            beforeImplementationImagePath: normalizeImagePath(detail.implementationCycle.beforeImplementationImagePath),
+            afterImplementationImagePath: normalizedAfterImagePath
+          } : null
+        };
+        
+        setIdeaDetail(normalizedDetail);
+        setSelectedIdea(normalizedDetail);
+        if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
-        console.log("✅ Idea detail loaded successfully");
-      } else if (response?.data) {
-        setIdeaDetail(response.data);
-        setSelectedIdea(response.data);
-        if (shouldShowImplementationDetails(response.data)) {
-          setShowImplementationDetails(true);
-        }
-        console.log("✅ Idea detail loaded (direct format)");
       } else {
-        console.log("⚠️ Unexpected response format");
         Alert.alert("Error", "Idea details not found or invalid format.");
       }
     } catch (error) {
-      console.error("❌ Error fetching idea details:", error);
       let errorMessage = "Failed to fetch idea details.";
       if (error.response) {
-        console.error("Response status:", error.response.status);
-        console.error("Response data:", error.response.data);
         if (error.response.status === 404) {
           errorMessage = "Idea not found.";
         } else if (error.response.status === 401) {
@@ -334,7 +337,6 @@ const ApprovedScreen = () => {
       setTotalItems(filteredIdeas.length);
       setShowFilters(false);
     } catch (error) {
-      console.error("Filter error:", error);
     } finally {
       setLoading(false);
     }
@@ -361,8 +363,39 @@ const ApprovedScreen = () => {
   };
 
   const openImagePreview = (imageUrl) => {
-    setCurrentImageUrl(imageUrl);
+    const finalUrl = normalizeImagePath(imageUrl);
+    
+    if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
+      Alert.alert(
+        'PDF Document',
+        'This is a PDF document. Would you like to open it?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Open',
+            onPress: () => {
+              Linking.openURL(finalUrl).catch(err => {
+                Alert.alert('Error', 'Unable to open PDF. Please try accessing it from a web browser.');
+              });
+            }
+          }
+        ]
+      );
+      return;
+    }
+
+    setCurrentImageUrl(finalUrl);
+    setImageRetryUrl(getAlternateImageUrl(finalUrl));
     setShowImage(true);
+  };
+
+  const handleImageError = (error) => {
+    if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
+      setCurrentImageUrl(imageRetryUrl);
+      setImageRetryUrl(null);
+    } else {
+      Alert.alert('Error', 'Failed to load image');
+    }
   };
 
   const closeModal = () => {
@@ -371,6 +404,7 @@ const ApprovedScreen = () => {
     setEmployeeInfoExpanded(false);
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
+    setImageLoadError({});
   };
 
   const renderIdeaCard = ({ item }) => (
@@ -589,13 +623,47 @@ const ApprovedScreen = () => {
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
-                      {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
-                        <TouchableOpacity style={styles.imagePreviewContainer} onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
-                          <Image source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.thumbnailSmall} contentFit="cover" cachePolicy="none" />
+                      {ideaDetail.beforeImplementationImagePath ? (
+                        <TouchableOpacity
+                          style={styles.imagePreviewContainer}
+                          onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath)}
+                        >
+                          {ideaDetail.beforeImplementationImagePath.toLowerCase().includes('.pdf') ? (
+                            <View style={styles.pdfThumbnailContainer}>
+                              <Ionicons name="document-text" size={30} color="#FF5722" />
+                              <Text style={styles.pdfThumbnailText}>PDF</Text>
+                            </View>
+                          ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
+                            <Image
+                              source={{ uri: ideaDetail.beforeImplementationImagePath }}
+                              style={styles.thumbnailSmall}
+                              contentFit="cover"
+                              cachePolicy="none"
+                              placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                              transition={1000}
+                              onError={(e) => {
+                                const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
+                                if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+                                  setIdeaDetail(prev => ({
+                                    ...prev,
+                                    beforeImplementationImagePath: altUrl
+                                  }));
+                                } else {
+                                  setImageLoadError(prev => ({
+                                    ...prev, 
+                                    [`before_${ideaDetail.id}`]: true
+                                  }));
+                                }
+                              }}
+                            />
+                          ) : (
+                            <View style={styles.imageErrorContainer}>
+                              <Ionicons name="image-outline" size={24} color="#999" />
+                              <Text style={styles.imageErrorText}>Image unavailable</Text>
+                            </View>
+                          )}
                         </TouchableOpacity>
-                      ) : (
-                        <Text style={styles.valueDetail}>N/A</Text>
-                      )}
+                      ) : (<Text style={styles.valueDetail}>N/A</Text>)}
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Status:</Text>
@@ -677,41 +745,46 @@ const ApprovedScreen = () => {
                             </Text>
                           </View>
                         )}
-                        {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
+                        {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>Before Implementation:</Text>
-                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
-                              <Image source={{ uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.implementationImage} contentFit="cover" />
+                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
+                              <Image source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }} style={styles.implementationImage} contentFit="cover" />
                             </TouchableOpacity>
                           </View>
                         )}
-                        {/* {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
+                        
+                        {ideaDetail.afterImplementationImagePath && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>After Implementation:</Text>
-                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath)}>
-                              <Image source={{ uri: ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath }} style={styles.implementationImage} />
-                            </TouchableOpacity>
-                          </View>
-                        )} */}
-
-{(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>After Implementation:</Text>
-                            <TouchableOpacity onPress={() => {
-                              const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
-                              const fullUrl = imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
-                              openImagePreview(fullUrl);
-                            }}>
-                              <Image source={{ 
-                                uri: (() => {
-                                  const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
-                                  return imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
-                                })()
-                              }} style={styles.implementationImage} contentFit="cover" />
+                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}>
+                                {!imageLoadError[`after_${ideaDetail.id}`] ? (
+                                    <Image
+                                    source={{ uri: ideaDetail.afterImplementationImagePath }}
+                                    style={styles.implementationImage}
+                                    contentFit="cover"
+                                    cachePolicy="none"
+                                    onError={() => {
+                                        const altUrl = getAlternateImageUrl(ideaDetail.afterImplementationImagePath);
+                                        if (altUrl && ideaDetail.afterImplementationImagePath !== altUrl) {
+                                        setIdeaDetail(prev => ({
+                                            ...prev,
+                                            afterImplementationImagePath: altUrl
+                                        }));
+                                        } else {
+                                        setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
+                                        }
+                                    }}
+                                    />
+                                ) : (
+                                    <View style={[styles.implementationImage, styles.imageErrorContainer]}>
+                                    <Ionicons name="image-outline" size={40} color="#999" />
+                                    <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                    </View>
+                                )}
                             </TouchableOpacity>
                           </View>
                         )}
-
                       </View>
                     )}
                   </>
@@ -775,11 +848,11 @@ const ApprovedScreen = () => {
 
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
-          <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}>
+          <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); setImageRetryUrl(null); }}>
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" cachePolicy="none" onError={(e) => Alert.alert('Error', 'Failed to load image')} />
+            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" onError={handleImageError} />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
           )}
@@ -840,7 +913,10 @@ const styles = StyleSheet.create({
   statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
   imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
-  tapToEnlargeText: { color: '#2196F3', fontSize: 12, fontWeight: '500' },
+  pdfThumbnailContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#FF5722', backgroundColor: '#FFF3E0', justifyContent: 'center', alignItems: 'center' },
+  pdfThumbnailText: { fontSize: 10, color: '#FF5722', fontWeight: 'bold', marginTop: 2 },
+  imageErrorContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' },
+  imageErrorText: { fontSize: 9, color: '#999', marginTop: 2, textAlign: 'center' },
   implementationImageSection: { marginTop: 12, marginBottom: 12 },
   imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
   implementationImage: { width: '100%', height: 200, borderRadius: 8, resizeMode: 'cover', borderWidth: 1, borderColor: '#ddd' },

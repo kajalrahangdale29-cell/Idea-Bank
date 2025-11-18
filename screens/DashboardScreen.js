@@ -9,6 +9,34 @@ import axios from 'axios';
 import { decrypt, safeDecrypt } from './EncryptionHelper'; 
 import { DASHBOARD_URL, NOTIFICATION_USER_URL, NOTIFICATION_COUNT_URL, MARK_READ_URL, CLEAR_ALL_URL, REDIRECT_NOTIFICATION_URL, IDEA_DETAIL_URL, PENDING_APPROVALS_URL } from '../src/context/api'; 
 
+// ✅ FIXED: URL Normalization Function
+const normalizeImagePath = (path) => {
+  if (!path) return null;
+  
+  // Remove any duplicate BASE_URL patterns
+  let cleanPath = path;
+  const basePattern = 'https://ideabank-api-dev.abisaio.com';
+  
+  // Count occurrences of the base URL
+  const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+  
+  // If BASE_URL appears more than once, keep only the last occurrence
+  if (occurrences > 1) {
+    const lastIndex = cleanPath.lastIndexOf(basePattern);
+    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+  }
+  
+  // If it's already a full URL, return as-is
+  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+    return cleanPath;
+  }
+  
+  // Otherwise, prepend BASE_URL
+  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+  return fullUrl;
+};
+
 const formatDateTime = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -123,6 +151,7 @@ const DashboardScreen = () => {
       console.error("Error loading stored notifications:", error);
     }
   };
+
   const saveNotificationsToStorage = async (systemId, notificationsList) => {
     try {
       const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
@@ -217,7 +246,6 @@ const DashboardScreen = () => {
       });
 
       if (!response.ok) {
-     
         await loadStoredNotifications(employeeSystemId);
         return;
       }
@@ -238,7 +266,6 @@ const DashboardScreen = () => {
         const storedNotifications = JSON.parse(storedData);
         const currentTime = Date.now();
         
-        // Keep stored notifications that are less than 7 days old
         const validStoredNotifs = storedNotifications.filter(notif => {
           const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
           return (currentTime - notifTime) < SEVEN_DAYS_MS;
@@ -267,7 +294,6 @@ const DashboardScreen = () => {
       
     } catch (error) {
       console.error("Fetch notifications error:", error);
-
       await loadStoredNotifications(employeeSystemId);
     } finally {
       setLoadingNotifications(false);
@@ -318,11 +344,29 @@ const DashboardScreen = () => {
       });
 
       if (response?.success && response?.data) {
-        setIdeaDetail(response.data);
-        setSelectedIdea(response.data);
+        const detail = response.data;
+        
+        // Normalize all image paths
+        const normalizedDetail = {
+          ...detail,
+          beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          imagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          afterImplementationImagePath: normalizeImagePath(detail.afterImplementationImagePath),
+          implementationCycle: detail.implementationCycle ? {
+            ...detail.implementationCycle,
+            beforeImplementationImagePath: normalizeImagePath(detail.implementationCycle.beforeImplementationImagePath),
+            afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
+          } : null
+        };
+        
+        console.log('📸 Dashboard - Normalized Before Image:', normalizedDetail.beforeImplementationImagePath);
+        console.log('📸 Dashboard - Normalized After Image:', normalizedDetail.afterImplementationImagePath);
+        
+        setIdeaDetail(normalizedDetail);
+        setSelectedIdea(normalizedDetail);
         setShowNotificationModal(false);
         
-        if (shouldShowImplementationDetails(response.data)) {
+        if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
       } else {
@@ -378,7 +422,6 @@ const DashboardScreen = () => {
         );
         
         setNotifications(updatedNotifications);
-        
         await saveNotificationsToStorage(employeeSystemId, updatedNotifications);
         
         const unread = updatedNotifications.filter(n => !n.isRead).length;
@@ -439,7 +482,8 @@ const DashboardScreen = () => {
   };
 
   const openImagePreview = (imageUrl) => {
-    setCurrentImageUrl(imageUrl);
+    const finalUrl = normalizeImagePath(imageUrl);
+    setCurrentImageUrl(finalUrl);
     setShowImage(true);
   };
 
@@ -509,7 +553,6 @@ const DashboardScreen = () => {
       
       if (encryptedId && encryptedId.trim() !== '') {
         setShowNotificationModal(false);
-        
         await fetchIdeaDetail(encryptedId);
       } else {
         Toast.show('Invalid notification - redirect URL missing', {
@@ -664,7 +707,6 @@ const DashboardScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Notification Modal */}
       <Modal visible={showNotificationModal} animationType="slide" transparent={true} onRequestClose={() => setShowNotificationModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -704,7 +746,6 @@ const DashboardScreen = () => {
         </View>
       </Modal>
 
-      {/* Loading Overlay */}
       {loadingDetail && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#004d61" />
@@ -712,7 +753,6 @@ const DashboardScreen = () => {
         </View>
       )}
 
-      {/* Idea Detail Modal - Team Ideas Design Style */}
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.modalHeaderDetail}>
@@ -731,7 +771,6 @@ const DashboardScreen = () => {
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             {selectedIdea && ideaDetail && (
               <>
-                {/* Employee Information - Collapsible */}
                 <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} activeOpacity={0.7}>
                   <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
                   <Ionicons name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
@@ -778,7 +817,6 @@ const DashboardScreen = () => {
                   </View>
                 )}
 
-                {/* Idea Information - Collapsible */}
                 <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} activeOpacity={0.7}>
                   <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
                   <Ionicons name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
@@ -809,12 +847,23 @@ const DashboardScreen = () => {
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
-                      {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
-                        <TouchableOpacity style={styles.imagePreviewContainer} onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
-                          <Image source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.thumbnailSmall} contentFit="cover" />
-                          <Text style={styles.tapToEnlargeText}></Text>
-                        </TouchableOpacity>
-                      ) : (<Text style={styles.valueDetail}>N/A</Text>)}
+                      <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                        {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
+                          <TouchableOpacity
+                            style={styles.imagePreviewContainer}
+                            onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                          >
+                            <Image
+                              source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }}
+                              style={styles.thumbnailSmall}
+                              contentFit="cover"
+                              cachePolicy="none"
+                            />
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.valueDetail}>N/A</Text>
+                        )}
+                      </View>
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Status:</Text>
@@ -857,7 +906,6 @@ const DashboardScreen = () => {
                   </View>
                 )}
 
-                {/* Implementation Details - Show if available */}
                 {shouldShowImplementationDetails(ideaDetail) && (
                   <>
                     <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setShowImplementationDetails(!showImplementationDetails)} activeOpacity={0.7}>
@@ -887,35 +935,53 @@ const DashboardScreen = () => {
                         </View>
                         {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
                           <View style={styles.rowDetailWithBorder}>
-                            <Text style={styles.labelDetail}>Submitted On:</Text>
+                            <Text style={styles.labelDetail}>Completed On:</Text>
                             <Text style={styles.valueDetail}>
                               {formatDate(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate)}
                             </Text>
                           </View>
                         )}
                         
-                        {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
+                        {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>Before Implementation:</Text>
-                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
-                              <Image source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }} style={styles.implementationImage} contentFit="cover" />
+                            <TouchableOpacity onPress={() => {
+                              const imagePath = ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath;
+                              openImagePreview(imagePath);
+                            }}>
+                              <Image
+                                source={{
+                                  uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath
+                                }}
+                                style={styles.implementationImage}
+                                contentFit="cover"
+                                cachePolicy="none"
+                                onError={(e) => {
+                                  console.log('Before image load error:', e.nativeEvent.error);
+                                }}
+                              />
                             </TouchableOpacity>
                           </View>
                         )}
                         
-                        {ideaDetail.implementationCycle?.afterImplementationImagePath && (
+                        {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>After Implementation:</Text>
                             <TouchableOpacity onPress={() => {
-                              const imagePath = ideaDetail.implementationCycle.afterImplementationImagePath;
-                              const fullUrl = imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
-                              openImagePreview(fullUrl);
+                              const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
+                              openImagePreview(imagePath);
                             }}>
-                              <Image source={{ 
-                                uri: ideaDetail.implementationCycle.afterImplementationImagePath.startsWith('http')
-                                  ? ideaDetail.implementationCycle.afterImplementationImagePath
-                                  : `https://ideabank-api-dev.abisaio.com${ideaDetail.implementationCycle.afterImplementationImagePath}`
-                              }} style={styles.implementationImage} contentFit="cover" />
+                              <Image
+                                source={{
+                                  uri: ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath
+                                }}
+                                style={styles.implementationImage}
+                                contentFit="cover"
+                                cachePolicy="none"
+                                onError={(e) => {
+                                  console.log('After image load error:', e.nativeEvent.error);
+                                }}
+                              />
                             </TouchableOpacity>
                           </View>
                         )}
@@ -924,7 +990,6 @@ const DashboardScreen = () => {
                   </>
                 )}
 
-                {/* Remarks Section */}
                 <View style={styles.cardDetail}>
                   <Text style={styles.cardHeading}>Remarks</Text>
                   {(() => {
@@ -948,7 +1013,6 @@ const DashboardScreen = () => {
         </View>
       </Modal>
 
-      {/* Timeline Modal */}
       <Modal visible={showTimelineModal} animationType="slide">
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
@@ -983,14 +1047,13 @@ const DashboardScreen = () => {
         </View>
       </Modal>
 
-      {/* Image Viewer Modal */}
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
           <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}>
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" onError={() => Toast.show('Failed to load image', { duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM })} />
+            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" cachePolicy="none" onError={() => Toast.show('Failed to load image', { duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM })} />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
           )}
@@ -1021,10 +1084,7 @@ const styles = StyleSheet.create({
   empInfo: { flexDirection: 'row', alignItems: 'center' },
   name: { color: '#fff', fontSize: isSmallDevice ? 15 : 16, fontWeight: 'bold' },
   id: { color: '#ddd', fontSize: isSmallDevice ? 12 : 12 },
-  notificationBell: {
-    marginLeft: 12,
-    position: 'relative',
-  },
+  notificationBell: { marginLeft: 12, position: 'relative' },
   badge: {
     position: 'absolute',
     top: -5,
@@ -1037,36 +1097,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
   },
-  badgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  cardsContainer: {
-    paddingHorizontal: 15,
-    marginTop: 15,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  rejectedRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  cardWrapper: {
-    width: '48%', 
-  },
-  rejectedWrapper: {
-    width: '48%', 
-  },
+  badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+  cardsContainer: { paddingHorizontal: 15, marginTop: 15 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  rejectedRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 6 },
+  cardWrapper: { width: '48%' },
+  rejectedWrapper: { width: '48%' },
   card: {
     width: '100%',
     borderRadius: 15,
     alignItems: 'center',
-    paddingVertical: 25, 
+    paddingVertical: 25,
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -1083,12 +1124,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  cardCount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#004d61',
-    marginTop: 6,
-  },
+  cardCount: { fontSize: 24, fontWeight: 'bold', color: '#004d61', marginTop: 6 },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -1099,7 +1135,7 @@ const styles = StyleSheet.create({
   overviewCard: {
     backgroundColor: '#fff',
     marginHorizontal: 20,
-    marginTop: 10, 
+    marginTop: 10,
     padding: 20,
     borderRadius: 20,
     alignItems: 'center',
@@ -1112,12 +1148,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.05)',
   },
-  readyTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 1,
-    color: '#000',
-  },
+  readyTitle: { fontSize: 16, fontWeight: 'bold', marginTop: 1, color: '#000' },
   readySubtitle: {
     fontSize: 13,
     color: '#555',
@@ -1137,14 +1168,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scrollContent: {
-    paddingBottom: 30,
-  },
+  createButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  scrollContent: { paddingBottom: 30 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -1166,31 +1191,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#004d61',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
-  },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#004d61' },
+  modalActions: { flexDirection: 'row', alignItems: 'center', gap: 15 },
   clearAllBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: '#ff3b30',
     borderRadius: 6,
   },
-  clearAllText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  notificationList: {
-    paddingHorizontal: 15,
-    paddingTop: 10,
-  },
+  clearAllText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  notificationList: { paddingHorizontal: 15, paddingTop: 10 },
   notificationItem: {
     flexDirection: 'row',
     backgroundColor: '#f9f9f9',
@@ -1200,36 +1210,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#eee',
   },
-  unreadNotification: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#004d61',
-  },
-  notificationIcon: {
-    marginRight: 12,
-  },
-  notificationContent: {
-    flex: 1,
-  },
+  unreadNotification: { backgroundColor: '#e3f2fd', borderColor: '#004d61' },
+  notificationIcon: { marginRight: 12 },
+  notificationContent: { flex: 1 },
   notificationTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
     marginBottom: 4,
   },
-  unreadText: {
-    color: '#004d61',
-    fontWeight: 'bold',
-  },
+  unreadText: { color: '#004d61', fontWeight: 'bold' },
   notificationMessage: {
     fontSize: 13,
     color: '#666',
     lineHeight: 18,
     marginBottom: 6,
   },
-  notificationTime: {
-    fontSize: 11,
-    color: '#999',
-  },
+  notificationTime: { fontSize: 11, color: '#999' },
   unreadDot: {
     width: 8,
     height: 8,
@@ -1238,24 +1235,10 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     alignSelf: 'center',
   },
-  loadingContainer: {
-    paddingVertical: 60,
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 14,
-    color: '#666',
-  },
-  emptyContainer: {
-    paddingVertical: 80,
-    alignItems: 'center',
-  },
-  emptyText: {
-    marginTop: 15,
-    fontSize: 16,
-    color: '#999',
-  },
+  loadingContainer: { paddingVertical: 60, alignItems: 'center' },
+  loadingText: { marginTop: 10, fontSize: 14, color: '#666' },
+  emptyContainer: { paddingVertical: 80, alignItems: 'center' },
+  emptyText: { marginTop: 15, fontSize: 16, color: '#999' },
   loadingOverlay: {
     position: 'absolute',
     top: 0,
@@ -1267,10 +1250,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.8)',
     zIndex: 9999,
   },
-  fullModal: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  fullModal: { flex: 1, backgroundColor: '#f5f5f5' },
   modalHeaderDetail: {
     backgroundColor: '#fff',
     paddingTop: 24,
@@ -1286,11 +1266,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  modalHeaderTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2c5aa0',
-  },
+  modalHeaderTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c5aa0' },
   closeButton: {
     backgroundColor: '#f0f0f0',
     borderRadius: 18,
@@ -1315,10 +1291,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-  modalScrollContent: {
-    padding: 16,
-    paddingBottom: 30,
-  },
+  modalScrollContent: { padding: 16, paddingBottom: 30 },
   collapsibleHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1335,11 +1308,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
-  collapsibleHeaderText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2c5aa0',
-  },
+  collapsibleHeaderText: { fontSize: 16, fontWeight: '600', color: '#2c5aa0' },
   cardDetail: {
     backgroundColor: '#fff',
     padding: 16,
@@ -1349,12 +1318,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     elevation: 2,
   },
-  cardHeading: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#2c5aa0',
-  },
+  cardHeading: { fontSize: 18, fontWeight: 'bold', marginBottom: 12, color: '#2c5aa0' },
   rowDetail: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1370,18 +1334,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  labelDetail: {
-    fontWeight: '600',
-    color: '#555',
-    width: '45%',
-    fontSize: 14,
-  },
-  valueDetail: {
-    color: '#222',
-    width: '50%',
-    textAlign: 'right',
-    fontSize: 14,
-  },
+  labelDetail: { fontWeight: '600', color: '#555', width: '45%', fontSize: 14 },
+  valueDetail: { color: '#222', width: '50%', textAlign: 'right', fontSize: 14 },
   statusBadgeDetail: {
     color: '#fff',
     paddingHorizontal: 10,
@@ -1392,11 +1346,7 @@ const styles = StyleSheet.create({
     maxWidth: 200,
     textAlign: 'center',
   },
-  imagePreviewContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   thumbnailSmall: {
     width: 60,
     height: 60,
@@ -1404,21 +1354,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  tapToEnlargeText: {
-    color: '#2196F3',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  implementationImageSection: {
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  imageLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 8,
-  },
+  tapToEnlargeText: { color: '#2196F3', fontSize: 12, fontWeight: '500' },
+  implementationImageSection: { marginTop: 12, marginBottom: 12 },
+  imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
   implementationImage: {
     width: '100%',
     height: 200,
@@ -1441,17 +1379,8 @@ const styles = StyleSheet.create({
     color: '#2c5aa0',
     marginBottom: 6,
   },
-  remarkComment: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-    marginBottom: 6,
-  },
-  remarkDate: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
-  },
+  remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
+  remarkDate: { fontSize: 12, color: '#999', fontStyle: 'italic' },
   noRemarksText: {
     textAlign: 'center',
     color: '#999',
@@ -1469,11 +1398,7 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     elevation: 4,
   },
-  timelineModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
+  timelineModalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
   closeButtonTimeline: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 18,
@@ -1490,19 +1415,9 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     elevation: 2,
   },
-  timelineContainer: {
-    paddingLeft: 4,
-    paddingTop: 4,
-  },
-  timelineItem: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  timelineLeft: {
-    alignItems: 'center',
-    marginRight: 15,
-    width: 20,
-  },
+  timelineContainer: { paddingLeft: 4, paddingTop: 4 },
+  timelineItem: { flexDirection: 'row', marginBottom: 20 },
+  timelineLeft: { alignItems: 'center', marginRight: 15, width: 20 },
   timelineCircle: {
     width: 14,
     height: 14,
@@ -1517,27 +1432,15 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 4,
   },
-  timelineContent: {
-    flex: 1,
-    paddingBottom: 5,
-  },
-  timelineStatus: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
+  timelineContent: { flex: 1, paddingBottom: 5 },
+  timelineStatus: { fontSize: 15, fontWeight: 'bold', color: '#333', marginBottom: 4 },
   timelineDescription: {
     fontSize: 13,
     color: '#666',
     marginBottom: 6,
     lineHeight: 18,
   },
-  timelineDate: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
-  },
+  timelineDate: { fontSize: 12, color: '#999', fontStyle: 'italic' },
   noTimelineContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1568,8 +1471,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  fullImage: {
-    width: '90%',
-    height: '70%',
-  },
+  fullImage: { width: '90%', height: '70%' },
 });

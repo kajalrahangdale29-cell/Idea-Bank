@@ -9,6 +9,7 @@ import {
   Alert,
   ScrollView,
   Modal,
+  Linking,
 } from "react-native";
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,28 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ALL_TEAM_IDEAS_URL, IDEA_DETAIL_URL } from "../src/context/api";
+
+const normalizeImagePath = (path) => {
+  if (!path) return null;
+  let cleanPath = path;
+  const basePattern = 'https://ideabank-api-dev.abisaio.com';
+  const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
+  if (occurrences > 1) {
+    const lastIndex = cleanPath.lastIndexOf(basePattern);
+    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+  }
+  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+    return cleanPath;
+  }
+  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+  return fullUrl;
+};
+
+const getAlternateImageUrl = (url) => {
+  if (!url) return null;
+  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
+};
 
 function TimelineItem({ status, date, description, isLast, isFirst }) {
   const getCircleColor = (status) => {
@@ -137,6 +160,8 @@ export default function AllTeamIdeasScreen() {
   const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
+  const [imageRetryUrl, setImageRetryUrl] = useState(null);
+  const [imageLoadError, setImageLoadError] = useState({});
 
   const [allIdeasOriginal, setAllIdeasOriginal] = useState([]);
 
@@ -277,17 +302,36 @@ export default function AllTeamIdeasScreen() {
       const { data: response } = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
 
       if (response?.success && response?.data) {
-        setIdeaDetail(response.data);
-        setSelectedIdea(response.data);
+        const detail = response.data;
+
+        const beforeImagePath = detail.beforeImplementationImagePath || detail.imagePath || detail.beforeImplementationImage;
+        const normalizedBeforeImagePath = normalizeImagePath(beforeImagePath);
+
+        const afterImagePath = detail.afterImplementationImagePath || detail.implementationCycle?.afterImplementationImagePath;
+        const normalizedAfterImagePath = normalizeImagePath(afterImagePath);
+
+        const normalizedDetail = {
+          ...detail,
+          beforeImplementationImagePath: normalizedBeforeImagePath,
+          imagePath: normalizedBeforeImagePath,
+          afterImplementationImagePath: normalizedAfterImagePath,
+          implementationCycle: detail.implementationCycle ? {
+            ...detail.implementationCycle,
+            beforeImplementationImagePath: normalizeImagePath(detail.implementationCycle.beforeImplementationImagePath),
+            afterImplementationImagePath: normalizedAfterImagePath
+          } : null
+        };
+
+        setIdeaDetail(normalizedDetail);
+        setSelectedIdea(normalizedDetail);
         
-        if (shouldShowImplementationDetails(response.data)) {
+        if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
       } else {
         Alert.alert("Error", response?.message || "Idea details not found.");
       }
     } catch (error) {
-      console.error("Error fetching idea detail:", error);
       Alert.alert("Error", "Failed to fetch idea details.");
     } finally {
       setLoadingDetail(false);
@@ -315,11 +359,43 @@ export default function AllTeamIdeasScreen() {
     setEmployeeInfoExpanded(false);
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
+    setImageLoadError({});
   };
 
   const openImagePreview = (imageUrl) => {
-    setCurrentImageUrl(imageUrl);
+    const finalUrl = normalizeImagePath(imageUrl);
+    
+    if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
+      Alert.alert(
+        'PDF Document',
+        'This is a PDF document. Would you like to open it?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Open',
+            onPress: () => {
+              Linking.openURL(finalUrl).catch(err => {
+                Alert.alert('Error', 'Unable to open PDF. Please try accessing it from a web browser.');
+              });
+            }
+          }
+        ]
+      );
+      return;
+    }
+
+    setCurrentImageUrl(finalUrl);
+    setImageRetryUrl(getAlternateImageUrl(finalUrl));
     setShowImage(true);
+  };
+
+  const handleImageError = (error) => {
+    if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
+      setCurrentImageUrl(imageRetryUrl);
+      setImageRetryUrl(null);
+    } else {
+      Alert.alert('Error', 'Failed to load image');
+    }
   };
 
   return (
@@ -593,10 +669,45 @@ export default function AllTeamIdeasScreen() {
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
-                      {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
-                        <TouchableOpacity style={styles.imagePreviewContainer} onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
-                          <Image source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.thumbnailSmall} contentFit="cover" />
-                          <Text style={styles.tapToEnlargeText}></Text>
+                      {ideaDetail.beforeImplementationImagePath ? (
+                        <TouchableOpacity
+                          style={styles.imagePreviewContainer}
+                          onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath)}
+                        >
+                          {ideaDetail.beforeImplementationImagePath.toLowerCase().includes('.pdf') ? (
+                            <View style={styles.pdfThumbnailContainer}>
+                              <Ionicons name="document-text" size={30} color="#FF5722" />
+                              <Text style={styles.pdfThumbnailText}>PDF</Text>
+                            </View>
+                          ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
+                            <Image
+                              source={{ uri: ideaDetail.beforeImplementationImagePath }}
+                              style={styles.thumbnailSmall}
+                              contentFit="cover"
+                              cachePolicy="none"
+                              placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                              transition={1000}
+                              onError={(e) => {
+                                const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
+                                if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+                                  setIdeaDetail(prev => ({
+                                    ...prev,
+                                    beforeImplementationImagePath: altUrl
+                                  }));
+                                } else {
+                                  setImageLoadError(prev => ({
+                                    ...prev, 
+                                    [`before_${ideaDetail.id}`]: true
+                                  }));
+                                }
+                              }}
+                            />
+                          ) : (
+                            <View style={styles.imageErrorContainer}>
+                              <Ionicons name="image-outline" size={24} color="#999" />
+                              <Text style={styles.imageErrorText}>Image unavailable</Text>
+                            </View>
+                          )}
                         </TouchableOpacity>
                       ) : (<Text style={styles.valueDetail}>N/A</Text>)}
                     </View>
@@ -687,19 +798,34 @@ export default function AllTeamIdeasScreen() {
                           </View>
                         )}
                         
-                        {ideaDetail.implementationCycle?.afterImplementationImagePath && (
+                        {ideaDetail.afterImplementationImagePath && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>After Implementation:</Text>
-                            <TouchableOpacity onPress={() => {
-                              const imagePath = ideaDetail.implementationCycle.afterImplementationImagePath;
-                              const fullUrl = imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
-                              openImagePreview(fullUrl);
-                            }}>
-                              <Image source={{ 
-                                uri: ideaDetail.implementationCycle.afterImplementationImagePath.startsWith('http')
-                                  ? ideaDetail.implementationCycle.afterImplementationImagePath
-                                  : `https://ideabank-api-dev.abisaio.com${ideaDetail.implementationCycle.afterImplementationImagePath}`
-                              }} style={styles.implementationImage} contentFit="cover" cachePolicy="none" />
+                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}>
+                                {!imageLoadError[`after_${ideaDetail.id}`] ? (
+                                    <Image
+                                    source={{ uri: ideaDetail.afterImplementationImagePath }}
+                                    style={styles.implementationImage}
+                                    contentFit="cover"
+                                    cachePolicy="none"
+                                    onError={() => {
+                                        const altUrl = getAlternateImageUrl(ideaDetail.afterImplementationImagePath);
+                                        if (altUrl && ideaDetail.afterImplementationImagePath !== altUrl) {
+                                        setIdeaDetail(prev => ({
+                                            ...prev,
+                                            afterImplementationImagePath: altUrl
+                                        }));
+                                        } else {
+                                        setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
+                                        }
+                                    }}
+                                    />
+                                ) : (
+                                    <View style={[styles.implementationImage, styles.imageErrorContainer]}>
+                                    <Ionicons name="image-outline" size={40} color="#999" />
+                                    <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                    </View>
+                                )}
                             </TouchableOpacity>
                           </View>
                         )}
@@ -771,11 +897,11 @@ export default function AllTeamIdeasScreen() {
       {/* Image Viewer Modal */}
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
-          <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}>
+          <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); setImageRetryUrl(null); }}>
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" onError={() => Alert.alert('Error', 'Failed to load image')} />
+            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" onError={handleImageError} />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
           )}
@@ -844,7 +970,10 @@ const styles = StyleSheet.create({
   statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
   imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
-  tapToEnlargeText: { color: '#2196F3', fontSize: 12, fontWeight: '500' },
+  pdfThumbnailContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#FF5722', backgroundColor: '#FFF3E0', justifyContent: 'center', alignItems: 'center' },
+  pdfThumbnailText: { fontSize: 10, color: '#FF5722', fontWeight: 'bold', marginTop: 2 },
+  imageErrorContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' },
+  imageErrorText: { fontSize: 9, color: '#999', marginTop: 2, textAlign: 'center' },
   implementationImageSection: { marginTop: 12, marginBottom: 12 },
   imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
   implementationImage: { width: '100%', height: 200, borderRadius: 8, resizeMode: 'cover', borderWidth: 1, borderColor: '#ddd' },
