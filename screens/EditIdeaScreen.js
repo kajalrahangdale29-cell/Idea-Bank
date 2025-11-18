@@ -1144,11 +1144,11 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Image,
   Modal,
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { EDIT_IDEA_URL, EMPLOYEE_GET_URL } from '../src/context/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
@@ -1737,7 +1737,7 @@ export default function EditIdeaScreen() {
                     <Image 
                       source={{ uri: file }} 
                       style={[styles.fullScreenImage, { transform: [{ scale: imageScale }] }]} 
-                      resizeMode="contain" 
+                      contentFit="contain" 
                     />
                   </ScrollView>
                 </View>

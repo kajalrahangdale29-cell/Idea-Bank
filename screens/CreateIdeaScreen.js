@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
-  Alert, Image, Modal, ActivityIndicator, Platform, Linking,
+  Alert, Modal, ActivityIndicator, Platform, Linking,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { CREATE_IDEA_POST_URL, EMPLOYEE_GET_URL } from '../src/context/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
@@ -625,7 +626,8 @@ export default function CreateIdeaScreen() {
                     <Image
                       source={{ uri: file }}
                       style={[styles.fullScreenImage, { transform: [{ scale: imageScale }] }]}
-                      resizeMode="contain"
+                      contentFit="contain"
+                      cachePolicy="none"
                     />
                   </ScrollView>
                 </View>

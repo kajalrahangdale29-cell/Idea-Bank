@@ -1319,12 +1319,12 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Image,
   Modal,
   ActivityIndicator,
   Platform,
   Linking,
 } from 'react-native';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
@@ -1981,7 +1981,7 @@ export default function ManagerEditIdeaScreen() {
                     <Image 
                       source={{ uri: file }} 
                       style={[styles.fullScreenImage, { transform: [{ scale: imageScale }] }]} 
-                      resizeMode="contain" 
+                      contentFit="contain" 
                     />
                   </ScrollView>
                 </View>

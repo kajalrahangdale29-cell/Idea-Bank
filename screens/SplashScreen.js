@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Image, StyleSheet, Text, Animated } from 'react-native';
+import { View, StyleSheet, Text, Animated } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SplashScreen({ navigation }) {
@@ -80,6 +81,7 @@ export default function SplashScreen({ navigation }) {
         <Image
           source={require('../assets/ideabank_logo.png')}
           style={styles.logo}
+          contentFit="contain"
         />
       </Animated.View>
       <View style={styles.textContainer}>

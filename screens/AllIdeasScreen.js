@@ -9,8 +9,8 @@ import {
   Alert,
   ScrollView,
   Modal,
-  Image,
 } from "react-native";
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -595,7 +595,7 @@ export default function AllTeamIdeasScreen() {
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
                       {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
                         <TouchableOpacity style={styles.imagePreviewContainer} onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
-                          <Image source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.thumbnailSmall} />
+                          <Image source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.thumbnailSmall} contentFit="cover" />
                           <Text style={styles.tapToEnlargeText}></Text>
                         </TouchableOpacity>
                       ) : (<Text style={styles.valueDetail}>N/A</Text>)}
@@ -682,7 +682,7 @@ export default function AllTeamIdeasScreen() {
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>Before Implementation:</Text>
                             <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
-                              <Image source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }} style={styles.implementationImage} />
+                              <Image source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }} style={styles.implementationImage} contentFit="cover" />
                             </TouchableOpacity>
                           </View>
                         )}
@@ -699,7 +699,7 @@ export default function AllTeamIdeasScreen() {
                                 uri: ideaDetail.implementationCycle.afterImplementationImagePath.startsWith('http')
                                   ? ideaDetail.implementationCycle.afterImplementationImagePath
                                   : `https://ideabank-api-dev.abisaio.com${ideaDetail.implementationCycle.afterImplementationImagePath}`
-                              }} style={styles.implementationImage} />
+                              }} style={styles.implementationImage} contentFit="cover" cachePolicy="none" />
                             </TouchableOpacity>
                           </View>
                         )}
@@ -775,7 +775,7 @@ export default function AllTeamIdeasScreen() {
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} resizeMode="contain" onError={() => Alert.alert('Error', 'Failed to load image')} />
+            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" onError={() => Alert.alert('Error', 'Failed to load image')} />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
           )}

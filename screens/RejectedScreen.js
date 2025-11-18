@@ -9,9 +9,9 @@ import {
   Alert,
   ScrollView,
   Modal,
-  Image,
   SafeAreaView,
 } from "react-native";
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -523,6 +523,7 @@ export default function RejectedByMeScreen() {
                           <Image 
                             source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
                             style={styles.thumbnailSmall} 
+                            contentFit="cover"
                           />
                         </TouchableOpacity>
                       ) : (
@@ -635,6 +636,7 @@ export default function RejectedByMeScreen() {
                               <Image 
                                 source={{ uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
                                 style={styles.implementationImage} 
+                                contentFit="cover"
                               />
                             </TouchableOpacity>
                           </View>
@@ -663,7 +665,7 @@ export default function RejectedByMeScreen() {
                                   const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
                                   return imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
                                 })()
-                              }} style={styles.implementationImage} />
+                              }} style={styles.implementationImage} contentFit="cover" />
                             </TouchableOpacity>
                           </View>
                         )}
@@ -748,7 +750,7 @@ export default function RejectedByMeScreen() {
             <Image
               source={{ uri: currentImageUrl }}
               style={styles.fullImage}
-              resizeMode="contain"
+              contentFit="contain"
               onError={(e) => Alert.alert('Error', 'Failed to load image')}
             />
           ) : (

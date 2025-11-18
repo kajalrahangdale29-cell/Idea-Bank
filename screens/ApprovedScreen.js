@@ -10,8 +10,8 @@ import {
   ScrollView,
   Modal,
   Alert,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -591,8 +591,7 @@ const ApprovedScreen = () => {
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
                       {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
                         <TouchableOpacity style={styles.imagePreviewContainer} onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
-                          <Image source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.thumbnailSmall} />
-                          <Text style={styles.tapToEnlargeText}></Text>
+                          <Image source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.thumbnailSmall} contentFit="cover" cachePolicy="none" />
                         </TouchableOpacity>
                       ) : (
                         <Text style={styles.valueDetail}>N/A</Text>
@@ -682,7 +681,7 @@ const ApprovedScreen = () => {
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>Before Implementation:</Text>
                             <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
-                              <Image source={{ uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.implementationImage} />
+                              <Image source={{ uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} style={styles.implementationImage} contentFit="cover" />
                             </TouchableOpacity>
                           </View>
                         )}
@@ -708,7 +707,7 @@ const ApprovedScreen = () => {
                                   const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
                                   return imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
                                 })()
-                              }} style={styles.implementationImage} />
+                              }} style={styles.implementationImage} contentFit="cover" />
                             </TouchableOpacity>
                           </View>
                         )}
@@ -780,7 +779,7 @@ const ApprovedScreen = () => {
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} resizeMode="contain" onError={(e) => Alert.alert('Error', 'Failed to load image')} />
+            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" cachePolicy="none" onError={(e) => Alert.alert('Error', 'Failed to load image')} />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
           )}

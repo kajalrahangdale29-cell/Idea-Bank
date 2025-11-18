@@ -1200,9 +1200,9 @@ import {
   Alert,
   ScrollView,
   Modal,
-  Image,
   BackHandler,
 } from "react-native";
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -2009,6 +2009,7 @@ export default function MyTeamIdeasScreen() {
                             <Image
                               source={{ uri: normalizeImagePath(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) }}
                               style={styles.thumbnailSmall}
+                              contentFit="cover"
                             />
                           </TouchableOpacity>
                         ) : (
@@ -2127,6 +2128,7 @@ export default function MyTeamIdeasScreen() {
                                   uri: normalizeImagePath(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)
                                 }}
                                 style={styles.implementationImage}
+                                contentFit="cover"
                                 onError={(e) => {
                                   console.log('Before image load error:', e.nativeEvent.error);
                                 }}
@@ -2146,6 +2148,7 @@ export default function MyTeamIdeasScreen() {
                                   uri: normalizeImagePath(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath)
                                 }}
                                 style={styles.implementationImage}
+                                contentFit="cover"
                                 onError={(e) => {
                                   console.log('After image load error:', e.nativeEvent.error);
                                 }}
@@ -2265,7 +2268,7 @@ export default function MyTeamIdeasScreen() {
             <Image
               source={{ uri: currentImageUrl }}
               style={styles.fullImage}
-              resizeMode="contain"
+              contentFit="contain"
               onError={(e) => Alert.alert('Error', 'Failed to load image')}
             />
           ) : (

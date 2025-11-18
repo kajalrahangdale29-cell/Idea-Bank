@@ -9,9 +9,9 @@ import {
   Alert,
   ScrollView,
   Modal,
-  Image,
   Platform,
 } from "react-native";
+import { Image } from 'expo-image';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -918,6 +918,7 @@ export default function PendingScreen() {
                           <Image 
                             source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
                             style={styles.thumbnailSmall} 
+                            contentFit="cover"
                           />
                           <Text style={styles.tapToEnlargeText}></Text>
                         </TouchableOpacity>
@@ -995,10 +996,11 @@ export default function PendingScreen() {
                         {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>Before Implementation:</Text>
-                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
+                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
                               <Image 
-                                source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }} 
+                                source={{ uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
                                 style={styles.implementationImage} 
+                                contentFit="cover"
                               />
                             </TouchableOpacity>
                           </View>
@@ -1024,6 +1026,7 @@ export default function PendingScreen() {
                                   })()
                                 }} 
                                 style={styles.implementationImage} 
+                                contentFit="cover"
                               />
                             </TouchableOpacity>
                           </View>
@@ -1183,7 +1186,7 @@ export default function PendingScreen() {
             <Image
               source={{ uri: currentImageUrl }}
               style={styles.fullImage}
-              resizeMode="contain"
+              contentFit="contain"
               onError={(e) => Alert.alert('Error', 'Failed to load image')}
             />
           ) : (

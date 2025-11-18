@@ -7,7 +7,8 @@ export const DASHBOARD_URL = BASE_URL + "/dashboard";
 export const IDEA_DETAIL_URL = BASE_URL + "/detail";
 
 export const CREATE_IDEA_POST_URL = BASE_URL + "/create";
-export const MY_IDEAS_URL = BASE_URL + "/MyIdealist?page=1&pageSize=10";
+//export const MY_IDEAS_URL = BASE_URL + "/MyIdealist?page=1&pageSize=10";
+export const MY_IDEAS_URL = BASE_URL + "/MyIdealist";
 export const EDIT_IDEA_URL = (id) => `${BASE_URL}/edit/${id}`; 
 export const MANAGER_EDIT_IDEA_URL = (id) => `${BASE_URL}/api/Approval/edit/${id}`;
 export const EDIT_IMPLEMENTATION_URL = (id) => `${BASE_URL}/api/Approval/implementation/edit/${id}`;

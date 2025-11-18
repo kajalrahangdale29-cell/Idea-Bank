@@ -4,12 +4,12 @@ import {
   Text,
   TouchableOpacity,
   Modal,
-  Image,
   StyleSheet,
   Alert,
   Linking,
   BackHandler,
 } from "react-native";
+import { Image } from 'expo-image';
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
@@ -415,6 +415,7 @@ function CustomDrawerContent(props) {
             <Image
               source={require("../assets/logout.png")}
               style={{ width: 50, height: 50, marginBottom: 15 }}
+              contentFit="contain"
             />
             <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}>
               Logout

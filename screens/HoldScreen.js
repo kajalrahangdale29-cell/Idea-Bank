@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, ScrollView, Image, SafeAreaView } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, ScrollView, SafeAreaView } from "react-native";
+import { Image } from 'expo-image';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -600,6 +601,7 @@ const HoldScreen = () => {
                           <Image 
                             source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
                             style={styles.thumbnailSmall} 
+                            contentFit="cover"
                           />
                         </TouchableOpacity>
                       ) : (
@@ -712,6 +714,7 @@ const HoldScreen = () => {
                               <Image 
                                 source={{ uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }} 
                                 style={styles.implementationImage} 
+                                contentFit="cover"
                               />
                             </TouchableOpacity>
                           </View>
@@ -741,7 +744,7 @@ const HoldScreen = () => {
                                   const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
                                   return imagePath.startsWith('http') ? imagePath : `https://ideabank-api-dev.abisaio.com${imagePath}`;
                                 })()
-                              }} style={styles.implementationImage} />
+                              }} style={styles.implementationImage} contentFit="cover" />
                             </TouchableOpacity>
                           </View>
                         )}
@@ -887,7 +890,7 @@ const HoldScreen = () => {
             <Image
               source={{ uri: currentImageUrl }}
               style={styles.fullImage}
-              resizeMode="contain"
+              contentFit="contain"
               onError={(e) => Alert.alert('Error', 'Failed to load image')}
             />
           ) : (
