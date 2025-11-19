@@ -27,6 +27,34 @@ import {
   SUBMIT_URL
 } from "../src/context/api";
 
+// ✅ FIXED: URL Normalization Function
+const normalizeImagePath = (path) => {
+  if (!path) return null;
+  
+  // Remove any duplicate BASE_URL patterns
+  let cleanPath = path;
+  const basePattern = 'https://ideabank-api-dev.abisaio.com';
+  
+  // Count occurrences of the base URL
+  const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+  
+  // If BASE_URL appears more than once, keep only the last occurrence
+  if (occurrences > 1) {
+    const lastIndex = cleanPath.lastIndexOf(basePattern);
+    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+  }
+  
+  // If it's already a full URL, return as-is
+  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+    return cleanPath;
+  }
+  
+  // Otherwise, prepend BASE_URL
+  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+  return fullUrl;
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
   const date = new Date(dateString);
@@ -429,7 +457,6 @@ export default function PendingScreen() {
         }
       }
 
-      console.log(`✅ Fetch complete: ${allIdeas.length} total pending ideas`);
       
       setAllIdeasOriginal(allIdeas);
       setIdeas(allIdeas);
@@ -506,6 +533,7 @@ export default function PendingScreen() {
     setTotalItems(allIdeasOriginal.length);
   };
 
+  // ✅ FIXED: fetchIdeaDetail with URL normalization
   const fetchIdeaDetail = async (ideaId) => {
     if (!ideaId) return;
     try {
@@ -516,9 +544,24 @@ export default function PendingScreen() {
       const { data: response } = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
 
       if (response?.success && response?.data) {
-        setIdeaDetail(response.data);
-        setSelectedIdea(response.data);
-        if (shouldShowImplementationDetails(response.data)) {
+        const detail = response.data;
+        
+        // Normalize all image paths
+        const normalizedDetail = {
+          ...detail,
+          beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          imagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          afterImplementationImagePath: normalizeImagePath(detail.afterImplementationImagePath),
+          implementationCycle: detail.implementationCycle ? {
+            ...detail.implementationCycle,
+            beforeImplementationImagePath: normalizeImagePath(detail.implementationCycle.beforeImplementationImagePath),
+            afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
+          } : null
+        };
+        
+        setIdeaDetail(normalizedDetail);
+        setSelectedIdea(normalizedDetail);
+        if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
       } else {
@@ -668,7 +711,8 @@ export default function PendingScreen() {
   };
 
   const openImagePreview = (imageUrl) => {
-    setCurrentImageUrl(imageUrl);
+    const finalUrl = normalizeImagePath(imageUrl);
+    setCurrentImageUrl(finalUrl);
     setShowImage(true);
   };
 

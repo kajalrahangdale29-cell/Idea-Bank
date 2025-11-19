@@ -273,12 +273,9 @@ export default function MyTeamIdeasScreen() {
       setLoading(false);
     }
   };
-
-  // ✅ FIXED: Real-time filter application for search
   const applyFiltersRealTime = () => {
     let filteredIdeas = [...allIdeasOriginal];
 
-    // Apply search filter
     if (searchIdeaNumber.trim()) {
       const searchTerm = searchIdeaNumber.trim().toLowerCase();
       filteredIdeas = filteredIdeas.filter(idea => {
@@ -292,7 +289,6 @@ export default function MyTeamIdeasScreen() {
       });
     }
 
-    // Apply status filter (only if selected)
     if (selectedStatus && selectedStatus !== "") {
       filteredIdeas = filteredIdeas.filter(idea => {
         if (!idea.status) return false;
@@ -300,7 +296,6 @@ export default function MyTeamIdeasScreen() {
       });
     }
 
-    // Apply date filter
     if (fromDate || toDate) {
       filteredIdeas = filteredIdeas.filter(idea => {
         if (!idea.creationDate) return false;
@@ -331,13 +326,11 @@ export default function MyTeamIdeasScreen() {
     setTotalItems(filteredIdeas.length);
   };
 
-  // ✅ FIXED: Apply button now uses the same logic
   const applyFilters = () => {
     applyFiltersRealTime();
     setShowFilters(false);
   };
 
-  // ✅ FIXED: Clear filters resets everything and re-applies
   const clearFilters = () => {
     setSearchIdeaNumber("");
     setFromDate(null);
@@ -345,12 +338,10 @@ export default function MyTeamIdeasScreen() {
     setSelectedStatus("");
     setShowStatusDropdown(false);
     
-    // Reset to original data
     setIdeas(allIdeasOriginal);
     setTotalItems(allIdeasOriginal.length);
   };
 
-  // ✅ FIXED: fetchIdeaDetail with URL normalization
   const fetchIdeaDetail = async (ideaId) => {
     if (!ideaId) {
       Alert.alert("Error", "Invalid idea ID");
@@ -375,7 +366,6 @@ export default function MyTeamIdeasScreen() {
       if (response?.data?.success && response?.data?.data) {
         const detail = response.data.data;
         
-        // Normalize all image paths
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
@@ -388,9 +378,6 @@ export default function MyTeamIdeasScreen() {
           } : null
         };
         
-        console.log('📸 Team Ideas - Normalized Before Image:', normalizedDetail.beforeImplementationImagePath);
-        console.log('📸 Team Ideas - Normalized After Image:', normalizedDetail.afterImplementationImagePath);
-        
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
 
@@ -400,7 +387,6 @@ export default function MyTeamIdeasScreen() {
       } else if (response?.data) {
         const detail = response.data;
         
-        // Normalize all image paths
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
@@ -994,7 +980,6 @@ export default function MyTeamIdeasScreen() {
                                 contentFit="cover"
                                 cachePolicy="none"
                                 onError={(e) => {
-                                  console.log('Before image load error:', e.nativeEvent.error);
                                 }}
                               />
                             </TouchableOpacity>
@@ -1015,7 +1000,6 @@ export default function MyTeamIdeasScreen() {
                                 contentFit="cover"
                                 cachePolicy="none"
                                 onError={(e) => {
-                                  console.log('After image load error:', e.nativeEvent.error);
                                 }}
                               />
                             </TouchableOpacity>
