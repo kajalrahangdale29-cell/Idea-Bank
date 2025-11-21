@@ -1140,26 +1140,21 @@ const Tab = createMaterialTopTabNavigator();
 
 const normalizeImagePath = (path) => {
   if (!path) return null;
-  
-  // Remove any duplicate BASE_URL patterns
+
   let cleanPath = path;
   const basePattern = 'https://ideabank-api-dev.abisaio.com';
-  
-  // Count occurrences of the base URL
+
   const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
-  
-  // If BASE_URL appears more than once, keep only the last occurrence
+
   if (occurrences > 1) {
     const lastIndex = cleanPath.lastIndexOf(basePattern);
     cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
   }
-  
-  // If it's already a full URL, return as-is
+
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
   }
-  
-  // Otherwise, prepend BASE_URL
+
   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
   return fullUrl;
@@ -1345,7 +1340,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
     console.log('🖼️ Opening image preview:', finalUrl);
-    
+
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
         'PDF Document',
@@ -1425,10 +1420,10 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       ) : (
         ideas.map((idea, index) => {
           return (
-            <TouchableOpacity 
-              key={index} 
-              activeOpacity={0.8} 
-              style={styles.cardContainer} 
+            <TouchableOpacity
+              key={index}
+              activeOpacity={0.8}
+              style={styles.cardContainer}
               onPress={() => fetchIdeaDetail(idea.id)}
             >
               <View style={styles.cardHeader}>
@@ -1459,8 +1454,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                 <View style={styles.rowDetail}>
                   <Text style={styles.label}>Status:</Text>
                   <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                    <Text 
-                      style={[styles.statusBadge, { backgroundColor: getStatusColor(idea.ideaStatus) }]} 
+                    <Text
+                      style={[styles.statusBadge, { backgroundColor: getStatusColor(idea.ideaStatus) }]}
                       numberOfLines={2}
                     >
                       {idea.ideaStatus || "N/A"}
@@ -1490,10 +1485,10 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
               </TouchableOpacity>
             </View>
           </View>
-          <ImplementationForm 
-            ideaDetail={ideaDetail} 
-            onClose={closeModal} 
-            refreshIdeas={refreshIdeas} 
+          <ImplementationForm
+            ideaDetail={ideaDetail}
+            onClose={closeModal}
+            refreshIdeas={refreshIdeas}
           />
         </View>
       </Modal>
@@ -1508,8 +1503,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                 <Ionicons name="close" size={20} color="#666" />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity 
-              style={styles.timelineButtonHeader} 
+            <TouchableOpacity
+              style={styles.timelineButtonHeader}
               onPress={() => setShowTimelineModal(true)}
             >
               <Ionicons name="time-outline" size={18} color="#2c5aa0" />
@@ -1521,16 +1516,16 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
             {selectedIdea && ideaDetail && (
               <>
                 {/* Employee Information - Collapsible */}
-                <TouchableOpacity 
-                  style={styles.collapsibleHeader} 
-                  onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} 
+                <TouchableOpacity
+                  style={styles.collapsibleHeader}
+                  onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
-                  <Ionicons 
-                    name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color="#2c5aa0" 
+                  <Ionicons
+                    name={employeeInfoExpanded ? "chevron-up" : "chevron-down"}
+                    size={24}
+                    color="#2c5aa0"
                   />
                 </TouchableOpacity>
 
@@ -1576,16 +1571,16 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                 )}
 
                 {/* Idea Information - Collapsible */}
-                <TouchableOpacity 
-                  style={styles.collapsibleHeader} 
-                  onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} 
+                <TouchableOpacity
+                  style={styles.collapsibleHeader}
+                  onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
-                  <Ionicons 
-                    name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color="#2c5aa0" 
+                  <Ionicons
+                    name={ideaInfoExpanded ? "chevron-up" : "chevron-down"}
+                    size={24}
+                    color="#2c5aa0"
                   />
                 </TouchableOpacity>
 
@@ -1642,7 +1637,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                                 } else {
                                   console.log("❌ No alternate URL available, showing error state");
                                   setImageLoadError(prev => ({
-                                    ...prev, 
+                                    ...prev,
                                     [`before_${ideaDetail.id}`]: true
                                   }));
                                 }
@@ -1664,9 +1659,9 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Status:</Text>
-                      <Text 
+                      <Text
                         style={[
-                          styles.statusBadgeDetail, 
+                          styles.statusBadgeDetail,
                           { backgroundColor: getStatusColor(ideaDetail.ideaStatus) }
                         ]}
                       >
@@ -1717,50 +1712,54 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                 {/* Implementation Details - Show if available */}
                 {shouldShowImplementationDetails(ideaDetail) && (
                   <>
-                    <TouchableOpacity 
-                      style={styles.collapsibleHeader} 
-                      onPress={() => setShowImplementationDetails(!showImplementationDetails)} 
+                    <TouchableOpacity
+                      style={styles.collapsibleHeader}
+                      onPress={() => setShowImplementationDetails(!showImplementationDetails)}
                       activeOpacity={0.7}
                     >
                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
-                      <Ionicons 
-                        name={showImplementationDetails ? "chevron-up" : "chevron-down"} 
-                        size={24} 
-                        color="#2c5aa0" 
+                      <Ionicons
+                        name={showImplementationDetails ? "chevron-up" : "chevron-down"}
+                        size={24}
+                        color="#2c5aa0"
                       />
                     </TouchableOpacity>
 
                     {showImplementationDetails && (
                       <View style={styles.cardDetail}>
+
                         <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Implementation Status:</Text>
-                          <Text 
+                          <Text
                             style={[
-                              styles.statusBadgeDetail, 
+                              styles.statusBadgeDetail,
                               { backgroundColor: getStatusColor(ideaDetail.implementationCycle?.status) }
                             ]}
                           >
                             {ideaDetail.implementationCycle?.status || "N/A"}
                           </Text>
                         </View>
+
                         <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Implementation Details:</Text>
                           <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.implementation || 
-                             ideaDetail.implementationDetail || 
-                             ideaDetail.implementation || 
-                             "Not provided"}
+                            {ideaDetail.implementationCycle?.implementation ||
+                              ideaDetail.implementationDetail ||
+                              ideaDetail.implementation ||
+                              "Not provided"}
                           </Text>
                         </View>
+
                         <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
                           <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.outcome || 
-                             ideaDetail.implementationOutcome || 
-                             ideaDetail.outcome || 
-                             "Not provided"}
+                            {ideaDetail.implementationCycle?.outcome ||
+                              ideaDetail.implementationOutcome ||
+                              ideaDetail.outcome ||
+                              "Not provided"}
                           </Text>
                         </View>
+
                         {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>Submitted On:</Text>
@@ -1771,21 +1770,30 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                         )}
 
                         {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>Before Implementation:</Text>
-                            <TouchableOpacity 
-                              onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}
-                            >
-                              {!imageLoadError[`impl_before_${ideaDetail.id}`] ? (
-                                <Image 
-                                  source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }} 
-                                  style={styles.implementationImage} 
+                          <View style={styles.rowDetailWithBorder}>
+                            <Text style={styles.labelDetail}>Before Implementation:</Text>
+
+                            {ideaDetail.implementationCycle.beforeImplementationImagePath.toLowerCase().includes('.pdf') ? (
+                              <TouchableOpacity
+                                onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}
+                              >
+                                <View style={styles.pdfThumbnailContainer}>
+                                  <Ionicons name="document-text" size={30} color="#FF5722" />
+                                  <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ) : !imageLoadError[`impl_before_${ideaDetail.id}`] ? (
+                              <TouchableOpacity
+                                onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}
+                              >
+                                <Image
+                                  source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }}
+                                  style={styles.thumbnailSmall}
                                   contentFit="cover"
                                   cachePolicy="none"
-                                  onError={(e) => {
-                                    console.log("❌ Implementation Before Image error:", ideaDetail.implementationCycle.beforeImplementationImagePath);
+                                  onError={() => {
                                     const altUrl = getAlternateImageUrl(ideaDetail.implementationCycle.beforeImplementationImagePath);
-                                    if (altUrl && ideaDetail.implementationCycle.beforeImplementationImagePath !== altUrl) {
+                                    if (altUrl) {
                                       setIdeaDetail(prev => ({
                                         ...prev,
                                         implementationCycle: {
@@ -1795,66 +1803,66 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                                       }));
                                     } else {
                                       setImageLoadError(prev => ({
-                                        ...prev, 
+                                        ...prev,
                                         [`impl_before_${ideaDetail.id}`]: true
                                       }));
                                     }
                                   }}
-                                  onLoad={() => {
-                                    console.log("✅ Implementation Before Image loaded successfully");
-                                  }}
                                 />
-                              ) : (
-                                <View style={[styles.implementationImage, styles.imageErrorContainer]}>
-                                  <Ionicons name="image-outline" size={40} color="#999" />
-                                  <Text style={styles.imageErrorText}>Image unavailable</Text>
-                                </View>
-                              )}
-                            </TouchableOpacity>
+                              </TouchableOpacity>
+                            ) : (
+                              <View style={styles.imageErrorContainer}>
+                                <Ionicons name="image-outline" size={24} color="#999" />
+                                <Text style={styles.imageErrorText}>Image unavailable</Text>
+                              </View>
+                            )}
                           </View>
                         )}
 
                         {ideaDetail.afterImplementationImagePath && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>After Implementation:</Text>
-                            <TouchableOpacity 
-                              onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}
-                            >
-                              {!imageLoadError[`after_${ideaDetail.id}`] ? (
-                                <Image 
-                                  source={{ uri: ideaDetail.afterImplementationImagePath }} 
-                                  style={styles.implementationImage} 
+                          <View style={styles.rowDetailWithBorder}>
+                            <Text style={styles.labelDetail}>After Implementation:</Text>
+
+                            {ideaDetail.afterImplementationImagePath.toLowerCase().includes('.pdf') ? (
+                              <TouchableOpacity
+                                onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}
+                              >
+                                <View style={styles.pdfThumbnailContainer}>
+                                  <Ionicons name="document-text" size={30} color="#FF5722" />
+                                  <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ) : !imageLoadError[`after_${ideaDetail.id}`] ? (
+                              <TouchableOpacity
+                                onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}
+                              >
+                                <Image
+                                  source={{ uri: ideaDetail.afterImplementationImagePath }}
+                                  style={styles.thumbnailSmall}
                                   contentFit="cover"
                                   cachePolicy="none"
-                                  onError={(e) => {
-                                    console.log("❌ After Image load error for ID:", ideaDetail.id);
-                                    console.log("❌ Failed After URL:", ideaDetail.afterImplementationImagePath);
+                                  onError={() => {
                                     const altUrl = getAlternateImageUrl(ideaDetail.afterImplementationImagePath);
-                                    if (altUrl && ideaDetail.afterImplementationImagePath !== altUrl) {
-                                      console.log("🔄 Trying alternate After URL:", altUrl);
+                                    if (altUrl) {
                                       setIdeaDetail(prev => ({
                                         ...prev,
                                         afterImplementationImagePath: altUrl
                                       }));
                                     } else {
-                                      console.log("❌ No alternate After URL available");
                                       setImageLoadError(prev => ({
-                                        ...prev, 
+                                        ...prev,
                                         [`after_${ideaDetail.id}`]: true
                                       }));
                                     }
                                   }}
-                                  onLoad={() => {
-                                    console.log("✅ After Image loaded successfully:", ideaDetail.afterImplementationImagePath);
-                                  }}
                                 />
-                              ) : (
-                                <View style={[styles.implementationImage, styles.imageErrorContainer]}>
-                                  <Ionicons name="image-outline" size={40} color="#999" />
-                                  <Text style={styles.imageErrorText}>Image unavailable</Text>
-                                </View>
-                              )}
-                            </TouchableOpacity>
+                              </TouchableOpacity>
+                            ) : (
+                              <View style={styles.imageErrorContainer}>
+                                <Ionicons name="image-outline" size={24} color="#999" />
+                                <Text style={styles.imageErrorText}>Image unavailable</Text>
+                              </View>
+                            )}
                           </View>
                         )}
 
@@ -1872,11 +1880,11 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                       return <Text style={styles.noRemarksText}>No remarks available</Text>;
                     }
                     return remarks.map((remark, index) => (
-                      <RemarksCard 
-                        key={index} 
-                        title={remark.approverName || remark.title || "Unknown"} 
-                        comment={remark.comments || remark.comment || "No comment"} 
-                        date={remark.approvalDate || remark.date ? formatDateTime(remark.approvalDate || remark.date) : ""} 
+                      <RemarksCard
+                        key={index}
+                        title={remark.approverName || remark.title || "Unknown"}
+                        comment={remark.comments || remark.comment || "No comment"}
+                        date={remark.approvalDate || remark.date ? formatDateTime(remark.approvalDate || remark.date) : ""}
                       />
                     ));
                   })()}
@@ -1892,8 +1900,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                   return (canEdit || canDelete || inImplementation) && (
                     <View style={styles.buttonRow}>
                       {(canEdit || inImplementation) && (
-                        <TouchableOpacity 
-                          style={[styles.button, styles.editButton]} 
+                        <TouchableOpacity
+                          style={[styles.button, styles.editButton]}
                           onPress={() => handleEdit(ideaDetail)}
                         >
                           <Ionicons name="create-outline" size={18} color="#fff" />
@@ -1903,13 +1911,13 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                         </TouchableOpacity>
                       )}
                       {canDelete && (
-                        <TouchableOpacity 
-                          style={[styles.button, styles.deleteButton]} 
-                          onPress={() => { 
-                            deleteIdea(ideaDetail, () => { 
-                              closeModal(); 
-                              refreshIdeas(); 
-                            }); 
+                        <TouchableOpacity
+                          style={[styles.button, styles.deleteButton]}
+                          onPress={() => {
+                            deleteIdea(ideaDetail, () => {
+                              closeModal();
+                              refreshIdeas();
+                            });
                           }}
                         >
                           <Ionicons name="trash-outline" size={18} color="#fff" />
@@ -1930,8 +1938,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
             <Text style={styles.timelineModalTitle}>Progress Timeline</Text>
-            <TouchableOpacity 
-              style={styles.closeButtonTimeline} 
+            <TouchableOpacity
+              style={styles.closeButtonTimeline}
               onPress={() => setShowTimelineModal(false)}
             >
               <Ionicons name="close" size={20} color="#fff" />
@@ -1942,12 +1950,12 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
               <View style={styles.timelineContainer}>
                 {ideaDetail?.timeline && Array.isArray(ideaDetail.timeline) && ideaDetail.timeline.length > 0 ? (
                   ideaDetail.timeline.map((item, idx) => (
-                    <TimelineItem 
-                      key={idx} 
-                      status={item.status || item.approvalStage || "N/A"} 
-                      date={item.date || item.approvalDate} 
-                      description={item.description || item.comments} 
-                      isLast={idx === ideaDetail.timeline.length - 1} 
+                    <TimelineItem
+                      key={idx}
+                      status={item.status || item.approvalStage || "N/A"}
+                      date={item.date || item.approvalDate}
+                      description={item.description || item.comments}
+                      isLast={idx === ideaDetail.timeline.length - 1}
                     />
                   ))
                 ) : (
@@ -1965,8 +1973,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       {/* Image Viewer Modal */}
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
-          <TouchableOpacity 
-            style={styles.closeButtonImage} 
+          <TouchableOpacity
+            style={styles.closeButtonImage}
             onPress={() => {
               setShowImage(false);
               setCurrentImageUrl(null);
@@ -2021,41 +2029,41 @@ export default function MyIdeasScreen() {
     }
   };
 
-  useEffect(() => { 
-    fetchIdeas(); 
+  useEffect(() => {
+    fetchIdeas();
   }, []);
 
-  useEffect(() => { 
-    const unsubscribe = navigation.addListener('focus', () => { 
-      fetchIdeas(); 
-    }); 
-    return unsubscribe; 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchIdeas();
+    });
+    return unsubscribe;
   }, [navigation]);
 
-  useEffect(() => { 
-    if (route.params?.newIdea) { 
-      if (route.params?.showDraftMessage) { 
-        Alert.alert('Draft Saved', 'Your idea has been saved as a draft.'); 
-      } 
-      fetchIdeas(); 
-    } 
+  useEffect(() => {
+    if (route.params?.newIdea) {
+      if (route.params?.showDraftMessage) {
+        Alert.alert('Draft Saved', 'Your idea has been saved as a draft.');
+      }
+      fetchIdeas();
+    }
   }, [route.params?.newIdea, route.params?.showDraftMessage]);
 
-  useEffect(() => { 
-    if (route.params?.refreshIdeas) { 
-      fetchIdeas(); 
-    } 
+  useEffect(() => {
+    if (route.params?.refreshIdeas) {
+      fetchIdeas();
+    }
   }, [route.params?.refreshIdeas]);
 
   const deleteIdea = async (idea, callback) => {
     Alert.alert(
-      "Delete Idea", 
-      "Are you sure you want to delete this idea?", 
+      "Delete Idea",
+      "Are you sure you want to delete this idea?",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete", 
-          style: "destructive", 
+          text: "Delete",
+          style: "destructive",
           onPress: async () => {
             try {
               const token = await AsyncStorage.getItem('token');
@@ -2078,114 +2086,104 @@ export default function MyIdeasScreen() {
     );
   };
 
-  const editIdea = (idea) => { 
-    navigation.navigate("EditIdea", { ideaId: idea.id, ideaData: idea }); 
+  const editIdea = (idea) => {
+    navigation.navigate("EditIdea", { ideaId: idea.id, ideaData: idea });
   };
 
   const filterIdeas = (status) => {
     return ideas.filter((idea) => {
       const s = (idea.ideaStatus || "").toLowerCase().trim();
       switch (status.toLowerCase()) {
-        case "pending": 
+        case "pending":
           return [
-            "pending", 
-            "approval pending", 
-            "rm approval pending", 
-            "under review by be team", 
-            "be_team approval pending", 
-            "published", 
-            "draft", 
-            "ready for implementation", 
-            "approved by be team", 
+            "pending",
+            "approval pending",
+            "rm approval pending",
+            "under review by be team",
+            "be_team approval pending",
+            "published",
+            "draft",
+            "ready for implementation",
+            "approved by be team",
             "approved by be team - ready for implementation"
           ].includes(s);
-        case "approved": 
+        case "approved":
           return s === "closed";
-        case "hold": 
+        case "hold":
           return [
-            "hold", 
-            "idea hold by be team", 
-            "implementation hold by be team", 
-            "idea hold by manager", 
+            "hold",
+            "idea hold by be team",
+            "implementation hold by be team",
+            "idea hold by manager",
             "implementation hold by manager"
           ].includes(s);
-        case "rejected": 
+        case "rejected":
           return [
-            "rejected", 
-            "implementation rejected by manager", 
-            "idea rejected by be team", 
-            "implementation rejected by be team", 
+            "rejected",
+            "implementation rejected by manager",
+            "idea rejected by be team",
+            "implementation rejected by be team",
             "idea rejected by manager"
           ].includes(s);
-        case "cancelled": 
-          return s === "cancelled";
-        default: 
+
+        default:
           return false;
       }
     });
   };
 
   return (
-    <Tab.Navigator 
-      screenOptions={{ 
-        tabBarActiveTintColor: "#000000", 
-        tabBarInactiveTintColor: "#333333", 
-        tabBarStyle: { backgroundColor: "#CED8E7" }, 
-        tabBarIndicatorStyle: { backgroundColor: "#5A6FAE" }, 
-        tabBarLabelStyle: { fontSize: 14, fontWeight: "bold" }, 
-        tabBarScrollEnabled: true 
+    <Tab.Navigator
+      screenOptions={{
+        tabBarActiveTintColor: "#000000",
+        tabBarInactiveTintColor: "#333333",
+        tabBarStyle: { backgroundColor: "#CED8E7" },
+        tabBarIndicatorStyle: { backgroundColor: "#5A6FAE" },
+        tabBarLabelStyle: { fontSize: 14, fontWeight: "bold" },
+        tabBarScrollEnabled: true
       }}
     >
       <Tab.Screen name="Pending">
         {() => (
-          <IdeasList 
-            ideas={filterIdeas("Pending")} 
-            editIdea={editIdea} 
-            deleteIdea={deleteIdea} 
-            refreshIdeas={fetchIdeas} 
+          <IdeasList
+            ideas={filterIdeas("Pending")}
+            editIdea={editIdea}
+            deleteIdea={deleteIdea}
+            refreshIdeas={fetchIdeas}
           />
         )}
       </Tab.Screen>
       <Tab.Screen name="Closed">
         {() => (
-          <IdeasList 
-            ideas={filterIdeas("Approved")} 
-            editIdea={editIdea} 
-            deleteIdea={deleteIdea} 
-            refreshIdeas={fetchIdeas} 
+          <IdeasList
+            ideas={filterIdeas("Approved")}
+            editIdea={editIdea}
+            deleteIdea={deleteIdea}
+            refreshIdeas={fetchIdeas}
           />
         )}
       </Tab.Screen>
       <Tab.Screen name="Hold">
         {() => (
-          <IdeasList 
-            ideas={filterIdeas("Hold")} 
-            editIdea={editIdea} 
-            deleteIdea={deleteIdea} 
-            refreshIdeas={fetchIdeas} 
+          <IdeasList
+            ideas={filterIdeas("Hold")}
+            editIdea={editIdea}
+            deleteIdea={deleteIdea}
+            refreshIdeas={fetchIdeas}
           />
         )}
       </Tab.Screen>
       <Tab.Screen name="Rejected">
         {() => (
-          <IdeasList 
-            ideas={filterIdeas("Rejected")} 
-            editIdea={editIdea} 
-            deleteIdea={deleteIdea} 
-            refreshIdeas={fetchIdeas} 
+          <IdeasList
+            ideas={filterIdeas("Rejected")}
+            editIdea={editIdea}
+            deleteIdea={deleteIdea}
+            refreshIdeas={fetchIdeas}
           />
         )}
       </Tab.Screen>
-      <Tab.Screen name="Cancelled">
-        {() => (
-          <IdeasList 
-            ideas={filterIdeas("Cancelled")} 
-            editIdea={editIdea} 
-            deleteIdea={deleteIdea} 
-            refreshIdeas={fetchIdeas} 
-          />
-        )}
-      </Tab.Screen>
+
     </Tab.Navigator>
   );
 }
@@ -2209,14 +2207,14 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
 
   const pickImageFromGallery = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) { 
-      Alert.alert('Permission required!'); 
-      return; 
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required!');
+      return;
     }
-    let result = await ImagePicker.launchImageLibraryAsync({ 
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, 
-      allowsEditing: true, 
-      quality: 1 
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 1
     });
     if (!result.canceled) {
       setAfterImage(result.assets[0].uri);
@@ -2229,13 +2227,13 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
 
   const pickImageFromCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) { 
-      Alert.alert('Camera permission required!'); 
-      return; 
+    if (!permissionResult.granted) {
+      Alert.alert('Camera permission required!');
+      return;
     }
-    let result = await ImagePicker.launchCameraAsync({ 
-      allowsEditing: true, 
-      quality: 1 
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 1
     });
     if (!result.canceled) {
       setAfterImage(result.assets[0].uri);
@@ -2248,9 +2246,9 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
 
   const pickPDF = async () => {
     try {
-      let result = await DocumentPicker.getDocumentAsync({ 
-        type: 'application/pdf', 
-        copyToCacheDirectory: true 
+      let result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true
       });
       if (result.type === 'success' || !result.canceled) {
         const selectedFile = result.assets ? result.assets[0] : result;
@@ -2266,17 +2264,17 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
   };
 
   const handleSubmit = async () => {
-    if (!implementationDetails.trim()) { 
-      Alert.alert('Error', 'Please enter implementation details'); 
-      return; 
+    if (!implementationDetails.trim()) {
+      Alert.alert('Error', 'Please enter implementation details');
+      return;
     }
-    if (!outcomesBenefits.trim()) { 
-      Alert.alert('Error', 'Please enter outcome/benefits achieved'); 
-      return; 
+    if (!outcomesBenefits.trim()) {
+      Alert.alert('Error', 'Please enter outcome/benefits achieved');
+      return;
     }
-    if (!afterImage) { 
-      Alert.alert('Error', 'Please upload after implementation image'); 
-      return; 
+    if (!afterImage) {
+      Alert.alert('Error', 'Please upload after implementation image');
+      return;
     }
 
     setIsSubmitting(true);
@@ -2303,19 +2301,19 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         else if (ext === 'png') mimeType = 'image/png';
         else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
         const cleanName = afterImageName.replace(/[^a-zA-Z0-9._-]/g, '_');
-        formData.append('AfterImplementationImage', { 
-          uri: fileInfo.uri, 
-          type: mimeType, 
-          name: cleanName 
+        formData.append('AfterImplementationImage', {
+          uri: fileInfo.uri,
+          type: mimeType,
+          name: cleanName
         });
       }
 
       console.log('📤 Submitting implementation form...');
-      const response = await axios.post(SUBMIT_URL, formData, { 
-        headers: { 
-          Authorization: `Bearer ${token}`, 
-          'Content-Type': 'multipart/form-data' 
-        } 
+      const response = await axios.post(SUBMIT_URL, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
       if (response.data?.success) {
@@ -2323,14 +2321,14 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         const pattern = [0, 100, 50, 100];
         Vibration.vibrate(pattern);
         Alert.alert(
-          'Success', 
-          response.data?.message || 'Implementation submitted successfully!', 
-          [{ 
-            text: 'OK', 
-            onPress: () => { 
-              refreshIdeas(); 
-              onClose(); 
-            } 
+          'Success',
+          response.data?.message || 'Implementation submitted successfully!',
+          [{
+            text: 'OK',
+            onPress: () => {
+              refreshIdeas();
+              onClose();
+            }
           }]
         );
       } else {
@@ -2345,18 +2343,18 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
     }
   };
 
-  const handleZoomIn = () => { 
-    setImageScale(prev => Math.min(prev + 0.2, 3)); 
+  const handleZoomIn = () => {
+    setImageScale(prev => Math.min(prev + 0.2, 3));
   };
-  
-  const handleZoomOut = () => { 
-    setImageScale(prev => Math.max(prev - 0.2, 0.5)); 
+
+  const handleZoomOut = () => {
+    setImageScale(prev => Math.max(prev - 0.2, 0.5));
   };
 
   return (
     <ScrollView contentContainerStyle={styles.modalScrollContent}>
-      <TouchableOpacity 
-        style={styles.timelineButtonHeader} 
+      <TouchableOpacity
+        style={styles.timelineButtonHeader}
         onPress={() => setShowTimelineModal(true)}
       >
         <Ionicons name="time-outline" size={18} color="#2c5aa0" />
@@ -2364,16 +2362,16 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
       </TouchableOpacity>
 
       {/* Employee Information - Collapsible */}
-      <TouchableOpacity 
-        style={styles.collapsibleHeader} 
-        onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} 
+      <TouchableOpacity
+        style={styles.collapsibleHeader}
+        onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)}
         activeOpacity={0.7}
       >
         <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
-        <Ionicons 
-          name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} 
-          size={24} 
-          color="#2c5aa0" 
+        <Ionicons
+          name={employeeInfoExpanded ? "chevron-up" : "chevron-down"}
+          size={24}
+          color="#2c5aa0"
         />
       </TouchableOpacity>
 
@@ -2419,16 +2417,16 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
       )}
 
       {/* Idea Information - Collapsible */}
-      <TouchableOpacity 
-        style={styles.collapsibleHeader} 
-        onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} 
+      <TouchableOpacity
+        style={styles.collapsibleHeader}
+        onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)}
         activeOpacity={0.7}
       >
         <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
-        <Ionicons 
-          name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} 
-          size={24} 
-          color="#2c5aa0" 
+        <Ionicons
+          name={ideaInfoExpanded ? "chevron-up" : "chevron-down"}
+          size={24}
+          color="#2c5aa0"
         />
       </TouchableOpacity>
 
@@ -2454,9 +2452,9 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
           </View>
           <View style={styles.rowDetailWithBorder}>
             <Text style={styles.labelDetail}>Status:</Text>
-            <Text 
+            <Text
               style={[
-                styles.statusBadgeDetail, 
+                styles.statusBadgeDetail,
                 { backgroundColor: getStatusColor(ideaDetail.ideaStatus) }
               ]}
             >
@@ -2491,10 +2489,10 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         <View style={styles.cardDetail}>
           <Text style={styles.cardHeading}>Before Implementation Image</Text>
           <View style={styles.implementationImageSection}>
-            <Image 
-              source={{ uri: ideaDetail.beforeImplementationImagePath }} 
-              style={styles.implementationImage} 
-              contentFit="cover" 
+            <Image
+              source={{ uri: ideaDetail.beforeImplementationImagePath }}
+              style={styles.implementationImage}
+              contentFit="cover"
             />
           </View>
         </View>
@@ -2520,16 +2518,16 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
       </View>
 
       {/* Implementation Form Section - Collapsible */}
-      <TouchableOpacity 
-        style={styles.collapsibleHeader} 
-        onPress={() => setImplementationFormExpanded(!implementationFormExpanded)} 
+      <TouchableOpacity
+        style={styles.collapsibleHeader}
+        onPress={() => setImplementationFormExpanded(!implementationFormExpanded)}
         activeOpacity={0.7}
       >
         <Text style={styles.collapsibleHeaderText}>Submit Implementation Details</Text>
-        <Ionicons 
-          name={implementationFormExpanded ? "chevron-up" : "chevron-down"} 
-          size={24} 
-          color="#2c5aa0" 
+        <Ionicons
+          name={implementationFormExpanded ? "chevron-up" : "chevron-down"}
+          size={24}
+          color="#2c5aa0"
         />
       </TouchableOpacity>
 
@@ -2571,8 +2569,8 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
             </Text>
           </View>
           <View style={styles.fileInputRow}>
-            <TouchableOpacity 
-              style={styles.chooseFileButton} 
+            <TouchableOpacity
+              style={styles.chooseFileButton}
               onPress={() => setShowFileOptions(true)}
             >
               <Text style={styles.chooseFileText}>Choose File</Text>
@@ -2581,8 +2579,8 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
           </View>
 
           {afterImage && afterImageType === 'image' && (
-            <TouchableOpacity 
-              onPress={() => setShowImagePreview(true)} 
+            <TouchableOpacity
+              onPress={() => setShowImagePreview(true)}
               style={styles.eyeIconContainer}
             >
               <Feather name="eye" size={20} color="#2196F3" />
@@ -2617,29 +2615,29 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         <View style={styles.imageOptionsContainer}>
           <View style={styles.imageOptionsContent}>
             <Text style={styles.imageOptionsTitle}>Choose File Source</Text>
-            <TouchableOpacity 
-              style={styles.imageOptionButton} 
+            <TouchableOpacity
+              style={styles.imageOptionButton}
               onPress={pickImageFromCamera}
             >
               <Feather name="camera" size={24} color="#2196F3" />
               <Text style={styles.imageOptionText}>Take Photo</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.imageOptionButton} 
+            <TouchableOpacity
+              style={styles.imageOptionButton}
               onPress={pickImageFromGallery}
             >
               <Feather name="image" size={24} color="#4CAF50" />
               <Text style={styles.imageOptionText}>Choose Image from Gallery</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.imageOptionButton} 
+            <TouchableOpacity
+              style={styles.imageOptionButton}
               onPress={pickPDF}
             >
               <Feather name="file-text" size={24} color="#FF5722" />
               <Text style={styles.imageOptionText}>Choose PDF Document</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.imageOptionButton, styles.cancelButton]} 
+            <TouchableOpacity
+              style={[styles.imageOptionButton, styles.cancelButton]}
               onPress={() => setShowFileOptions(false)}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -2653,8 +2651,8 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
             <Text style={styles.timelineModalTitle}>Progress Timeline</Text>
-            <TouchableOpacity 
-              style={styles.closeButtonTimeline} 
+            <TouchableOpacity
+              style={styles.closeButtonTimeline}
               onPress={() => setShowTimelineModal(false)}
             >
               <Ionicons name="close" size={20} color="#fff" />
@@ -2702,9 +2700,9 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
               </TouchableOpacity>
             </View>
           </View>
-          <ScrollView 
-            contentContainerStyle={styles.imageScrollContent} 
-            maximumZoomScale={3} 
+          <ScrollView
+            contentContainerStyle={styles.imageScrollContent}
+            maximumZoomScale={3}
             minimumZoomScale={0.5}
           >
             {afterImage && (
@@ -2722,628 +2720,628 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    padding: 16, 
-    backgroundColor: "#f5f5f5" 
-  },
-  cardContainer: { 
-    backgroundColor: '#fff', 
-    borderRadius: 8, 
-    marginBottom: 12, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.1, 
-    shadowRadius: 4, 
-    elevation: 3 
-  },
-  cardHeader: { 
-    backgroundColor: '#2c5aa0', 
-    padding: 12, 
-    borderTopLeftRadius: 8, 
-    borderTopRightRadius: 8, 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-start' 
-  },
-  ideaNumber: { 
-    color: '#fff', 
-    fontSize: 14, 
-    fontWeight: 'bold', 
-    flex: 1, 
-    marginRight: 8 
-  },
-  typeTag: { 
-    backgroundColor: '#f0ad4e', 
-    borderRadius: 4, 
-    paddingHorizontal: 6, 
-    paddingVertical: 2 
-  },
-  typeText: { 
-    color: '#fff', 
-    fontSize: 12, 
-    fontWeight: '500' 
-  },
-  cardContent: { 
-    padding: 12 
-  },
-  row: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 6, 
-    alignItems: 'center' 
-  },
-  rowDetail: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    marginBottom: 8, 
-    alignItems: 'flex-start' 
-  },
-  rowDetailWithBorder: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    paddingBottom: 10, 
-    marginBottom: 10, 
-    alignItems: 'flex-start', 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#f0f0f0' 
-  },
-  label: { 
-    color: '#555', 
-    fontWeight: '500', 
-    fontSize: 14 
-  },
-  value: { 
-    color: '#333', 
-    fontSize: 14, 
-    maxWidth: '65%', 
-    textAlign: 'right' 
-  },
-  statusBadge: { 
-    color: "#fff", 
-    paddingHorizontal: 8, 
-    paddingVertical: 4, 
-    borderRadius: 12, 
-    fontSize: 11, 
-    fontWeight: '600', 
-    maxWidth: 200, 
-    textAlign: 'center' 
-  },
-  buttonRow: { 
-    flexDirection: "row", 
-    justifyContent: "center", 
-    marginTop: 20, 
-    gap: 12 
-  },
-  button: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingVertical: 12, 
-    paddingHorizontal: 24, 
-    borderRadius: 10, 
-    gap: 6, 
-    elevation: 2 
-  },
-  editButton: { 
-    backgroundColor: "#607D8B" 
-  },
-  deleteButton: { 
-    backgroundColor: "#F44336" 
-  },
-  buttonText: { 
-    color: "#fff", 
-    fontWeight: "bold", 
-    fontSize: 15 
-  },
-  fullModal: { 
-    flex: 1, 
-    backgroundColor: "#f5f5f5" 
-  },
-  modalHeader: { 
-    backgroundColor: '#fff', 
-    paddingTop: 24, 
-    paddingBottom: 12, 
-    paddingHorizontal: 16, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#e0e0e0', 
-    elevation: 4 
-  },
-  modalHeaderContent: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 12 
-  },
-  modalHeaderTitle: { 
-    fontSize: 20, 
-    fontWeight: 'bold', 
-    color: '#2c5aa0' 
-  },
-  closeButton: { 
-    backgroundColor: '#f0f0f0', 
-    borderRadius: 18, 
-    width: 32, 
-    height: 32, 
-    justifyContent: "center", 
-    alignItems: "center" 
-  },
-  timelineButtonHeader: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#e3f2fd', 
-    paddingHorizontal: 16, 
-    paddingVertical: 10, 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#2c5aa0', 
-    marginBottom: 12 
-  },
-  timelineButtonText: { 
-    color: '#2c5aa0', 
-    fontSize: 14, 
-    fontWeight: '600', 
-    marginLeft: 6 
-  },
-  modalScrollContent: { 
-    padding: 16, 
-    paddingBottom: 30 
-  },
-  cardDetail: { 
-    backgroundColor: "#fff", 
-    padding: 16, 
-    borderRadius: 10, 
-    marginBottom: 12, 
-    borderWidth: 1, 
-    borderColor: "#E0E0E0", 
-    elevation: 2 
-  },
-  cardHeading: { 
-    fontSize: 18, 
-    fontWeight: "bold", 
-    marginBottom: 12, 
-    color: "#2c5aa0" 
-  },
-  labelDetail: { 
-    fontWeight: "600", 
-    color: "#555", 
-    width: "45%", 
-    fontSize: 14 
-  },
-  valueDetail: { 
-    color: "#222", 
-    width: "50%", 
-    textAlign: "right", 
-    fontSize: 14 
-  },
-  statusBadgeDetail: { 
-    color: "#fff", 
-    paddingHorizontal: 10, 
-    paddingVertical: 6, 
-    borderRadius: 12, 
-    fontSize: 11, 
-    fontWeight: '600', 
-    maxWidth: 200, 
-    textAlign: 'center' 
-  },
-  imagePreviewContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 8 
-  },
-  thumbnailSmall: { 
-    width: 60, 
-    height: 60, 
-    borderRadius: 6, 
-    borderWidth: 1, 
-    borderColor: '#ddd' 
-  },
-  pdfThumbnailContainer: { 
-    width: 60, 
-    height: 60, 
-    borderRadius: 6, 
-    borderWidth: 1, 
-    borderColor: '#FF5722', 
-    backgroundColor: '#FFF3E0', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  pdfThumbnailText: { 
-    fontSize: 10, 
-    color: '#FF5722', 
-    fontWeight: 'bold', 
-    marginTop: 2 
-  },
-  imageErrorContainer: { 
-    width: 60, 
-    height: 60, 
-    borderRadius: 6, 
-    borderWidth: 1, 
-    borderColor: '#ddd', 
-    backgroundColor: '#f5f5f5', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  imageErrorText: { 
-    fontSize: 9, 
-    color: '#999', 
-    marginTop: 2, 
-    textAlign: 'center' 
-  },
-  implementationImageSection: { 
-    marginTop: 12, 
-    marginBottom: 12 
-  },
-  imageLabel: { 
-    fontSize: 14, 
-    fontWeight: '600', 
-    color: '#555', 
-    marginBottom: 8 
-  },
-  implementationImage: { 
-    width: '100%', 
-    height: 200, 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#ddd' 
-  },
-  remarkCard: { 
-    backgroundColor: '#f8f9fa', 
-    padding: 12, 
-    borderRadius: 8, 
-    marginBottom: 10, 
-    borderLeftWidth: 3, 
-    borderLeftColor: '#2c5aa0' 
-  },
-  remarkTitle: { 
-    fontSize: 15, 
-    fontWeight: 'bold', 
-    color: '#2c5aa0', 
-    marginBottom: 6 
-  },
-  remarkComment: { 
-    fontSize: 14, 
-    color: '#333', 
-    lineHeight: 20, 
-    marginBottom: 6 
-  },
-  remarkDate: { 
-    fontSize: 12, 
-    color: '#999', 
-    fontStyle: 'italic' 
-  },
-  noRemarksText: { 
-    textAlign: 'center', 
-    color: '#999', 
-    fontSize: 14, 
-    fontStyle: 'italic', 
-    paddingVertical: 10 
-  },
-  timelineModalHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    backgroundColor: '#2c5aa0', 
-    paddingHorizontal: 16, 
-    paddingVertical: 12, 
-    paddingTop: 40, 
-    elevation: 4 
-  },
-  timelineModalTitle: { 
-    fontSize: 20, 
-    fontWeight: 'bold', 
-    color: '#fff' 
-  },
-  closeButtonTimeline: { 
-    backgroundColor: 'rgba(255,255,255,0.2)', 
-    borderRadius: 18, 
-    width: 32, 
-    height: 32, 
-    justifyContent: "center", 
-    alignItems: "center" 
-  },
-  timelineCardContainer: { 
-    backgroundColor: "#fff", 
-    padding: 16, 
-    borderRadius: 10, 
-    borderWidth: 1, 
-    borderColor: "#E0E0E0", 
-    elevation: 2 
-  },
-  timelineContainer: { 
-    paddingLeft: 4, 
-    paddingTop: 4 
-  },
-  timelineItem: { 
-    flexDirection: "row", 
-    marginBottom: 20 
-  },
-  timelineLeft: { 
-    alignItems: "center", 
-    marginRight: 15, 
-    width: 20 
-  },
-  timelineCircle: { 
-    width: 14, 
-    height: 14, 
-    borderRadius: 7, 
-    borderWidth: 3, 
-    borderColor: "#fff", 
-    elevation: 2 
-  },
-  timelineLine: { 
-    width: 3, 
-    backgroundColor: "#E0E0E0", 
-    flex: 1, 
-    marginTop: 4 
-  },
-  timelineContent: { 
-    flex: 1, 
-    paddingBottom: 5 
-  },
-  timelineStatus: { 
-    fontSize: 15, 
-    fontWeight: "bold", 
-    color: "#333", 
-    marginBottom: 4 
-  },
-  timelineDescription: { 
-    fontSize: 13, 
-    color: "#666", 
-    marginBottom: 6, 
-    lineHeight: 18 
-  },
-  timelineDate: { 
-    fontSize: 12, 
-    color: "#999", 
-    fontStyle: "italic" 
-  },
-  noTimelineContainer: { 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    paddingVertical: 40 
-  },
-  noTimelineText: { 
-    color: "#999", 
-    textAlign: "center", 
-    marginTop: 10, 
-    fontSize: 15, 
-    fontStyle: 'italic' 
-  },
-  imageModal: { 
-    flex: 1, 
-    backgroundColor: "rgba(0,0,0,0.95)", 
-    justifyContent: "center", 
-    alignItems: "center" 
-  },
-  closeButtonImage: { 
-    position: 'absolute', 
-    top: 50, 
-    right: 20, 
-    zIndex: 10, 
-    backgroundColor: 'rgba(255,255,255,0.2)', 
-    borderRadius: 22, 
-    width: 44, 
-    height: 44, 
-    justifyContent: "center", 
-    alignItems: "center" 
-  },
-  fullImage: { 
-    width: "90%", 
-    height: "70%" 
-  },
-  loadingOverlay: { 
-    position: "absolute", 
-    top: 0, 
-    left: 0, 
-    right: 0, 
-    bottom: 0, 
-    justifyContent: "center", 
-    alignItems: "center", 
-    backgroundColor: "rgba(255,255,255,0.6)" 
-  },
-  collapsibleHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    backgroundColor: '#fff', 
-    padding: 16, 
-    borderRadius: 8, 
-    marginBottom: 8, 
-    borderWidth: 1, 
-    borderColor: '#e0e0e0', 
-    elevation: 1, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 1 }, 
-    shadowOpacity: 0.05, 
-    shadowRadius: 2 
-  },
-  collapsibleHeaderText: { 
-    fontSize: 16, 
-    fontWeight: '600', 
-    color: '#2c5aa0' 
-  },
-  requiredStar: { 
-    color: '#F44336', 
-    fontSize: 16 
-  },
-  textInputArea: { 
-    borderWidth: 1, 
-    borderColor: '#ddd', 
-    borderRadius: 6, 
-    padding: 12, 
-    fontSize: 14, 
-    color: '#333', 
-    backgroundColor: '#fafafa', 
-    textAlignVertical: 'top', 
-    minHeight: 100 
-  },
-  fileInputRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#F0F2F5', 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#ddd', 
-    overflow: 'hidden' 
-  },
-  chooseFileButton: { 
-    backgroundColor: '#e0e0e0', 
-    paddingHorizontal: 16, 
-    paddingVertical: 12, 
-    borderRightWidth: 1, 
-    borderRightColor: '#ccc' 
-  },
-  chooseFileText: { 
-    color: '#333', 
-    fontSize: 14, 
-    fontWeight: '500' 
-  },
-  fileNameDisplay: { 
-    flex: 1, 
-    paddingHorizontal: 12, 
-    color: '#666', 
-    fontSize: 14 
-  },
-  eyeIconContainer: { 
-    marginTop: 8, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    alignSelf: 'flex-start' 
-  },
-  previewText: { 
-    marginLeft: 6, 
-    color: '#2196F3', 
-    fontSize: 14, 
-    fontWeight: '500' 
-  },
-  pdfInfoContainer: { 
-    marginTop: 8, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#FFF3E0', 
-    paddingHorizontal: 12, 
-    paddingVertical: 8, 
-    borderRadius: 6, 
-    alignSelf: 'flex-start' 
-  },
-  pdfInfoText: { 
-    marginLeft: 8, 
-    color: '#FF5722', 
-    fontSize: 14, 
-    fontWeight: '500' 
-  },
-  imageOptionsContainer: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.5)', 
-    justifyContent: 'flex-end' 
-  },
-  imageOptionsContent: { 
-    backgroundColor: '#fff', 
-    borderTopLeftRadius: 20, 
-    borderTopRightRadius: 20, 
-    padding: 20, 
-    paddingBottom: 40 
-  },
-  imageOptionsTitle: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#333', 
-    marginBottom: 20, 
-    textAlign: 'center' 
-  },
-  imageOptionButton: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#F0F2F5', 
-    padding: 16, 
-    borderRadius: 12, 
-    marginBottom: 12 
-  },
-  imageOptionText: { 
-    fontSize: 16, 
-    color: '#333', 
-    fontWeight: '600', 
-    marginLeft: 15 
-  },
-  cancelButton: { 
-    backgroundColor: '#FFE5E5', 
-    marginTop: 10, 
-    justifyContent: 'center' 
-  },
-  cancelButtonText: { 
-    fontSize: 16, 
-    color: '#FF3B30', 
-    fontWeight: '600', 
-    textAlign: 'center' 
-  },
-  noDataText: { 
-    textAlign: 'center', 
-    color: '#999', 
-    fontSize: 14, 
-    fontStyle: 'italic', 
-    paddingVertical: 12 
-  },
-  noDataContainer: { 
-    alignItems: 'center', 
-    paddingVertical: 30 
-  },
-  submitImplementButton: { 
-    backgroundColor: '#1976D2', 
-    paddingVertical: 14, 
-    borderRadius: 8, 
-    alignItems: 'center', 
-    marginBottom: 16, 
-    elevation: 3, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.2, 
-    shadowRadius: 3 
-  },
-  submitImplementButtonText: { 
-    color: '#fff', 
-    fontSize: 16, 
-    fontWeight: 'bold' 
-  },
-  submitButtonDisabled: { 
-    backgroundColor: '#9E9E9E' 
-  },
-  imagePreviewModal: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.95)' 
-  },
-  imagePreviewHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingHorizontal: 20, 
-    paddingTop: 50, 
-    paddingBottom: 15 
-  },
-  zoomControls: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: 'rgba(255,255,255,0.2)', 
-    borderRadius: 20, 
-    paddingHorizontal: 10, 
-    paddingVertical: 5 
-  },
-  zoomButton: { 
-    padding: 8 
-  },
-  zoomText: { 
-    color: '#fff', 
-    fontSize: 14, 
-    fontWeight: 'bold', 
-    marginHorizontal: 15, 
-    minWidth: 50, 
-    textAlign: 'center' 
-  },
-  imageScrollContent: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  fullImagePreview: { 
-    width: 350, 
-    height: 500 
+  container: {
+    padding: 16,
+    backgroundColor: "#f5f5f5"
+  },
+  cardContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  cardHeader: {
+    backgroundColor: '#2c5aa0',
+    padding: 12,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start'
+  },
+  ideaNumber: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 8
+  },
+  typeTag: {
+    backgroundColor: '#f0ad4e',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2
+  },
+  typeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  cardContent: {
+    padding: 12
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    alignItems: 'center'
+  },
+  rowDetail: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    alignItems: 'flex-start'
+  },
+  rowDetailWithBorder: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingBottom: 10,
+    marginBottom: 10,
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0'
+  },
+  label: {
+    color: '#555',
+    fontWeight: '500',
+    fontSize: 14
+  },
+  value: {
+    color: '#333',
+    fontSize: 14,
+    maxWidth: '65%',
+    textAlign: 'right'
+  },
+  statusBadge: {
+    color: "#fff",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 11,
+    fontWeight: '600',
+    maxWidth: 200,
+    textAlign: 'center'
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 20,
+    gap: 12
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    gap: 6,
+    elevation: 2
+  },
+  editButton: {
+    backgroundColor: "#607D8B"
+  },
+  deleteButton: {
+    backgroundColor: "#F44336"
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 15
+  },
+  fullModal: {
+    flex: 1,
+    backgroundColor: "#f5f5f5"
+  },
+  modalHeader: {
+    backgroundColor: '#fff',
+    paddingTop: 24,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    elevation: 4
+  },
+  modalHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12
+  },
+  modalHeaderTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c5aa0'
+  },
+  closeButton: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 18,
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  timelineButtonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2c5aa0',
+    marginBottom: 12
+  },
+  timelineButtonText: {
+    color: '#2c5aa0',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6
+  },
+  modalScrollContent: {
+    padding: 16,
+    paddingBottom: 30
+  },
+  cardDetail: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    elevation: 2
+  },
+  cardHeading: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+    color: "#2c5aa0"
+  },
+  labelDetail: {
+    fontWeight: "600",
+    color: "#555",
+    width: "45%",
+    fontSize: 14
+  },
+  valueDetail: {
+    color: "#222",
+    width: "50%",
+    textAlign: "right",
+    fontSize: 14
+  },
+  statusBadgeDetail: {
+    color: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    fontSize: 11,
+    fontWeight: '600',
+    maxWidth: 200,
+    textAlign: 'center'
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  thumbnailSmall: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ddd'
+  },
+  pdfThumbnailContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FF5722',
+    backgroundColor: '#FFF3E0',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  pdfThumbnailText: {
+    fontSize: 10,
+    color: '#FF5722',
+    fontWeight: 'bold',
+    marginTop: 2
+  },
+  imageErrorContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  imageErrorText: {
+    fontSize: 9,
+    color: '#999',
+    marginTop: 2,
+    textAlign: 'center'
+  },
+  implementationImageSection: {
+    marginTop: 12,
+    marginBottom: 12
+  },
+  imageLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8
+  },
+  implementationImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd'
+  },
+  remarkCard: {
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#2c5aa0'
+  },
+  remarkTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#2c5aa0',
+    marginBottom: 6
+  },
+  remarkComment: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+    marginBottom: 6
+  },
+  remarkDate: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic'
+  },
+  noRemarksText: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    fontStyle: 'italic',
+    paddingVertical: 10
+  },
+  timelineModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#2c5aa0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingTop: 40,
+    elevation: 4
+  },
+  timelineModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff'
+  },
+  closeButtonTimeline: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 18,
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  timelineCardContainer: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    elevation: 2
+  },
+  timelineContainer: {
+    paddingLeft: 4,
+    paddingTop: 4
+  },
+  timelineItem: {
+    flexDirection: "row",
+    marginBottom: 20
+  },
+  timelineLeft: {
+    alignItems: "center",
+    marginRight: 15,
+    width: 20
+  },
+  timelineCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 3,
+    borderColor: "#fff",
+    elevation: 2
+  },
+  timelineLine: {
+    width: 3,
+    backgroundColor: "#E0E0E0",
+    flex: 1,
+    marginTop: 4
+  },
+  timelineContent: {
+    flex: 1,
+    paddingBottom: 5
+  },
+  timelineStatus: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4
+  },
+  timelineDescription: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 6,
+    lineHeight: 18
+  },
+  timelineDate: {
+    fontSize: 12,
+    color: "#999",
+    fontStyle: "italic"
+  },
+  noTimelineContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40
+  },
+  noTimelineText: {
+    color: "#999",
+    textAlign: "center",
+    marginTop: 10,
+    fontSize: 15,
+    fontStyle: 'italic'
+  },
+  imageModal: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.95)",
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  closeButtonImage: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 22,
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  fullImage: {
+    width: "90%",
+    height: "70%"
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.6)"
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2
+  },
+  collapsibleHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c5aa0'
+  },
+  requiredStar: {
+    color: '#F44336',
+    fontSize: 16
+  },
+  textInputArea: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 14,
+    color: '#333',
+    backgroundColor: '#fafafa',
+    textAlignVertical: 'top',
+    minHeight: 100
+  },
+  fileInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F2F5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    overflow: 'hidden'
+  },
+  chooseFileButton: {
+    backgroundColor: '#e0e0e0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#ccc'
+  },
+  chooseFileText: {
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '500'
+  },
+  fileNameDisplay: {
+    flex: 1,
+    paddingHorizontal: 12,
+    color: '#666',
+    fontSize: 14
+  },
+  eyeIconContainer: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start'
+  },
+  previewText: {
+    marginLeft: 6,
+    color: '#2196F3',
+    fontSize: 14,
+    fontWeight: '500'
+  },
+  pdfInfoContainer: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignSelf: 'flex-start'
+  },
+  pdfInfoText: {
+    marginLeft: 8,
+    color: '#FF5722',
+    fontSize: 14,
+    fontWeight: '500'
+  },
+  imageOptionsContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end'
+  },
+  imageOptionsContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40
+  },
+  imageOptionsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center'
+  },
+  imageOptionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F2F5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12
+  },
+  imageOptionText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '600',
+    marginLeft: 15
+  },
+  cancelButton: {
+    backgroundColor: '#FFE5E5',
+    marginTop: 10,
+    justifyContent: 'center'
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#FF3B30',
+    fontWeight: '600',
+    textAlign: 'center'
+  },
+  noDataText: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    fontStyle: 'italic',
+    paddingVertical: 12
+  },
+  noDataContainer: {
+    alignItems: 'center',
+    paddingVertical: 30
+  },
+  submitImplementButton: {
+    backgroundColor: '#1976D2',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3
+  },
+  submitImplementButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#9E9E9E'
+  },
+  imagePreviewModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)'
+  },
+  imagePreviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 15
+  },
+  zoomControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5
+  },
+  zoomButton: {
+    padding: 8
+  },
+  zoomText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginHorizontal: 15,
+    minWidth: 50,
+    textAlign: 'center'
+  },
+  imageScrollContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  fullImagePreview: {
+    width: 350,
+    height: 500
   },
 });

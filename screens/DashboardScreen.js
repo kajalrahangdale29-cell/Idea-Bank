@@ -9,29 +9,23 @@
 // import { decrypt, safeDecrypt } from './EncryptionHelper'; 
 // import { DASHBOARD_URL, NOTIFICATION_USER_URL, NOTIFICATION_COUNT_URL, MARK_READ_URL, CLEAR_ALL_URL, REDIRECT_NOTIFICATION_URL, IDEA_DETAIL_URL, PENDING_APPROVALS_URL } from '../src/context/api'; 
 
-// // ✅ FIXED: URL Normalization Function
 // const normalizeImagePath = (path) => {
 //   if (!path) return null;
-  
-//   // Remove any duplicate BASE_URL patterns
+
 //   let cleanPath = path;
 //   const basePattern = 'https://ideabank-api-dev.abisaio.com';
-  
-//   // Count occurrences of the base URL
+
 //   const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-  
-//   // If BASE_URL appears more than once, keep only the last occurrence
+
 //   if (occurrences > 1) {
 //     const lastIndex = cleanPath.lastIndexOf(basePattern);
 //     cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
 //   }
-  
-//   // If it's already a full URL, return as-is
+
 //   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
 //     return cleanPath;
 //   }
-  
-//   // Otherwise, prepend BASE_URL
+
 //   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
 //   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
 //   return fullUrl;
@@ -104,7 +98,7 @@
 //           setToken(parsed.token);
 //           fetchDashboard(parsed.token);
 //           fetchUnreadCount(parsed.employee.id, parsed.token);
-          
+
 //           loadStoredNotifications(parsed.employee.id);
 //         }
 //       } catch (error) {
@@ -128,22 +122,22 @@
 //     try {
 //       const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
 //       const storedData = await AsyncStorage.getItem(key);
-      
+
 //       if (storedData) {
 //         const parsedData = JSON.parse(storedData);
 //         const currentTime = Date.now();
-        
+
 //         const validNotifications = parsedData.filter(notif => {
 //           const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
 //           return (currentTime - notifTime) < SEVEN_DAYS_MS;
 //         });
-        
+
 //         if (validNotifications.length !== parsedData.length) {
 //           await AsyncStorage.setItem(key, JSON.stringify(validNotifications));
 //         }
-        
+
 //         setNotifications(validNotifications);
-        
+
 //         const unread = validNotifications.filter(n => !n.isRead).length;
 //         setUnreadCount(unread);
 //       }
@@ -156,12 +150,12 @@
 //     try {
 //       const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
 //       const currentTime = Date.now();
-      
+
 //       const notificationsWithTimestamp = notificationsList.map(notif => ({
 //         ...notif,
 //         storedAt: notif.storedAt || currentTime
 //       }));
-      
+
 //       await AsyncStorage.setItem(key, JSON.stringify(notificationsWithTimestamp));
 //     } catch (error) {
 //       console.error("Error saving notifications:", error);
@@ -252,7 +246,7 @@
 
 //       const data = await response.json();
 //       let newNotifications = [];
-      
+
 //       if (Array.isArray(data)) {
 //         newNotifications = data;
 //       } else if (data.data && Array.isArray(data.data)) {
@@ -261,16 +255,16 @@
 
 //       const key = `${NOTIFICATIONS_STORAGE_KEY}_${employeeSystemId}`;
 //       const storedData = await AsyncStorage.getItem(key);
-      
+
 //       if (storedData) {
 //         const storedNotifications = JSON.parse(storedData);
 //         const currentTime = Date.now();
-        
+
 //         const validStoredNotifs = storedNotifications.filter(notif => {
 //           const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
 //           return (currentTime - notifTime) < SEVEN_DAYS_MS;
 //         });
-        
+
 //         const mergedNotifications = [...newNotifications];
 //         validStoredNotifs.forEach(storedNotif => {
 //           const exists = mergedNotifications.find(n => n.id === storedNotif.id);
@@ -278,20 +272,20 @@
 //             mergedNotifications.push(storedNotif);
 //           }
 //         });
-        
+
 //         mergedNotifications.sort((a, b) => {
 //           const dateA = new Date(a.createdOn || a.storedAt).getTime();
 //           const dateB = new Date(b.createdOn || b.storedAt).getTime();
 //           return dateB - dateA;
 //         });
-        
+
 //         setNotifications(mergedNotifications);
 //         await saveNotificationsToStorage(employeeSystemId, mergedNotifications);
 //       } else {
 //         setNotifications(newNotifications);
 //         await saveNotificationsToStorage(employeeSystemId, newNotifications);
 //       }
-      
+
 //     } catch (error) {
 //       console.error("Fetch notifications error:", error);
 //       await loadStoredNotifications(employeeSystemId);
@@ -345,8 +339,7 @@
 
 //       if (response?.success && response?.data) {
 //         const detail = response.data;
-        
-//         // Normalize all image paths
+
 //         const normalizedDetail = {
 //           ...detail,
 //           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
@@ -358,14 +351,14 @@
 //             afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
 //           } : null
 //         };
-        
+
 //         console.log('📸 Dashboard - Normalized Before Image:', normalizedDetail.beforeImplementationImagePath);
 //         console.log('📸 Dashboard - Normalized After Image:', normalizedDetail.afterImplementationImagePath);
-        
+
 //         setIdeaDetail(normalizedDetail);
 //         setSelectedIdea(normalizedDetail);
 //         setShowNotificationModal(false);
-        
+
 //         if (shouldShowImplementationDetails(normalizedDetail)) {
 //           setShowImplementationDetails(true);
 //         }
@@ -377,9 +370,9 @@
 //       }
 //     } catch (error) {
 //       console.error("Fetch idea detail error:", error);
-      
+
 //       let errorMsg = 'Failed to fetch idea details';
-      
+
 //       if (error.code === 'ECONNABORTED') {
 //         errorMsg = 'Request timeout - please try again';
 //       } else if (error.response?.status === 401) {
@@ -393,7 +386,7 @@
 //       } else if (error.message && !error.message.includes('decrypt')) {
 //         errorMsg = error.message;
 //       }
-      
+
 //       Toast.show(errorMsg, {
 //         duration: Toast.durations.LONG,
 //         position: Toast.positions.BOTTOM,
@@ -420,10 +413,10 @@
 //             ? { ...notif, isRead: true } 
 //             : notif
 //         );
-        
+
 //         setNotifications(updatedNotifications);
 //         await saveNotificationsToStorage(employeeSystemId, updatedNotifications);
-        
+
 //         const unread = updatedNotifications.filter(n => !n.isRead).length;
 //         setUnreadCount(unread);
 //       }
@@ -446,10 +439,10 @@
 //       if (response.ok) {
 //         setNotifications([]);
 //         setUnreadCount(0);
-        
+
 //         const key = `${NOTIFICATIONS_STORAGE_KEY}_${employeeSystemId}`;
 //         await AsyncStorage.removeItem(key);
-        
+
 //         Toast.show('All notifications cleared!', {
 //           duration: Toast.durations.SHORT,
 //           position: Toast.positions.BOTTOM,
@@ -544,13 +537,13 @@
 //   const NotificationItem = ({ item }) => {
 //     const handleNotificationClick = async () => {
 //       await markAsRead(item.id);
-      
+
 //       let encryptedId = null;
 //       if (item.redirectUrl) {
 //         const urlParts = item.redirectUrl.split('/');
 //         encryptedId = urlParts[urlParts.length - 1];
 //       }
-      
+
 //       if (encryptedId && encryptedId.trim() !== '') {
 //         setShowNotificationModal(false);
 //         await fetchIdeaDetail(encryptedId);
@@ -912,7 +905,7 @@
 //                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
 //                       <Ionicons name={showImplementationDetails ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
 //                     </TouchableOpacity>
-                    
+
 //                     {showImplementationDetails && (
 //                       <View style={styles.cardDetail}>
 //                         <View style={styles.rowDetailWithBorder}>
@@ -941,7 +934,7 @@
 //                             </Text>
 //                           </View>
 //                         )}
-                        
+
 //                         {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
 //                           <View style={styles.implementationImageSection}>
 //                             <Text style={styles.imageLabel}>Before Implementation:</Text>
@@ -963,7 +956,7 @@
 //                             </TouchableOpacity>
 //                           </View>
 //                         )}
-                        
+
 //                         {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
 //                           <View style={styles.implementationImageSection}>
 //                             <Text style={styles.imageLabel}>After Implementation:</Text>
@@ -1476,39 +1469,44 @@
 
 
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Dimensions, Modal, FlatList, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Dimensions, Modal, FlatList, ActivityIndicator, SafeAreaView } from 'react-native';
+import {
+  widthPercentageToDP as wp,
+  heightPercentageToDP as hp,
+} from 'react-native-responsive-screen';
+import { RFValue } from 'react-native-responsive-fontsize';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-root-toast';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { decrypt, safeDecrypt } from './EncryptionHelper'; 
-import { DASHBOARD_URL, NOTIFICATION_USER_URL, NOTIFICATION_COUNT_URL, MARK_READ_URL, CLEAR_ALL_URL, REDIRECT_NOTIFICATION_URL, IDEA_DETAIL_URL, PENDING_APPROVALS_URL } from '../src/context/api'; 
+import { decrypt, safeDecrypt } from './EncryptionHelper';
+import { DASHBOARD_URL, NOTIFICATION_USER_URL, NOTIFICATION_COUNT_URL, MARK_READ_URL, CLEAR_ALL_URL, REDIRECT_NOTIFICATION_URL, IDEA_DETAIL_URL, PENDING_APPROVALS_URL } from '../src/context/api';
 
 // ✅ FIXED: URL Normalization Function
 const normalizeImagePath = (path) => {
   if (!path) return null;
-  
+
   // Remove any duplicate BASE_URL patterns
   let cleanPath = path;
   const basePattern = 'https://ideabank-api-dev.abisaio.com';
-  
+
   // Count occurrences of the base URL
   const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-  
+
   // If BASE_URL appears more than once, keep only the last occurrence
   if (occurrences > 1) {
     const lastIndex = cleanPath.lastIndexOf(basePattern);
     cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
   }
-  
+
   // If it's already a full URL, return as-is
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
   }
-  
+
   // Otherwise, prepend BASE_URL
   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
@@ -1587,8 +1585,8 @@ const DashboardScreen = () => {
         if (storedData) {
           const parsed = JSON.parse(storedData);
           setEmployeeName(parsed.employee.name);
-          setEmployeeUsername(parsed.employee.username); 
-          setEmployeeSystemId(parsed.employee.id); 
+          setEmployeeUsername(parsed.employee.username);
+          setEmployeeSystemId(parsed.employee.id);
           setToken(parsed.token);
 
           // First fetch without forcing scope so backend returns default scope & permissions
@@ -1619,22 +1617,22 @@ const DashboardScreen = () => {
     try {
       const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
       const storedData = await AsyncStorage.getItem(key);
-      
+
       if (storedData) {
         const parsedData = JSON.parse(storedData);
         const currentTime = Date.now();
-        
+
         const validNotifications = parsedData.filter(notif => {
           const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
           return (currentTime - notifTime) < SEVEN_DAYS_MS;
         });
-        
+
         if (validNotifications.length !== parsedData.length) {
           await AsyncStorage.setItem(key, JSON.stringify(validNotifications));
         }
-        
+
         setNotifications(validNotifications);
-        
+
         const unread = validNotifications.filter(n => !n.isRead).length;
         setUnreadCount(unread);
       }
@@ -1647,12 +1645,12 @@ const DashboardScreen = () => {
     try {
       const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
       const currentTime = Date.now();
-      
+
       const notificationsWithTimestamp = notificationsList.map(notif => ({
         ...notif,
         storedAt: notif.storedAt || currentTime
       }));
-      
+
       await AsyncStorage.setItem(key, JSON.stringify(notificationsWithTimestamp));
     } catch (error) {
       console.error("Error saving notifications:", error);
@@ -1787,7 +1785,7 @@ const DashboardScreen = () => {
 
       const data = await response.json();
       let newNotifications = [];
-      
+
       if (Array.isArray(data)) {
         newNotifications = data;
       } else if (data.data && Array.isArray(data.data)) {
@@ -1796,16 +1794,16 @@ const DashboardScreen = () => {
 
       const key = `${NOTIFICATIONS_STORAGE_KEY}_${employeeSystemId}`;
       const storedData = await AsyncStorage.getItem(key);
-      
+
       if (storedData) {
         const storedNotifications = JSON.parse(storedData);
         const currentTime = Date.now();
-        
+
         const validStoredNotifs = storedNotifications.filter(notif => {
           const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
           return (currentTime - notifTime) < SEVEN_DAYS_MS;
         });
-        
+
         const mergedNotifications = [...newNotifications];
         validStoredNotifs.forEach(storedNotif => {
           const exists = mergedNotifications.find(n => n.id === storedNotif.id);
@@ -1813,20 +1811,20 @@ const DashboardScreen = () => {
             mergedNotifications.push(storedNotif);
           }
         });
-        
+
         mergedNotifications.sort((a, b) => {
           const dateA = new Date(a.createdOn || a.storedAt).getTime();
           const dateB = new Date(b.createdOn || b.storedAt).getTime();
           return dateB - dateA;
         });
-        
+
         setNotifications(mergedNotifications);
         await saveNotificationsToStorage(employeeSystemId, mergedNotifications);
       } else {
         setNotifications(newNotifications);
         await saveNotificationsToStorage(employeeSystemId, newNotifications);
       }
-      
+
     } catch (error) {
       console.error("Fetch notifications error:", error);
       await loadStoredNotifications(employeeSystemId);
@@ -1858,7 +1856,7 @@ const DashboardScreen = () => {
 
       let decryptedId;
       try {
-        decryptedId = decrypt(encryptedId);  
+        decryptedId = decrypt(encryptedId);
         if (!decryptedId || decryptedId.trim() === '') {
           throw new Error('Decryption returned empty value');
         }
@@ -1872,15 +1870,15 @@ const DashboardScreen = () => {
         return;
       }
 
-      const apiUrl = `${IDEA_DETAIL_URL}/${decryptedId}`; 
-      const { data: response } = await axios.get(apiUrl, { 
+      const apiUrl = `${IDEA_DETAIL_URL}/${decryptedId}`;
+      const { data: response } = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 15000
       });
 
       if (response?.success && response?.data) {
         const detail = response.data;
-        
+
         // Normalize all image paths
         const normalizedDetail = {
           ...detail,
@@ -1893,14 +1891,14 @@ const DashboardScreen = () => {
             afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
           } : null
         };
-        
+
         console.log('📸 Dashboard - Normalized Before Image:', normalizedDetail.beforeImplementationImagePath);
         console.log('📸 Dashboard - Normalized After Image:', normalizedDetail.afterImplementationImagePath);
-        
+
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
         setShowNotificationModal(false);
-        
+
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
@@ -1912,9 +1910,9 @@ const DashboardScreen = () => {
       }
     } catch (error) {
       console.error("Fetch idea detail error:", error);
-      
+
       let errorMsg = 'Failed to fetch idea details';
-      
+
       if (error.code === 'ECONNABORTED') {
         errorMsg = 'Request timeout - please try again';
       } else if (error.response?.status === 401) {
@@ -1928,7 +1926,7 @@ const DashboardScreen = () => {
       } else if (error.message && !error.message.includes('decrypt')) {
         errorMsg = error.message;
       }
-      
+
       Toast.show(errorMsg, {
         duration: Toast.durations.LONG,
         position: Toast.positions.BOTTOM,
@@ -1938,7 +1936,6 @@ const DashboardScreen = () => {
     }
   };
 
-  // --- Notifications helpers & clear / mark read (unchanged) ---
   const markAsRead = async (notificationId) => {
     try {
       const url = MARK_READ_URL(notificationId);
@@ -1951,15 +1948,15 @@ const DashboardScreen = () => {
       });
 
       if (response.ok) {
-        const updatedNotifications = notifications.map(notif => 
-          notif.id === notificationId 
-            ? { ...notif, isRead: true } 
+        const updatedNotifications = notifications.map(notif =>
+          notif.id === notificationId
+            ? { ...notif, isRead: true }
             : notif
         );
-        
+
         setNotifications(updatedNotifications);
         await saveNotificationsToStorage(employeeSystemId, updatedNotifications);
-        
+
         const unread = updatedNotifications.filter(n => !n.isRead).length;
         setUnreadCount(unread);
       }
@@ -1982,10 +1979,10 @@ const DashboardScreen = () => {
       if (response.ok) {
         setNotifications([]);
         setUnreadCount(0);
-        
+
         const key = `${NOTIFICATIONS_STORAGE_KEY}_${employeeSystemId}`;
         await AsyncStorage.removeItem(key);
-        
+
         Toast.show('All notifications cleared!', {
           duration: Toast.durations.SHORT,
           position: Toast.positions.BOTTOM,
@@ -2069,17 +2066,13 @@ const DashboardScreen = () => {
     return [];
   };
 
-  // --- Responsive wrapper function for card width ---
   const getCardWrapperStyle = () => {
-    // For very narrow phones, keep single column-ish spacing with bigger vertical padding
     if (width < 360) {
       return { width: '48%' };
     }
-    // Normal phones: two cards per row (48% each)
     if (width < 720) {
       return { width: '48%' };
     }
-    // Tablets or large screens: show five in a row
     return { width: `${100 / 5 - 0.5}%` };
   };
 
@@ -2091,17 +2084,16 @@ const DashboardScreen = () => {
     </View>
   );
 
-  // Notification item unchanged (kept same)
   const NotificationItem = ({ item }) => {
     const handleNotificationClick = async () => {
       await markAsRead(item.id);
-      
+
       let encryptedId = null;
       if (item.redirectUrl) {
         const urlParts = item.redirectUrl.split('/');
         encryptedId = urlParts[urlParts.length - 1];
       }
-      
+
       if (encryptedId && encryptedId.trim() !== '') {
         setShowNotificationModal(false);
         await fetchIdeaDetail(encryptedId);
@@ -2119,10 +2111,10 @@ const DashboardScreen = () => {
         onPress={handleNotificationClick}
       >
         <View style={styles.notificationIcon}>
-          <Ionicons 
-            name={item.isRead ? "mail-open-outline" : "mail-unread-outline"} 
-            size={24} 
-            color={item.isRead ? "#666" : "#004d61"} 
+          <Ionicons
+            name={item.isRead ? "mail-open-outline" : "mail-unread-outline"}
+            size={24}
+            color={item.isRead ? "#666" : "#004d61"}
           />
         </View>
         <View style={styles.notificationContent}>
@@ -2189,16 +2181,13 @@ const DashboardScreen = () => {
     );
   }
 
-  // --- Scope dropdown handler ---
   const changeScope = async (newScope) => {
     setShowScopeDropdown(false);
     if (newScope === scope) return;
     setScope(newScope);
-    // call dashboard with new scope
     await fetchDashboard(token, newScope);
   };
 
-  // Render dropdown label friendly text
   const scopeLabel = (s) => {
     if (!s) return 'My Ideas';
     if (s === 'self') return 'My Ideas';
@@ -2210,20 +2199,24 @@ const DashboardScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ marginRight: 15 }}>
-          <Ionicons name="menu" size={28} color="#fff" />
-        </TouchableOpacity>
-
-        <View style={styles.empInfo}>
-          <Ionicons name="person-circle-outline" size={35} color="#fff" style={{ marginRight: 8 }} />
-          <View>
-            <Text style={styles.name}>{employeeName}</Text>
-            <Text style={styles.id}>{employeeUsername}</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.headerMenuButton}>
+            <Ionicons name="menu" size={26} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.empInfo}>
+            <Ionicons name="person-circle-outline" size={32} color="#fff" style={{ marginRight: 8 }} />
+            <View style={styles.employeeTextContainer}>
+              <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+                {employeeName.length > 18 ? `${employeeName.substring(0, 18)}...` : employeeName}
+              </Text>
+              <Text style={styles.id} numberOfLines={1}>{employeeUsername}</Text>
+            </View>
           </View>
+        </View>
 
-          {/* Notification bell */}
+        <View style={styles.headerRight}>
           <TouchableOpacity onPress={openNotificationModal} style={styles.notificationBell}>
-            <Ionicons name="notifications-outline" size={22} color="#fff" />
+            <Ionicons name="notifications-outline" size={24} color="#fff" />
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -2232,21 +2225,19 @@ const DashboardScreen = () => {
               </View>
             )}
           </TouchableOpacity>
-        </View>
 
-        {/* Scope dropdown - show only when there are more than 1 available scopes */}
-        {availableScopes.length > 1 && (
-          <View style={styles.scopeContainer}>
-            <Text style={styles.viewScopeText}>View Scope:</Text>
-            <TouchableOpacity style={styles.scopeButton} onPress={() => setShowScopeDropdown(true)}>
-              <Text style={styles.scopeButtonText}>{scopeLabel(scope)}</Text>
-              <Ionicons name="chevron-down" size={16} color="#fff" style={{ marginLeft: 6 }} />
-            </TouchableOpacity>
-          </View>
-        )}
+          {availableScopes.length > 1 && (
+            <View style={styles.scopeContainer}>
+              <TouchableOpacity style={styles.scopeButton} onPress={() => setShowScopeDropdown(true)}>
+                <Text style={styles.scopeButtonText}>{scopeLabel(scope)}</Text>
+                <Ionicons name="chevron-down" size={14} color="#fff" style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -2291,20 +2282,23 @@ const DashboardScreen = () => {
 
       {/* Scope Dropdown Modal */}
       <Modal visible={showScopeDropdown} transparent animationType="fade" onRequestClose={() => setShowScopeDropdown(false)}>
-        <TouchableOpacity style={styles.dropdownOverlay} onPress={() => setShowScopeDropdown(false)}>
+        <TouchableOpacity style={styles.dropdownOverlay} activeOpacity={1} onPress={() => setShowScopeDropdown(false)}>
           <View style={styles.dropdownContent}>
             {availableScopes.includes('self') && (
               <TouchableOpacity style={styles.dropdownItem} onPress={() => changeScope('self')}>
+                <Ionicons name="person-outline" size={18} color="#004d61" style={{ marginRight: 8 }} />
                 <Text style={styles.dropdownItemText}>My Ideas</Text>
               </TouchableOpacity>
             )}
             {availableScopes.includes('team') && (
               <TouchableOpacity style={styles.dropdownItem} onPress={() => changeScope('team')}>
+                <Ionicons name="people-outline" size={18} color="#004d61" style={{ marginRight: 8 }} />
                 <Text style={styles.dropdownItemText}>Team Ideas</Text>
               </TouchableOpacity>
             )}
             {availableScopes.includes('all') && (
               <TouchableOpacity style={styles.dropdownItem} onPress={() => changeScope('all')}>
+                <Ionicons name="globe-outline" size={18} color="#004d61" style={{ marginRight: 8 }} />
                 <Text style={styles.dropdownItemText}>All Ideas</Text>
               </TouchableOpacity>
             )}
@@ -2440,7 +2434,7 @@ const DashboardScreen = () => {
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Creation Date:</Text>
                       <Text style={styles.valueDetail}>
-                        {ideaDetail.ideaCreationDate || ideaDetail.creationDate ? 
+                        {ideaDetail.ideaCreationDate || ideaDetail.creationDate ?
                           formatDate(ideaDetail.ideaCreationDate || ideaDetail.creationDate) : "N/A"}
                       </Text>
                     </View>
@@ -2517,7 +2511,7 @@ const DashboardScreen = () => {
                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
                       <Ionicons name={showImplementationDetails ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                     </TouchableOpacity>
-                    
+
                     {showImplementationDetails && (
                       <View style={styles.cardDetail}>
                         <View style={styles.rowDetailWithBorder}>
@@ -2546,7 +2540,7 @@ const DashboardScreen = () => {
                             </Text>
                           </View>
                         )}
-                        
+
                         {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>Before Implementation:</Text>
@@ -2568,7 +2562,7 @@ const DashboardScreen = () => {
                             </TouchableOpacity>
                           </View>
                         )}
-                        
+
                         {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
                           <View style={styles.implementationImageSection}>
                             <Text style={styles.imageLabel}>After Implementation:</Text>
@@ -2679,16 +2673,52 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#004d61',
-    paddingHorizontal: 16,
-    paddingVertical: Platform.OS === 'ios' ? 50 : 12,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 8 : 40,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 14 : 50,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
   },
-  empInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  name: { color: '#fff', fontSize: isSmallDevice ? 14 : 16, fontWeight: 'bold' },
-  id: { color: '#ddd', fontSize: isSmallDevice ? 11 : 12 },
-  notificationBell: { marginLeft: 12, position: 'relative' },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    maxWidth: '60%',
+  },
+  headerMenuButton: {
+    marginRight: 8,
+    padding: 4,
+  },
+  empInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
+  employeeTextContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+  name: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  id: {
+    color: '#ddd',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  notificationBell: {
+    position: 'relative',
+    marginRight: 10,
+    padding: 4,
+  },
   badge: {
     position: 'absolute',
     top: -5,
@@ -2701,36 +2731,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
   },
-  badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-
-  // Scope container in header (new)
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   scopeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
-  },
-  viewScopeText: {
-    color: '#fff',
-    marginRight: 6,
-    fontSize: 13,
-    opacity: 0.9,
   },
   scopeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 8,
   },
   scopeButtonText: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
 
   // Cards
-  cardsContainer: { paddingHorizontal: 12, marginTop: 12 },
+  cardsContainer: { paddingHorizontal: 12, marginTop: 20 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   rejectedRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 6 },
   cardWrapper: { width: '48%' },
@@ -2770,9 +2795,9 @@ const styles = StyleSheet.create({
   overviewCard: {
     backgroundColor: '#fff',
     marginHorizontal: 16,
-    marginTop: 10,
+    marginTop: 15,
     padding: 18,
-    borderRadius: 16,
+    borderRadius: 20,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.08,
@@ -2804,7 +2829,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   createButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  scrollContent: { paddingBottom: 36 },
+  scrollContent: { paddingBottom: 36, paddingTop: 8 },
 
   // Modal dropdown styles
   dropdownOverlay: {
@@ -2814,7 +2839,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   dropdownContent: {
-    width: 160,
+    width: 180,
     backgroundColor: '#fff',
     marginTop: Platform.OS === 'android' ? 70 : 90,
     marginRight: 12,
@@ -2826,7 +2851,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  dropdownItem: { paddingVertical: 10, paddingHorizontal: 12 },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   dropdownItemText: { fontSize: 14, color: '#004d61', fontWeight: '600' },
 
   modalOverlay: {
