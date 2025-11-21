@@ -10,6 +10,7 @@ import {
   ScrollView,
   Modal,
   BackHandler,
+  Linking,
 } from "react-native";
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,25 +25,25 @@ import { TEAM_IDEAS_URL, IDEA_DETAIL_URL, UPDATE_STATUS_URL } from "../src/conte
 // ✅ FIXED: URL Normalization Function
 const normalizeImagePath = (path) => {
   if (!path) return null;
-  
+
   // Remove any duplicate BASE_URL patterns
   let cleanPath = path;
   const basePattern = 'https://ideabank-api-dev.abisaio.com';
-  
+
   // Count occurrences of the base URL
   const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-  
+
   // If BASE_URL appears more than once, keep only the last occurrence
   if (occurrences > 1) {
     const lastIndex = cleanPath.lastIndexOf(basePattern);
     cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
   }
-  
+
   // If it's already a full URL, return as-is
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
   }
-  
+
   // Otherwise, prepend BASE_URL
   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
@@ -282,10 +283,10 @@ export default function MyTeamIdeasScreen() {
         const ideaNum = (idea.ideaNumber || '').toLowerCase();
         const ownerName = (idea.ownerName || '').toLowerCase();
         const description = (idea.description || '').toLowerCase();
-        
-        return ideaNum.includes(searchTerm) || 
-               ownerName.includes(searchTerm) || 
-               description.includes(searchTerm);
+
+        return ideaNum.includes(searchTerm) ||
+          ownerName.includes(searchTerm) ||
+          description.includes(searchTerm);
       });
     }
 
@@ -337,7 +338,7 @@ export default function MyTeamIdeasScreen() {
     setToDate(null);
     setSelectedStatus("");
     setShowStatusDropdown(false);
-    
+
     setIdeas(allIdeasOriginal);
     setTotalItems(allIdeasOriginal.length);
   };
@@ -365,7 +366,7 @@ export default function MyTeamIdeasScreen() {
 
       if (response?.data?.success && response?.data?.data) {
         const detail = response.data.data;
-        
+
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
@@ -377,7 +378,7 @@ export default function MyTeamIdeasScreen() {
             afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
           } : null
         };
-        
+
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
 
@@ -386,7 +387,7 @@ export default function MyTeamIdeasScreen() {
         }
       } else if (response?.data) {
         const detail = response.data;
-        
+
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
@@ -398,7 +399,7 @@ export default function MyTeamIdeasScreen() {
             afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
           } : null
         };
-        
+
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
 
@@ -542,6 +543,27 @@ export default function MyTeamIdeasScreen() {
 
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
+
+    // Check if it's a PDF
+    if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
+      Alert.alert(
+        'PDF Document',
+        'This is a PDF document. Would you like to open it?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Open',
+            onPress: () => {
+              Linking.openURL(finalUrl).catch(err => {
+                Alert.alert('Error', 'Unable to open PDF. Please try accessing it from a web browser.');
+              });
+            }
+          }
+        ]
+      );
+      return;
+    }
+
     setCurrentImageUrl(finalUrl);
     setShowImage(true);
   };
@@ -965,50 +987,71 @@ export default function MyTeamIdeasScreen() {
                           </View>
                         )}
 
+                        {/* Before Implementation with PDF Support */}
                         {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>Before Implementation:</Text>
-                            <TouchableOpacity onPress={() => {
-                              const imagePath = ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath;
-                              openImagePreview(imagePath);
-                            }}>
-                              <Image
-                                source={{
-                                  uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath
-                                }}
-                                style={styles.implementationImage}
-                                contentFit="cover"
-                                cachePolicy="none"
-                                onError={(e) => {
-                                }}
-                              />
-                            </TouchableOpacity>
+                          <View style={styles.rowDetailWithBorder}>
+                            <Text style={styles.labelDetail}>Before Implementation:</Text>
+                            {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
+                              ideaDetail.beforeImplementationImagePath?.toLowerCase().includes('.pdf') || ideaDetail.imagePath?.toLowerCase().includes('.pdf') ? (
+                                <TouchableOpacity
+                                  onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                                >
+                                  <View style={styles.pdfThumbnailContainer}>
+                                    <Ionicons name="document-text" size={30} color="#FF5722" />
+                                    <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                  </View>
+                                </TouchableOpacity>
+                              ) : (
+                                <TouchableOpacity
+                                  style={styles.imagePreviewContainer}
+                                  onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                                >
+                                  <Image
+                                    source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }}
+                                    style={styles.thumbnailSmall}
+                                    contentFit="cover"
+                                    cachePolicy="none"
+                                  />
+                                </TouchableOpacity>
+                              )
+                            ) : (
+                              <Text style={styles.valueDetail}>N/A</Text>
+                            )}
                           </View>
+
                         )}
+
+                        {/* After Implementation with PDF Support */}
                         {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>After Implementation:</Text>
-                            <TouchableOpacity onPress={() => {
+                          <View style={styles.rowDetailWithBorder}>
+                            <Text style={styles.labelDetail}>After Implementation:</Text>
+                            {(() => {
                               const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
-                              openImagePreview(imagePath);
-                            }}>
-                              <Image
-                                source={{
-                                  uri: ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath
-                                }}
-                                style={styles.implementationImage}
-                                contentFit="cover"
-                                cachePolicy="none"
-                                onError={(e) => {
-                                }}
-                              />
-                            </TouchableOpacity>
+                              return imagePath.toLowerCase().includes('.pdf') ? (
+                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                  <View style={styles.pdfThumbnailContainer}>
+                                    <Ionicons name="document-text" size={30} color="#FF5722" />
+                                    <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                  </View>
+                                </TouchableOpacity>
+                              ) : (
+                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                  <Image
+                                    source={{ uri: imagePath }}
+                                    style={styles.thumbnailSmall}
+                                    contentFit="cover"
+                                    cachePolicy="none"
+                                  />
+                                </TouchableOpacity>
+                              );
+                            })()}
                           </View>
                         )}
                       </View>
                     )}
                   </>
                 )}
+
 
                 <View style={styles.cardDetail}>
                   <Text style={styles.cardHeading}>Remarks</Text>
@@ -1230,4 +1273,21 @@ const styles = StyleSheet.create({
   remarkCancelText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   remarkSubmitButton: { flex: 1, backgroundColor: '#2c5aa0', paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   remarkSubmitText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  pdfThumbnailContainer: { 
+    width: 60, 
+    height: 60, 
+    borderRadius: 6, 
+    borderWidth: 1, 
+    borderColor: '#FF5722', 
+    backgroundColor: '#FFF3E0', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  pdfThumbnailText: { 
+    fontSize: 10, 
+    color: '#FF5722', 
+    fontWeight: 'bold', 
+    marginTop: 2 
+  },
+
 });

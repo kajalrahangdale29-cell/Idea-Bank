@@ -117,11 +117,11 @@ const getStatusColor = (status) => {
 
 const shouldShowImplementationDetails = (ideaDetail) => {
   if (!ideaDetail) return false;
-  
+
   if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
     return true;
   }
-  
+
   const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
   return type === "implementation" || type === "implement";
 };
@@ -183,38 +183,38 @@ export default function AllTeamIdeasScreen() {
       while (hasMorePages) {
         const baseUrl = ALL_TEAM_IDEAS_URL.split('?')[0];
         let url = `${baseUrl}?page=${currentPage}&pageSize=10`;
-        
+
         const response = await axios.get(url, { headers: authHeaders });
 
         if (response.data && response.data.data && Array.isArray(response.data.data.items)) {
           const { items, totalPages, totalItems, hasNextPage } = response.data.data;
-          
+
           if (currentPage === 1 && totalItems !== undefined) {
             apiTotalItems = totalItems;
           }
-          
+
           if (items.length > 0) {
             allIdeas = [...allIdeas, ...items];
           }
-          
+
           if (hasNextPage === false || items.length === 0 || (totalPages && currentPage >= totalPages)) {
             hasMorePages = false;
           }
         } else {
           hasMorePages = false;
         }
-        
+
         currentPage++;
-        
+
         if (currentPage > 100) {
           hasMorePages = false;
         }
       }
-      
+
       setAllIdeasOriginal(allIdeas);
       setIdeas(allIdeas);
       setTotalItems(apiTotalItems || allIdeas.length);
-      
+
     } catch (error) {
       setIdeas([]);
       setAllIdeasOriginal([]);
@@ -226,13 +226,13 @@ export default function AllTeamIdeasScreen() {
 
   const applyFilters = () => {
     setLoading(true);
-    
+
     try {
       let filteredIdeas = [...allIdeasOriginal];
 
       if (searchIdeaNumber.trim()) {
         const searchTerm = searchIdeaNumber.trim().toLowerCase();
-        filteredIdeas = filteredIdeas.filter(idea => 
+        filteredIdeas = filteredIdeas.filter(idea =>
           (idea.ideaNumber && idea.ideaNumber.toLowerCase().includes(searchTerm)) ||
           (idea.ownerName && idea.ownerName.toLowerCase().includes(searchTerm)) ||
           (idea.description && idea.description.toLowerCase().includes(searchTerm))
@@ -242,10 +242,10 @@ export default function AllTeamIdeasScreen() {
       if (fromDate || toDate) {
         filteredIdeas = filteredIdeas.filter(idea => {
           if (!idea.creationDate) return false;
-          
+
           const ideaDate = new Date(idea.creationDate);
           ideaDate.setHours(0, 0, 0, 0);
-          
+
           if (fromDate && toDate) {
             const from = new Date(fromDate);
             from.setHours(0, 0, 0, 0);
@@ -271,11 +271,11 @@ export default function AllTeamIdeasScreen() {
           return idea.status.toLowerCase() === selectedStatus.toLowerCase();
         });
       }
-      
+
       setIdeas(filteredIdeas);
       setTotalItems(filteredIdeas.length);
       setShowFilters(false);
-      
+
     } catch (error) {
     } finally {
       setLoading(false);
@@ -287,7 +287,7 @@ export default function AllTeamIdeasScreen() {
     setFromDate(null);
     setToDate(null);
     setSelectedStatus("");
-    
+
     setIdeas(allIdeasOriginal);
     setTotalItems(allIdeasOriginal.length);
   };
@@ -324,7 +324,7 @@ export default function AllTeamIdeasScreen() {
 
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
-        
+
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
@@ -364,7 +364,7 @@ export default function AllTeamIdeasScreen() {
 
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
-    
+
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
         'PDF Document',
@@ -473,7 +473,7 @@ export default function AllTeamIdeasScreen() {
             {statusOptions.map((status, index) => {
               const isAllStatus = status === "All Status";
               const isSelected = isAllStatus ? selectedStatus === "" : selectedStatus === status;
-              
+
               return (
                 <TouchableOpacity
                   key={index}
@@ -657,7 +657,7 @@ export default function AllTeamIdeasScreen() {
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Creation Date:</Text>
                       <Text style={styles.valueDetail}>
-                        {ideaDetail.ideaCreationDate || ideaDetail.creationDate ? 
+                        {ideaDetail.ideaCreationDate || ideaDetail.creationDate ?
                           formatDate(ideaDetail.ideaCreationDate || ideaDetail.creationDate) : "N/A"}
                       </Text>
                     </View>
@@ -696,7 +696,7 @@ export default function AllTeamIdeasScreen() {
                                   }));
                                 } else {
                                   setImageLoadError(prev => ({
-                                    ...prev, 
+                                    ...prev,
                                     [`before_${ideaDetail.id}`]: true
                                   }));
                                 }
@@ -759,7 +759,7 @@ export default function AllTeamIdeasScreen() {
                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
                       <Ionicons name={showImplementationDetails ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                     </TouchableOpacity>
-                    
+
                     {showImplementationDetails && (
                       <View style={styles.cardDetail}>
                         <View style={styles.rowDetailWithBorder}>
@@ -788,45 +788,106 @@ export default function AllTeamIdeasScreen() {
                             </Text>
                           </View>
                         )}
-                        
-                        {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>Before Implementation:</Text>
-                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
-                              <Image source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }} style={styles.implementationImage} contentFit="cover" />
-                            </TouchableOpacity>
-                          </View>
-                        )}
-                        
-                        {ideaDetail.afterImplementationImagePath && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>After Implementation:</Text>
-                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}>
-                                {!imageLoadError[`after_${ideaDetail.id}`] ? (
-                                    <Image
-                                    source={{ uri: ideaDetail.afterImplementationImagePath }}
-                                    style={styles.implementationImage}
+
+                        {/* Before Implementation with PDF Support */}
+                        {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
+                          <View style={styles.rowDetailWithBorder}>
+                            <Text style={styles.labelDetail}>Before Implementation:</Text>
+                            {(() => {
+                              const imagePath = ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath;
+                              return imagePath.toLowerCase().includes('.pdf') ? (
+                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                  <View style={styles.pdfThumbnailContainer}>
+                                    <Ionicons name="document-text" size={30} color="#FF5722" />
+                                    <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                  </View>
+                                </TouchableOpacity>
+                              ) : !imageLoadError[`impl_before_${ideaDetail.id}`] ? (
+                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                  <Image
+                                    source={{ uri: imagePath }}
+                                    style={styles.thumbnailSmall}
                                     contentFit="cover"
                                     cachePolicy="none"
                                     onError={() => {
-                                        const altUrl = getAlternateImageUrl(ideaDetail.afterImplementationImagePath);
-                                        if (altUrl && ideaDetail.afterImplementationImagePath !== altUrl) {
-                                        setIdeaDetail(prev => ({
+                                      const altUrl = getAlternateImageUrl(imagePath);
+                                      if (altUrl && imagePath !== altUrl) {
+                                        if (ideaDetail.implementationCycle?.beforeImplementationImagePath) {
+                                          setIdeaDetail(prev => ({
                                             ...prev,
-                                            afterImplementationImagePath: altUrl
-                                        }));
+                                            implementationCycle: {
+                                              ...prev.implementationCycle,
+                                              beforeImplementationImagePath: altUrl
+                                            }
+                                          }));
                                         } else {
-                                        setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
+                                          setIdeaDetail(prev => ({
+                                            ...prev,
+                                            beforeImplementationImagePath: altUrl
+                                          }));
                                         }
+                                      } else {
+                                        setImageLoadError(prev => ({
+                                          ...prev,
+                                          [`impl_before_${ideaDetail.id}`]: true
+                                        }));
+                                      }
                                     }}
-                                    />
-                                ) : (
-                                    <View style={[styles.implementationImage, styles.imageErrorContainer]}>
-                                    <Ionicons name="image-outline" size={40} color="#999" />
-                                    <Text style={styles.imageErrorText}>Image unavailable</Text>
-                                    </View>
-                                )}
-                            </TouchableOpacity>
+                                  />
+                                </TouchableOpacity>
+                              ) : (
+                                <View style={styles.imageErrorContainer}>
+                                  <Ionicons name="image-outline" size={24} color="#999" />
+                                  <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                </View>
+                              );
+                            })()}
+                          </View>
+                        )}
+
+                        {/* After Implementation with PDF Support */}
+                        {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
+                          <View style={styles.rowDetailWithBorder}>
+                            <Text style={styles.labelDetail}>After Implementation:</Text>
+                            {(() => {
+                              const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
+                              return imagePath.toLowerCase().includes('.pdf') ? (
+                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                  <View style={styles.pdfThumbnailContainer}>
+                                    <Ionicons name="document-text" size={30} color="#FF5722" />
+                                    <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                  </View>
+                                </TouchableOpacity>
+                              ) : !imageLoadError[`impl_after_${ideaDetail.id}`] ? (
+                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                  <Image
+                                    source={{ uri: imagePath }}
+                                    style={styles.thumbnailSmall}
+                                    contentFit="cover"
+                                    cachePolicy="none"
+                                    onError={() => {
+                                      const altUrl = getAlternateImageUrl(imagePath);
+                                      if (altUrl && imagePath !== altUrl) {
+                                        setIdeaDetail(prev => ({
+                                          ...prev,
+                                          afterImplementationImagePath: altUrl
+                                        }));
+                                      } else {
+                                        setImageLoadError(prev => ({
+                                          ...prev,
+                                          [`impl_after_${ideaDetail.id}`]: true
+                                        }));
+                                      }
+                                    }}
+                                  />
+                                </TouchableOpacity>
+                              ) : (
+                                <View style={styles.imageErrorContainer}>
+                                  <Ionicons name="image-outline" size={24} color="#999" />
+                                  <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                </View>
+                              );
+                            })()}
                           </View>
                         )}
                       </View>

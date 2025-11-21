@@ -153,10 +153,10 @@ const ApprovedScreen = () => {
         setLoading(false);
         return;
       }
-      
+
       const parsed = JSON.parse(storedData);
       const token = parsed.token;
-      const authHeaders = { 
+      const authHeaders = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
@@ -170,30 +170,30 @@ const ApprovedScreen = () => {
         try {
           const baseUrl = APPROVED_BY_ME_URL.split('?')[0];
           const url = `${baseUrl}?sortOrder=desc&page=${currentPage}&pageSize=10`;
-          
-          const response = await axios.get(url, { 
+
+          const response = await axios.get(url, {
             headers: authHeaders,
-            timeout: 15000 
+            timeout: 15000
           });
 
           if (response.data && response.data.data) {
             const { items, totalPages, totalItems, hasNextPage } = response.data.data;
-            
+
             if (currentPage === 1 && totalItems !== undefined) {
               apiTotalItems = totalItems;
             }
-            
+
             if (items && Array.isArray(items) && items.length > 0) {
               allIdeas = [...allIdeas, ...items];
             }
-            
+
             if (hasNextPage === false || items.length === 0 || (totalPages && currentPage >= totalPages)) {
               hasMorePages = false;
             }
           } else {
             hasMorePages = false;
           }
-          
+
           currentPage++;
           if (currentPage > 100) {
             hasMorePages = false;
@@ -239,25 +239,25 @@ const ApprovedScreen = () => {
       Alert.alert("Error", "Idea ID is missing");
       return;
     }
-    
+
     try {
       setLoadingDetail(true);
-      
+
       const storedData = await AsyncStorage.getItem("userData");
       if (!storedData) {
         Alert.alert("Error", "Session expired. Please login again.");
         return;
       }
-      
+
       const parsed = JSON.parse(storedData);
       const token = parsed.token;
-      const headers = { 
+      const headers = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
 
       const apiUrl = `${IDEA_DETAIL_URL}/${ideaId}`;
-      
+
       const response = await axios.get(apiUrl, { headers, timeout: 15000 });
 
       if (response?.data) {
@@ -280,7 +280,7 @@ const ApprovedScreen = () => {
             afterImplementationImagePath: normalizedAfterImagePath
           } : null
         };
-        
+
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
         if (shouldShowImplementationDetails(normalizedDetail)) {
@@ -364,7 +364,7 @@ const ApprovedScreen = () => {
 
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
-    
+
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
         'PDF Document',
@@ -650,7 +650,7 @@ const ApprovedScreen = () => {
                                   }));
                                 } else {
                                   setImageLoadError(prev => ({
-                                    ...prev, 
+                                    ...prev,
                                     [`before_${ideaDetail.id}`]: true
                                   }));
                                 }
@@ -716,7 +716,7 @@ const ApprovedScreen = () => {
                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
                       <Ionicons name={showImplementationDetails ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                     </TouchableOpacity>
-                    
+
                     {showImplementationDetails && (
                       <View style={styles.cardDetail}>
                         <View style={styles.rowDetailWithBorder}>
@@ -745,50 +745,74 @@ const ApprovedScreen = () => {
                             </Text>
                           </View>
                         )}
+
+                        {/* Before Implementation with PDF Support */}
                         {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>Before Implementation:</Text>
-                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
-                              <Image source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }} style={styles.implementationImage} contentFit="cover" />
-                            </TouchableOpacity>
+                          <View style={styles.rowDetailWithBorder}>
+                            <Text style={styles.labelDetail}>Before Implementation:</Text>
+                            {ideaDetail.implementationCycle.beforeImplementationImagePath.toLowerCase().includes('.pdf') ? (
+                              <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
+                                <View style={styles.pdfThumbnailContainer}>
+                                  <Ionicons name="document-text" size={30} color="#FF5722" />
+                                  <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ) : (
+                              <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
+                                <Image
+                                  source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }}
+                                  style={styles.thumbnailSmall}
+                                  contentFit="cover"
+                                />
+                              </TouchableOpacity>
+                            )}
                           </View>
                         )}
-                        
+
+                        {/* After Implementation with PDF Support */}
                         {ideaDetail.afterImplementationImagePath && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>After Implementation:</Text>
-                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}>
-                                {!imageLoadError[`after_${ideaDetail.id}`] ? (
-                                    <Image
-                                    source={{ uri: ideaDetail.afterImplementationImagePath }}
-                                    style={styles.implementationImage}
-                                    contentFit="cover"
-                                    cachePolicy="none"
-                                    onError={() => {
-                                        const altUrl = getAlternateImageUrl(ideaDetail.afterImplementationImagePath);
-                                        if (altUrl && ideaDetail.afterImplementationImagePath !== altUrl) {
-                                        setIdeaDetail(prev => ({
-                                            ...prev,
-                                            afterImplementationImagePath: altUrl
-                                        }));
-                                        } else {
-                                        setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
-                                        }
-                                    }}
-                                    />
-                                ) : (
-                                    <View style={[styles.implementationImage, styles.imageErrorContainer]}>
-                                    <Ionicons name="image-outline" size={40} color="#999" />
-                                    <Text style={styles.imageErrorText}>Image unavailable</Text>
-                                    </View>
-                                )}
-                            </TouchableOpacity>
+                          <View style={styles.rowDetailWithBorder}>
+                            <Text style={styles.labelDetail}>After Implementation:</Text>
+                            {ideaDetail.afterImplementationImagePath.toLowerCase().includes('.pdf') ? (
+                              <TouchableOpacity onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}>
+                                <View style={styles.pdfThumbnailContainer}>
+                                  <Ionicons name="document-text" size={30} color="#FF5722" />
+                                  <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ) : !imageLoadError[`after_${ideaDetail.id}`] ? (
+                              <TouchableOpacity onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}>
+                                <Image
+                                  source={{ uri: ideaDetail.afterImplementationImagePath }}
+                                  style={styles.thumbnailSmall}
+                                  contentFit="cover"
+                                  cachePolicy="none"
+                                  onError={() => {
+                                    const altUrl = getAlternateImageUrl(ideaDetail.afterImplementationImagePath);
+                                    if (altUrl && ideaDetail.afterImplementationImagePath !== altUrl) {
+                                      setIdeaDetail(prev => ({
+                                        ...prev,
+                                        afterImplementationImagePath: altUrl
+                                      }));
+                                    } else {
+                                      setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
+                                    }
+                                  }}
+                                />
+                              </TouchableOpacity>
+                            ) : (
+                              <View style={styles.imageErrorContainer}>
+                                <Ionicons name="image-outline" size={24} color="#999" />
+                                <Text style={styles.imageErrorText}>Image unavailable</Text>
+                              </View>
+                            )}
                           </View>
                         )}
                       </View>
                     )}
                   </>
                 )}
+
 
                 <View style={styles.cardDetail}>
                   <Text style={styles.cardHeading}>Remarks</Text>

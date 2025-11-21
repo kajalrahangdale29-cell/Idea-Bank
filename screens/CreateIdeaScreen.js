@@ -42,6 +42,10 @@
 //   const [showFileOptions, setShowFileOptions] = useState(false);
 //   const [isSubmitting, setIsSubmitting] = useState(false);
 
+//   // Validation error states
+//   const [teamMembersError, setTeamMembersError] = useState('');
+//   const [mobileNumberError, setMobileNumberError] = useState('');
+
 //   const resetForm = () => {
 //     setIdeaDescription('');
 //     setProposedSolution('');
@@ -57,6 +61,44 @@
 //     setBeSupportNeeded(null);
 //     setCanImplementOtherLocation(null);
 //     setImageScale(1);
+//     setTeamMembersError('');
+//     setMobileNumberError('');
+//   };
+
+//   // Validation function for Team Members (alphabets, spaces, comma, dot - NO numbers)
+//   const validateTeamMembers = (text) => {
+//     const regex = /^[a-zA-Z\s,.]*$/;
+//     if (!regex.test(text)) {
+//       setTeamMembersError('Numbers are not allowed');
+//       return false;
+//     }
+//     setTeamMembersError('');
+//     return true;
+//   };
+
+//   // Handle Team Members input
+//   const handleTeamMembersChange = (text) => {
+//     if (validateTeamMembers(text)) {
+//       setTeamMembers(text);
+//     }
+//   };
+
+//   // Validation function for Mobile Number (only digits)
+//   const validateMobileNumber = (text) => {
+//     if (text.length > 0 && text.length < 10) {
+//       setMobileNumberError('Mobile number must be 10 digits');
+//       return false;
+//     }
+//     setMobileNumberError('');
+//     return true;
+//   };
+
+//   // Handle Mobile Number input - FIXED: Allow only numbers
+//   const handleMobileNumberChange = (text) => {
+//     // Only allow digits, remove any non-numeric characters
+//     const numericText = text.replace(/[^0-9]/g, '');
+//     setMobileNumber(numericText);
+//     validateMobileNumber(numericText);
 //   };
 
 //   const pickImageFromGallery = async () => {
@@ -228,13 +270,6 @@
 
 //         if (!fileInfo.exists) throw new Error('File does not exist');
 
-//         console.log('✅ File verified:', {
-//           uri: fileInfo.uri,
-//           size: fileInfo.size,
-//           exists: fileInfo.exists,
-//           fileName: fileName,
-//         });
-
 //         let mimeType = 'application/octet-stream';
 //         const extension = fileName.split('.').pop()?.toLowerCase();
 
@@ -252,12 +287,6 @@
 //           name: cleanFileName,
 //         };
 
-//         console.log('📤 Uploading file:', {
-//           name: fileToUpload.name,
-//           type: fileToUpload.type,
-//           uriLength: fileToUpload.uri.length,
-//         });
-
 //         formData.append('BeforeImplementationImage', fileToUpload);
 //       } catch (error) {
 //         Alert.alert('File Error', 'Failed to prepare file for upload. Please try again.');
@@ -268,11 +297,14 @@
 //   };
 
 //   const handleSaveDraft = async () => {
-//     if (!proposedSolution || !solutionCategory || !file || !date || !mobileNumber) {
-//       Alert.alert('Required Fields', 'Please fill all required fields to save draft.');
+//     // For Draft: Only Idea Description is mandatory
+//     if (!ideaDescription.trim()) {
+//       Alert.alert('Required Field', 'Idea Description is required to save draft.');
 //       return;
 //     }
-//     if (!/^\d{10}$/.test(mobileNumber)) {
+
+//     // If mobile number is provided, validate it
+//     if (mobileNumber && !/^\d{10}$/.test(mobileNumber)) {
 //       Alert.alert('Invalid Mobile Number', 'Please enter a valid 10 digit mobile number.');
 //       return;
 //     }
@@ -314,7 +346,6 @@
 //           ? (imagePath.startsWith('http') ? imagePath : `${BASE_URL}${imagePath}`)
 //           : null;
 
-
 //         const ideaData = {
 //           ...data.data,
 //           status: 'Draft',
@@ -322,7 +353,6 @@
 //           beforeImplementationImage: fullImageUrl,
 //           imagePath: fullImageUrl,
 //         };
-
 
 //         resetForm();
 //         Alert.alert('Success', 'Draft saved successfully!');
@@ -342,14 +372,56 @@
 //   };
 
 //   const handleBeforeSubmit = () => {
-//     if (!proposedSolution || !solutionCategory || !file || !date || !mobileNumber) {
-//       Alert.alert('Required Fields', 'Please fill all required fields.');
+//     // For Publish: All fields are mandatory
+//     if (!ideaDescription.trim()) {
+//       Alert.alert('Required Field', 'Idea Description is required.');
+//       return;
+//     }
+//     if (!proposedSolution.trim()) {
+//       Alert.alert('Required Field', 'Proposed Solution is required.');
+//       return;
+//     }
+//     if (!benefit.trim()) {
+//       Alert.alert('Required Field', 'Process Improvement/Cost Benefit is required.');
+//       return;
+//     }
+//     if (!teamMembers.trim()) {
+//       Alert.alert('Required Field', 'Team Members is required.');
+//       return;
+//     }
+//     if (!solutionCategory) {
+//       Alert.alert('Required Field', 'Solution Category is required.');
+//       return;
+//     }
+//     if (!ideaTheme) {
+//       Alert.alert('Required Field', 'Idea Theme is required.');
+//       return;
+//     }
+//     if (!file) {
+//       Alert.alert('Required Field', 'Before Implementation file is required.');
+//       return;
+//     }
+//     if (!date) {
+//       Alert.alert('Required Field', 'Planned Completion Date is required.');
+//       return;
+//     }
+//     if (!mobileNumber) {
+//       Alert.alert('Required Field', 'Mobile Number is required.');
 //       return;
 //     }
 //     if (!/^\d{10}$/.test(mobileNumber)) {
 //       Alert.alert('Invalid Mobile Number', 'Please enter a valid 10 digit mobile number.');
 //       return;
 //     }
+//     if (beSupportNeeded === null) {
+//       Alert.alert('Required Field', 'Please select if BE Team Support is needed.');
+//       return;
+//     }
+//     if (canImplementOtherLocation === null) {
+//       Alert.alert('Required Field', 'Please select if can be implemented to other location.');
+//       return;
+//     }
+    
 //     setShowConfirm(true);
 //   };
 
@@ -384,8 +456,6 @@
 //       }
 
 //       if (response.ok && data.success) {
-        
-       
 //         const imagePath = data.data?.beforeImplementationImage 
 //                        || data.data?.imagePath 
 //                        || data.data?.BeforeImplementationImagePath;
@@ -394,14 +464,12 @@
 //           ? (imagePath.startsWith('http') ? imagePath : `${BASE_URL}${imagePath}`)
 //           : null;
 
-
 //         const ideaData = {
 //           ...data.data,
 //           beforeImplementationImagePath: fullImageUrl,
 //           beforeImplementationImage: fullImageUrl,
 //           imagePath: fullImageUrl,
 //         };
-        
 
 //         resetForm();
 //         Alert.alert('Success', 'Idea published successfully!');
@@ -504,15 +572,18 @@
 
 //             <InputField
 //               label="Team Members"
+//               required
 //               icon={<MaterialIcons name="group" size={20} color="#666" />}
 //               placeholder="Enter team Members..."
 //               value={teamMembers}
-//               onChangeText={setTeamMembers}
+//               onChangeText={handleTeamMembersChange}
 //               maxLength={100}
+//               error={teamMembersError}
 //             />
 
 //             <PickerField
 //               label="Solution Category"
+//               required
 //               icon={<Ionicons name="bulb-outline" size={20} color="#666" />}
 //               selectedValue={solutionCategory}
 //               onValueChange={setSolutionCategory}
@@ -533,6 +604,7 @@
 
 //             <PickerField
 //               label="Idea Theme"
+//               required
 //               icon={<MaterialIcons name="category" size={20} color="#666" />}
 //               selectedValue={ideaTheme}
 //               onValueChange={setIdeaTheme}
@@ -709,18 +781,22 @@
 //               icon={<Feather name="phone" size={20} color="#666" />}
 //               placeholder="Enter your number..."
 //               value={mobileNumber}
-//               onChangeText={setMobileNumber}
+//               onChangeText={handleMobileNumberChange}
 //               maxLength={10}
+//               keyboardType="number-pad"
+//               error={mobileNumberError}
 //             />
 
 //             <RadioField
 //               label="Is BE Team Support Needed?"
+//               required
 //               value={beSupportNeeded}
 //               setValue={setBeSupportNeeded}
 //             />
 
 //             <RadioField
 //               label="Can Be Implemented To Other Location?"
+//               required
 //               value={canImplementOtherLocation}
 //               setValue={setCanImplementOtherLocation}
 //             />
@@ -818,13 +894,15 @@
 //   );
 // }
 
-// const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, maxLength, required }) => (
+// const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, maxLength, required, keyboardType, error }) => (
 //   <View style={styles.inputBlock}>
 //     <Text style={styles.label}>
 //       {label} {required && <Text style={styles.required}>*</Text>}
 //     </Text>
 //     <View style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline]}>
-//       {icon}
+//       <View style={styles.iconContainer}>
+//         {icon}
+//       </View>
 //       <TextInput
 //         style={[styles.input, multiline && styles.textArea]}
 //         placeholder={placeholder}
@@ -832,19 +910,26 @@
 //         onChangeText={onChangeText}
 //         multiline={multiline}
 //         placeholderTextColor="#999"
-//         keyboardType={label === 'Mobile Number' ? 'numeric' : 'default'}
+//         keyboardType={keyboardType || 'default'}
 //         maxLength={maxLength}
 //       />
 //     </View>
+//     {error ? (
+//       <Text style={styles.errorText}>{error}</Text>
+//     ) : null}
 //     {maxLength && <Text style={styles.charCount}>{value.length}/{maxLength}</Text>}
 //   </View>
 // );
 
-// const PickerField = ({ label, icon, selectedValue, onValueChange, options }) => (
+// const PickerField = ({ label, icon, selectedValue, onValueChange, options, required }) => (
 //   <View style={styles.inputBlock}>
-//     <Text style={styles.label}>{label}</Text>
+//     <Text style={styles.label}>
+//       {label} {required && <Text style={styles.required}>*</Text>}
+//     </Text>
 //     <View style={styles.inputWrapper}>
-//       {icon}
+//       <View style={styles.iconContainer}>
+//         {icon}
+//       </View>
 //       <Picker selectedValue={selectedValue} onValueChange={onValueChange} style={styles.picker} dropdownIconColor="#666">
 //         <Picker.Item label="Select" value="" />
 //         {options.map((option, index) => (
@@ -855,15 +940,23 @@
 //   </View>
 // );
 
-// const RadioField = ({ label, value, setValue }) => (
+// const RadioField = ({ label, value, setValue, required }) => (
 //   <View style={styles.inputBlock}>
-//     <Text style={styles.label}>{label}</Text>
+//     <Text style={styles.label}>
+//       {label} {required && <Text style={styles.required}>*</Text>}
+//     </Text>
 //     <View style={styles.radioRow}>
-//       <TouchableOpacity style={styles.radioOption} onPress={() => setValue(value === 'Yes' ? null : 'Yes')}>
+//       <TouchableOpacity 
+//         style={styles.radioOption} 
+//         onPress={() => setValue('Yes')}
+//       >
 //         <View style={[styles.radioCircle, value === 'Yes' && styles.radioSelected]} />
 //         <Text style={styles.radioText}>Yes</Text>
 //       </TouchableOpacity>
-//       <TouchableOpacity style={styles.radioOption} onPress={() => setValue(value === 'No' ? null : 'No')}>
+//       <TouchableOpacity 
+//         style={styles.radioOption} 
+//         onPress={() => setValue('No')}
+//       >
 //         <View style={[styles.radioCircle, value === 'No' && styles.radioSelected]} />
 //         <Text style={styles.radioText}>No</Text>
 //       </TouchableOpacity>
@@ -874,7 +967,7 @@
 // const FieldRow = ({ label, value }) => (
 //   <View style={styles.fieldRow}>
 //     <Text style={styles.fieldLabel}>{label}</Text>
-//     <Text style={styles.fieldValue}>{value || '-'}</Text>
+//     <Text style={styles.fieldValue} numberOfLines={2} ellipsizeMode="tail">{value || '-'}</Text>
 //   </View>
 // );
 
@@ -916,11 +1009,33 @@
 //     paddingHorizontal: 12,
 //     paddingVertical: 10,
 //   },
-//   inputWrapperMultiline: { alignItems: 'flex-start' },
-//   input: { flex: 1, fontSize: 16, marginLeft: 10, color: '#333' },
-//   picker: { flex: 1, marginLeft: 10, color: '#333' },
-//   textArea: { height: 100, textAlignVertical: 'top' },
+//   inputWrapperMultiline: { 
+//     alignItems: 'flex-start',
+//     paddingTop: 12,
+//   },
+//   iconContainer: {
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     marginRight: 10,
+//   },
+//   input: { 
+//     flex: 1, 
+//     fontSize: 16, 
+//     color: '#333',
+//   },
+//   picker: { flex: 1, color: '#333' },
+//   textArea: { 
+//     height: 100, 
+//     textAlignVertical: 'top',
+//     paddingTop: 0,
+//   },
 //   charCount: { alignSelf: 'flex-end', fontSize: 12, color: '#888', marginTop: 4 },
+//   errorText: { 
+//     color: 'red', 
+//     fontSize: 12, 
+//     marginTop: 4,
+//     fontWeight: '500',
+//   },
 //   fileInputRow: {
 //     flexDirection: 'row',
 //     alignItems: 'center',
@@ -929,6 +1044,7 @@
 //     borderWidth: 1,
 //     borderColor: '#ddd',
 //     overflow: 'hidden',
+//     marginBottom: 10,
 //   },
 //   chooseFileButton: {
 //     backgroundColor: '#e0e0e0',
@@ -949,7 +1065,6 @@
 //     fontSize: 14,
 //   },
 //   eyeIconContainer: {
-//     marginTop: 8,
 //     flexDirection: 'row',
 //     alignItems: 'center',
 //     alignSelf: 'flex-start',
@@ -961,7 +1076,6 @@
 //     fontWeight: '500',
 //   },
 //   pdfInfoContainer: {
-//     marginTop: 8,
 //     flexDirection: 'row',
 //     alignItems: 'center',
 //     backgroundColor: '#FFF3E0',
@@ -1001,22 +1115,27 @@
 //     flexDirection: 'row',
 //     justifyContent: 'space-between',
 //     marginTop: 20,
-//     gap: 5,
+//     gap: 10,
 //   },
 //   draftButton: {
 //     flexDirection: 'row',
 //     alignItems: 'center',
+//     justifyContent: 'center',
 //     backgroundColor: '#e2e2e2',
 //     paddingVertical: 12,
-//     paddingHorizontal: 14,
+//     paddingHorizontal: 16,
 //     borderRadius: 10,
+//     flex: 1,
 //   },
 //   draftText: { marginLeft: 7, fontSize: 16, color: '#333', fontWeight: '600' },
 //   submitButton: {
 //     backgroundColor: '#00B894',
 //     paddingVertical: 12,
-//     paddingHorizontal: 18,
+//     paddingHorizontal: 20,
 //     borderRadius: 10,
+//     flex: 1,
+//     alignItems: 'center',
+//     justifyContent: 'center',
 //   },
 //   submitText: { color: '#fff', fontSize: 16, fontWeight: '500' },
 //   radioRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
@@ -1120,7 +1239,7 @@
 //   },
 //   imageOptionsContainer: {
 //     flex: 1,
-//     backgroundColor: 'rgba(0,0,0,0.5)',
+//     backgroundColor: 'rgba(0,0,0,0.6)',
 //     justifyContent: 'flex-end',
 //   },
 //   imageOptionsContent: {
@@ -1128,7 +1247,8 @@
 //     borderTopLeftRadius: 20,
 //     borderTopRightRadius: 20,
 //     padding: 20,
-//     paddingBottom: 40,
+//     paddingBottom: 50,
+//     minHeight: 400,
 //   },
 //   imageOptionsTitle: {
 //     fontSize: 18,
@@ -1141,9 +1261,9 @@
 //     flexDirection: 'row',
 //     alignItems: 'center',
 //     backgroundColor: '#F0F2F5',
-//     padding: 16,
+//     padding: 18,
 //     borderRadius: 12,
-//     marginBottom: 12,
+//     marginBottom: 14,
 //   },
 //   imageOptionText: {
 //     fontSize: 16,
@@ -1193,6 +1313,7 @@
 // });
 
 
+
 import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -1228,7 +1349,6 @@ export default function CreateIdeaScreen() {
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [fileType, setFileType] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
   const [imageScale, setImageScale] = useState(1);
   const [beSupportNeeded, setBeSupportNeeded] = useState(null);
@@ -1236,8 +1356,6 @@ export default function CreateIdeaScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showFileOptions, setShowFileOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Validation error states
   const [teamMembersError, setTeamMembersError] = useState('');
   const [mobileNumberError, setMobileNumberError] = useState('');
 
@@ -1260,7 +1378,6 @@ export default function CreateIdeaScreen() {
     setMobileNumberError('');
   };
 
-  // Validation function for Team Members (alphabets, spaces, comma, dot - NO numbers)
   const validateTeamMembers = (text) => {
     const regex = /^[a-zA-Z\s,.]*$/;
     if (!regex.test(text)) {
@@ -1271,14 +1388,12 @@ export default function CreateIdeaScreen() {
     return true;
   };
 
-  // Handle Team Members input
   const handleTeamMembersChange = (text) => {
     if (validateTeamMembers(text)) {
       setTeamMembers(text);
     }
   };
 
-  // Validation function for Mobile Number (only digits)
   const validateMobileNumber = (text) => {
     if (text.length > 0 && text.length < 10) {
       setMobileNumberError('Mobile number must be 10 digits');
@@ -1288,9 +1403,7 @@ export default function CreateIdeaScreen() {
     return true;
   };
 
-  // Handle Mobile Number input - FIXED: Allow only numbers
   const handleMobileNumberChange = (text) => {
-    // Only allow digits, remove any non-numeric characters
     const numericText = text.replace(/[^0-9]/g, '');
     setMobileNumber(numericText);
     validateMobileNumber(numericText);
@@ -1362,7 +1475,10 @@ export default function CreateIdeaScreen() {
         const selectedFile = result.assets ? result.assets[0] : result;
         setFile(selectedFile.uri);
         setFileType('pdf');
-        setFileName(selectedFile.name);
+        // CRITICAL: Clean filename - web compatible format
+        const timestamp = Date.now();
+        const cleanName = `document_${timestamp}.pdf`;
+        setFileName(cleanName);
         setShowFileOptions(false);
       }
     } catch (error) {
@@ -1435,6 +1551,7 @@ export default function CreateIdeaScreen() {
           reportingManagerEmail: data.data.managerEmail || '',
         });
       } catch (error) {
+        console.error('Error fetching employee details:', error);
       }
     };
     fetchEmployeeDetails();
@@ -1462,24 +1579,23 @@ export default function CreateIdeaScreen() {
         }
 
         const fileInfo = await FileSystem.getInfoAsync(fileUri);
-
         if (!fileInfo.exists) throw new Error('File does not exist');
 
         let mimeType = 'application/octet-stream';
         const extension = fileName.split('.').pop()?.toLowerCase();
 
-        if (fileType === 'pdf' || extension === 'pdf') mimeType = 'application/pdf';
-        else if (extension === 'png') mimeType = 'image/png';
-        else if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg';
-        else if (extension === 'gif') mimeType = 'image/gif';
-        else if (extension === 'webp') mimeType = 'image/webp';
-
-        const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        if (fileType === 'pdf' || extension === 'pdf') {
+          mimeType = 'application/pdf';
+        } else if (extension === 'png') {
+          mimeType = 'image/png';
+        } else if (extension === 'jpg' || extension === 'jpeg') {
+          mimeType = 'image/jpeg';
+        }
 
         const fileToUpload = {
           uri: fileUri,
           type: mimeType,
-          name: cleanFileName,
+          name: fileName,
         };
 
         formData.append('BeforeImplementationImage', fileToUpload);
@@ -1491,14 +1607,45 @@ export default function CreateIdeaScreen() {
     return formData;
   };
 
+  // CRITICAL FIX: Multiple field names ko check karo
+  const extractFilePath = (responseData) => {
+    const possibleFields = [
+      'beforeImplementationImage',
+      'beforeImplementationImagePath', 
+      'BeforeImplementationImagePath',
+      'imagePath',
+      'ImagePath',
+      'filePath',
+      'FilePath'
+    ];
+    
+    for (const field of possibleFields) {
+      if (responseData[field]) {
+        return responseData[field];
+      }
+    }
+    return null;
+  };
+
+  const normalizeFilePath = (path) => {
+    if (!path) return null;
+    
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    let cleanPath = path.replace(/^[\/\\]+/, '');
+    
+    cleanPath = cleanPath.replace(/\\/g, '/');
+    
+    return `${BASE_URL}/${cleanPath}`;
+  };
+
   const handleSaveDraft = async () => {
-    // For Draft: Only Idea Description is mandatory
     if (!ideaDescription.trim()) {
       Alert.alert('Required Field', 'Idea Description is required to save draft.');
       return;
     }
 
-    // If mobile number is provided, validate it
     if (mobileNumber && !/^\d{10}$/.test(mobileNumber)) {
       Alert.alert('Invalid Mobile Number', 'Please enter a valid 10 digit mobile number.');
       return;
@@ -1525,21 +1672,21 @@ export default function CreateIdeaScreen() {
       });
 
       const text = await response.text();
+      console.log('API Response:', text);
 
       let data = {};
       try {
         data = JSON.parse(text);
       } catch (e) {
-        data = {};
+        console.error('Parse error:', e);
       }
 
       if (response.ok && data.success) {
-        const imagePath = data.data?.beforeImplementationImage 
-                       || data.data?.imagePath 
-                       || data.data?.BeforeImplementationImagePath;
-        const fullImageUrl = imagePath 
-          ? (imagePath.startsWith('http') ? imagePath : `${BASE_URL}${imagePath}`)
-          : null;
+        const rawPath = extractFilePath(data.data);
+        const fullImageUrl = normalizeFilePath(rawPath);
+
+        console.log('Raw Path:', rawPath);
+        console.log('Full URL:', fullImageUrl);
 
         const ideaData = {
           ...data.data,
@@ -1547,6 +1694,7 @@ export default function CreateIdeaScreen() {
           beforeImplementationImagePath: fullImageUrl,
           beforeImplementationImage: fullImageUrl,
           imagePath: fullImageUrl,
+          fileType: fileType,
         };
 
         resetForm();
@@ -1560,6 +1708,7 @@ export default function CreateIdeaScreen() {
         Alert.alert('Error', data?.message || 'Failed to save draft.');
       }
     } catch (error) {
+      console.error('Network error:', error);
       Alert.alert('Error', 'Network error, please try again.');
     } finally {
       setIsSubmitting(false);
@@ -1567,7 +1716,6 @@ export default function CreateIdeaScreen() {
   };
 
   const handleBeforeSubmit = () => {
-    // For Publish: All fields are mandatory
     if (!ideaDescription.trim()) {
       Alert.alert('Required Field', 'Idea Description is required.');
       return;
@@ -1642,28 +1790,28 @@ export default function CreateIdeaScreen() {
       });
 
       const text = await response.text();
+      console.log('API Response:', text);
 
       let data = {};
       try {
         data = JSON.parse(text);
       } catch (e) {
-        data = {};
+        console.error('Parse error:', e);
       }
 
       if (response.ok && data.success) {
-        const imagePath = data.data?.beforeImplementationImage 
-                       || data.data?.imagePath 
-                       || data.data?.BeforeImplementationImagePath;
-        
-        const fullImageUrl = imagePath 
-          ? (imagePath.startsWith('http') ? imagePath : `${BASE_URL}${imagePath}`)
-          : null;
+        const rawPath = extractFilePath(data.data);
+        const fullImageUrl = normalizeFilePath(rawPath);
+
+        console.log('Raw Path:', rawPath);
+        console.log('Full URL:', fullImageUrl);
 
         const ideaData = {
           ...data.data,
           beforeImplementationImagePath: fullImageUrl,
           beforeImplementationImage: fullImageUrl,
           imagePath: fullImageUrl,
+          fileType: fileType,
         };
 
         resetForm();
@@ -1676,6 +1824,7 @@ export default function CreateIdeaScreen() {
         Alert.alert('Error', data?.message || 'Failed to create idea.');
       }
     } catch (error) {
+      console.error('Network error:', error);
       Alert.alert('Error', 'Network error, please try again.');
     } finally {
       setIsSubmitting(false);
@@ -2028,55 +2177,24 @@ export default function CreateIdeaScreen() {
       )}
 
       <Modal visible={showConfirm} transparent={true} animationType="fade">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: '#fff',
-              width: '80%',
-              padding: 20,
-              borderRadius: 10,
-              alignItems: 'center',
-            }}
-          >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', width: '80%', padding: 20, borderRadius: 10, alignItems: 'center' }}>
             <Feather name="check-circle" size={40} color="#2196F3" />
-            <Text style={{ fontSize: 18, fontWeight: 'bold', marginVertical: 10 }}>
-              Save & Publish
-            </Text>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginVertical: 10 }}>Save & Publish</Text>
             <Text style={{ fontSize: 14, textAlign: 'center', color: '#333' }}>
               Are you sure you want to save and publish this record?
             </Text>
             <View style={{ flexDirection: 'row', marginTop: 20 }}>
               <TouchableOpacity
-                style={{
-                  backgroundColor: '#ddd',
-                  paddingVertical: 10,
-                  paddingHorizontal: 20,
-                  borderRadius: 8,
-                  marginRight: 10,
-                }}
+                style={{ backgroundColor: '#ddd', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, marginRight: 10 }}
                 onPress={() => setShowConfirm(false)}
                 disabled={isSubmitting}
               >
                 <Text style={{ color: '#333', fontWeight: '600' }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{
-                  backgroundColor: '#00B894',
-                  paddingVertical: 10,
-                  paddingHorizontal: 20,
-                  borderRadius: 8,
-                }}
-                onPress={() => {
-                  setShowConfirm(false);
-                  handleFinalSubmit();
-                }}
+                style={{ backgroundColor: '#00B894', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 }}
+                onPress={() => { setShowConfirm(false); handleFinalSubmit(); }}
                 disabled={isSubmitting}
               >
                 <Text style={{ color: '#fff', fontWeight: '600' }}>Save & Publish</Text>
@@ -2095,9 +2213,7 @@ const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, 
       {label} {required && <Text style={styles.required}>*</Text>}
     </Text>
     <View style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline]}>
-      <View style={styles.iconContainer}>
-        {icon}
-      </View>
+      <View style={styles.iconContainer}>{icon}</View>
       <TextInput
         style={[styles.input, multiline && styles.textArea]}
         placeholder={placeholder}
@@ -2109,9 +2225,7 @@ const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, 
         maxLength={maxLength}
       />
     </View>
-    {error ? (
-      <Text style={styles.errorText}>{error}</Text>
-    ) : null}
+    {error ? <Text style={styles.errorText}>{error}</Text> : null}
     {maxLength && <Text style={styles.charCount}>{value.length}/{maxLength}</Text>}
   </View>
 );
@@ -2122,9 +2236,7 @@ const PickerField = ({ label, icon, selectedValue, onValueChange, options, requi
       {label} {required && <Text style={styles.required}>*</Text>}
     </Text>
     <View style={styles.inputWrapper}>
-      <View style={styles.iconContainer}>
-        {icon}
-      </View>
+      <View style={styles.iconContainer}>{icon}</View>
       <Picker selectedValue={selectedValue} onValueChange={onValueChange} style={styles.picker} dropdownIconColor="#666">
         <Picker.Item label="Select" value="" />
         {options.map((option, index) => (
@@ -2141,17 +2253,11 @@ const RadioField = ({ label, value, setValue, required }) => (
       {label} {required && <Text style={styles.required}>*</Text>}
     </Text>
     <View style={styles.radioRow}>
-      <TouchableOpacity 
-        style={styles.radioOption} 
-        onPress={() => setValue('Yes')}
-      >
+      <TouchableOpacity style={styles.radioOption} onPress={() => setValue('Yes')}>
         <View style={[styles.radioCircle, value === 'Yes' && styles.radioSelected]} />
         <Text style={styles.radioText}>Yes</Text>
       </TouchableOpacity>
-      <TouchableOpacity 
-        style={styles.radioOption} 
-        onPress={() => setValue('No')}
-      >
+      <TouchableOpacity style={styles.radioOption} onPress={() => setValue('No')}>
         <View style={[styles.radioCircle, value === 'No' && styles.radioSelected]} />
         <Text style={styles.radioText}>No</Text>
       </TouchableOpacity>
@@ -2169,340 +2275,119 @@ const FieldRow = ({ label, value }) => (
 const styles = StyleSheet.create({
   container: { backgroundColor: '#F5F8FF', padding: 20, paddingBottom: 50 },
   stickyHeader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#F5F8FF',
-    paddingVertical: 15,
-    zIndex: 10,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: '#F5F8FF',
+    paddingVertical: 15, zIndex: 10, elevation: 5, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4,
   },
   heading: { fontSize: 22, fontWeight: 'bold', color: '#2c3e50', textAlign: 'center' },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 5,
+    backgroundColor: '#fff', borderRadius: 16, padding: 20, shadowColor: '#000',
+    shadowOpacity: 0.08, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10, elevation: 5,
   },
   inputBlock: { marginBottom: 18 },
   label: { fontSize: 14, fontWeight: '600', marginBottom: 6, color: '#333' },
   required: { color: 'red' },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F2F5',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F2F5',
+    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
   },
-  inputWrapperMultiline: { 
-    alignItems: 'flex-start',
-    paddingTop: 12,
-  },
-  iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  input: { 
-    flex: 1, 
-    fontSize: 16, 
-    color: '#333',
-  },
+  inputWrapperMultiline: { alignItems: 'flex-start', paddingTop: 12 },
+  iconContainer: { justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  input: { flex: 1, fontSize: 16, color: '#333' },
   picker: { flex: 1, color: '#333' },
-  textArea: { 
-    height: 100, 
-    textAlignVertical: 'top',
-    paddingTop: 0,
-  },
+  textArea: { height: 100, textAlignVertical: 'top', paddingTop: 0 },
   charCount: { alignSelf: 'flex-end', fontSize: 12, color: '#888', marginTop: 4 },
-  errorText: { 
-    color: 'red', 
-    fontSize: 12, 
-    marginTop: 4,
-    fontWeight: '500',
-  },
+  errorText: { color: 'red', fontSize: 12, marginTop: 4, fontWeight: '500' },
   fileInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F2F5',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    overflow: 'hidden',
-    marginBottom: 10,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F2F5',
+    borderRadius: 8, borderWidth: 1, borderColor: '#ddd', overflow: 'hidden', marginBottom: 10,
   },
   chooseFileButton: {
-    backgroundColor: '#e0e0e0',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRightWidth: 1,
-    borderRightColor: '#ccc',
+    backgroundColor: '#e0e0e0', paddingHorizontal: 16, paddingVertical: 12,
+    borderRightWidth: 1, borderRightColor: '#ccc',
   },
-  chooseFileText: {
-    color: '#333',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  fileNameDisplay: {
-    flex: 1,
-    paddingHorizontal: 12,
-    color: '#666',
-    fontSize: 14,
-  },
-  eyeIconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-  },
-  previewText: {
-    marginLeft: 6,
-    color: '#2196F3',
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  chooseFileText: { color: '#333', fontSize: 14, fontWeight: '500' },
+  fileNameDisplay: { flex: 1, paddingHorizontal: 12, color: '#666', fontSize: 14 },
+  eyeIconContainer: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start' },
+  previewText: { marginLeft: 6, color: '#2196F3', fontSize: 14, fontWeight: '500' },
   pdfInfoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3E0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF3E0',
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, alignSelf: 'flex-start',
   },
-  pdfInfoText: {
-    marginLeft: 8,
-    color: '#FF5722',
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  pdfInfoText: { marginLeft: 8, color: '#FF5722', fontSize: 14, fontWeight: '500' },
   dateInputWeb: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F0F2F5',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#F0F2F5', borderRadius: 8, borderWidth: 1, borderColor: '#ddd',
+    paddingHorizontal: 12, paddingVertical: 12,
   },
-  dateDisplayText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  daysRemainingText: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 6,
-    fontStyle: 'italic',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    gap: 10,
-  },
+  dateDisplayText: { color: '#333', fontSize: 14 },
+  daysRemainingText: { fontSize: 13, color: '#666', marginTop: 6, fontStyle: 'italic' },
+  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, gap: 10 },
   draftButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#e2e2e2',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    flex: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#e2e2e2', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, flex: 1,
   },
   draftText: { marginLeft: 7, fontSize: 16, color: '#333', fontWeight: '600' },
   submitButton: {
-    backgroundColor: '#00B894',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#00B894', paddingVertical: 12, paddingHorizontal: 20,
+    borderRadius: 10, flex: 1, alignItems: 'center', justifyContent: 'center',
   },
   submitText: { color: '#fff', fontSize: 16, fontWeight: '500' },
   radioRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   radioOption: { flexDirection: 'row', alignItems: 'center', marginRight: 20 },
   radioCircle: {
-    height: 18,
-    width: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: '#666',
-    marginRight: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    height: 18, width: 18, borderRadius: 9, borderWidth: 2, borderColor: '#666',
+    marginRight: 8, alignItems: 'center', justifyContent: 'center',
   },
   radioSelected: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
   radioText: { fontSize: 14, color: '#333' },
   tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    backgroundColor: '#e0e0e0',
-    alignItems: 'center',
-    borderRadius: 8,
-    marginHorizontal: 2,
+    flex: 1, paddingVertical: 12, backgroundColor: '#e0e0e0',
+    alignItems: 'center', borderRadius: 8, marginHorizontal: 2,
   },
-  tabActive: {
-    backgroundColor: '#00B894',
-  },
-  tabText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
+  tabActive: { backgroundColor: '#00B894' },
+  tabText: { color: '#fff', fontWeight: '600' },
   fieldRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    flexDirection: 'row', marginBottom: 12, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
   },
-  fieldLabel: {
-    fontWeight: 'bold',
-    flex: 1.2,
-    color: '#333',
-    fontSize: 14,
-  },
-  fieldValue: {
-    flex: 2,
-    color: '#555',
-    fontSize: 14,
-  },
-  loadingText: {
-    color: '#555',
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 16,
-  },
+  fieldLabel: { fontWeight: 'bold', flex: 1.2, color: '#333', fontSize: 14 },
+  fieldValue: { flex: 2, color: '#555', fontSize: 14 },
+  loadingText: { color: '#555', textAlign: 'center', marginTop: 20, fontSize: 16 },
   fullScreenContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center', alignItems: 'center',
   },
-  closeButton: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    zIndex: 3,
-    padding: 10,
-  },
+  closeButton: { position: 'absolute', top: 40, right: 20, zIndex: 3, padding: 10 },
   zoomControls: {
-    position: 'absolute',
-    bottom: 40,
-    flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 25,
-    padding: 10,
-    zIndex: 2,
-    alignItems: 'center',
+    position: 'absolute', bottom: 40, flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 25, padding: 10, zIndex: 2, alignItems: 'center',
   },
-  zoomButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  zoomText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginHorizontal: 10,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  fullScreenImage: {
-    width: 350,
-    height: 600,
-  },
-  imageOptionsContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
+  zoomButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 },
+  zoomText: { color: '#fff', fontSize: 16, fontWeight: '600', marginHorizontal: 10 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  fullScreenImage: { width: 350, height: 600 },
+  imageOptionsContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   imageOptionsContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 50,
-    minHeight: 400,
+    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 20, paddingBottom: 50, minHeight: 400,
   },
-  imageOptionsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
+  imageOptionsTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 20, textAlign: 'center' },
   imageOptionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F2F5',
-    padding: 18,
-    borderRadius: 12,
-    marginBottom: 14,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F2F5',
+    padding: 18, borderRadius: 12, marginBottom: 14,
   },
-  imageOptionText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-    marginLeft: 15,
-  },
-  cancelButton: {
-    backgroundColor: '#FFE5E5',
-    marginTop: 10,
-    justifyContent: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    color: '#FF3B30',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
+  imageOptionText: { fontSize: 16, color: '#333', fontWeight: '600', marginLeft: 15 },
+  cancelButton: { backgroundColor: '#FFE5E5', marginTop: 10, justifyContent: 'center' },
+  cancelButtonText: { fontSize: 16, color: '#FF3B30', fontWeight: '600', textAlign: 'center' },
   loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
   },
   loadingCard: {
-    backgroundColor: '#fff',
-    padding: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 10,
+    backgroundColor: '#fff', padding: 30, borderRadius: 15, alignItems: 'center',
+    shadowColor: '#000', shadowOpacity: 0.3, shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10, elevation: 10,
   },
-  loadingOverlayText: {
-    marginTop: 15,
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-  },
+  loadingOverlayText: { marginTop: 15, fontSize: 16, color: '#333', fontWeight: '600' },
 });

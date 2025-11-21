@@ -10,6 +10,7 @@ import {
   ScrollView,
   Modal,
   SafeAreaView,
+  Linking,
 } from "react-native";
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,24 +19,23 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { REJECTED_BY_ME_URL, IDEA_DETAIL_URL } from "../src/context/api";
 
-// ✅ FIXED: URL Normalization Function (copied from TeamIdeasScreen)
 const normalizeImagePath = (path) => {
   if (!path) return null;
-  
+
   let cleanPath = path;
   const basePattern = 'https://ideabank-api-dev.abisaio.com';
-  
+
   const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-  
+
   if (occurrences > 1) {
     const lastIndex = cleanPath.lastIndexOf(basePattern);
     cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
   }
-  
+
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
   }
-  
+
   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
   return fullUrl;
@@ -114,11 +114,11 @@ const getStatusColor = (status) => {
 
 const shouldShowImplementationDetails = (ideaDetail) => {
   if (!ideaDetail) return false;
-  
+
   if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
     return true;
   }
-  
+
   const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
   return type === "implementation" || type === "implement";
 };
@@ -144,6 +144,7 @@ export default function RejectedByMeScreen() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [ideaDetail, setIdeaDetail] = useState(null);
   const [ideas, setIdeas] = useState([]);
+  const [allIdeasOriginal, setAllIdeasOriginal] = useState([]);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showImage, setShowImage] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
@@ -156,39 +157,57 @@ export default function RejectedByMeScreen() {
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
 
-  const fetchRejectedIdeas = async (from, to) => {
+  const fetchRejectedIdeas = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const token = await AsyncStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
       let allIdeas = [];
       let currentPage = 1;
       let hasMorePages = true;
+      let apiTotalItems = 0;
 
       while (hasMorePages) {
-        let url = `${REJECTED_BY_ME_URL}?page=${currentPage}&pageSize=10`;
-        if (from) url += `&fromDate=${from}`;
-        if (to) url += `&toDate=${to}`;
+        const baseUrl = REJECTED_BY_ME_URL.split('?')[0];
+        let url = `${baseUrl}?page=${currentPage}&pageSize=10`;
 
-        const response = await axios.get(url, { headers });
-        const items = response.data?.data?.items || [];
+        const response = await axios.get(url, { headers: authHeaders });
 
-        allIdeas = [...allIdeas, ...items];
+        if (response.data && response.data.data && Array.isArray(response.data.data.items)) {
+          const { items, totalPages, totalItems, hasNextPage } = response.data.data;
 
-        const { hasNextPage, totalPages } = response.data.data || {};
-        if (hasNextPage === false || (totalPages && currentPage >= totalPages) || items.length === 0) {
+          if (currentPage === 1 && totalItems !== undefined) {
+            apiTotalItems = totalItems;
+          }
+
+          if (items.length > 0) {
+            allIdeas = [...allIdeas, ...items];
+          }
+
+          if (hasNextPage === false || items.length === 0 || (totalPages && currentPage >= totalPages)) {
+            hasMorePages = false;
+          }
+        } else {
           hasMorePages = false;
         }
 
         currentPage++;
-        if (currentPage > 100) hasMorePages = false;
+        if (currentPage > 100) {
+          hasMorePages = false;
+        }
       }
 
+      setAllIdeasOriginal(allIdeas);
       setIdeas(allIdeas);
-      setTotalItems(allIdeas.length);
+      setTotalItems(apiTotalItems || allIdeas.length);
+
     } catch (error) {
+      console.error("Error fetching rejected ideas:", error);
       Alert.alert("Error", "Failed to load rejected ideas.");
+      setIdeas([]);
+      setAllIdeasOriginal([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
@@ -198,6 +217,7 @@ export default function RejectedByMeScreen() {
     fetchRejectedIdeas();
   }, []);
 
+  // ✅ FIXED: Real-time search (like Pending Screen)
   const filteredIdeas = Array.isArray(ideas)
     ? ideas.filter(idea => {
       const searchLower = searchText.trim().toLowerCase();
@@ -231,7 +251,7 @@ export default function RejectedByMeScreen() {
 
       if (response?.data?.success && response?.data?.data) {
         const detail = response.data.data;
-        
+
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
@@ -243,16 +263,16 @@ export default function RejectedByMeScreen() {
             afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
           } : null
         };
-        
+
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
-        
+
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
       } else if (response?.data) {
         const detail = response.data;
-        
+
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
@@ -264,10 +284,10 @@ export default function RejectedByMeScreen() {
             afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
           } : null
         };
-        
+
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
-        
+
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
@@ -282,16 +302,51 @@ export default function RejectedByMeScreen() {
   };
 
   const applyFilters = () => {
-    let from = fromDate ? fromDate.toISOString().split('T')[0] : null;
-    let to = toDate ? toDate.toISOString().split('T')[0] : null;
-    fetchRejectedIdeas(from, to);
-    setShowFilters(false);
+    setLoading(true);
+    try {
+      let filteredIdeas = [...allIdeasOriginal];
+
+      if (fromDate || toDate) {
+        filteredIdeas = filteredIdeas.filter(idea => {
+          if (!idea.creationDate) return false;
+          const ideaDate = new Date(idea.creationDate);
+          ideaDate.setHours(0, 0, 0, 0);
+
+          if (fromDate && toDate) {
+            const from = new Date(fromDate);
+            from.setHours(0, 0, 0, 0);
+            const to = new Date(toDate);
+            to.setHours(23, 59, 59, 999);
+            return ideaDate >= from && ideaDate <= to;
+          } else if (fromDate) {
+            const from = new Date(fromDate);
+            from.setHours(0, 0, 0, 0);
+            return ideaDate >= from;
+          } else if (toDate) {
+            const to = new Date(toDate);
+            to.setHours(23, 59, 59, 999);
+            return ideaDate <= to;
+          }
+          return true;
+        });
+      }
+
+      setIdeas(filteredIdeas);
+      setTotalItems(filteredIdeas.length);
+      setShowFilters(false);
+
+    } catch (error) {
+      console.error("Filter error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetFilters = () => {
     setFromDate(null);
     setToDate(null);
-    fetchRejectedIdeas();
+    setIdeas(allIdeasOriginal);
+    setTotalItems(allIdeasOriginal.length);
   };
 
   const closeModal = () => {
@@ -304,9 +359,30 @@ export default function RejectedByMeScreen() {
 
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
+
+    if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
+      Alert.alert(
+        'PDF Document',
+        'This is a PDF document. Would you like to open it?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Open',
+            onPress: () => {
+              Linking.openURL(finalUrl).catch(err => {
+                Alert.alert('Error', 'Unable to open PDF. Please try accessing it from a web browser.');
+              });
+            }
+          }
+        ]
+      );
+      return;
+    }
+
     setCurrentImageUrl(finalUrl);
     setShowImage(true);
   };
+
 
   const renderIdeaCard = ({ item }) => (
     <TouchableOpacity
@@ -344,8 +420,8 @@ export default function RejectedByMeScreen() {
         <View style={styles.rowDetail}>
           <Text style={styles.label}>Status:</Text>
           <View style={{ flex: 1, alignItems: 'flex-end' }}>
-            <Text 
-              style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]} 
+            <Text
+              style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}
               numberOfLines={2}
             >
               {item.status || "N/A"}
@@ -360,8 +436,8 @@ export default function RejectedByMeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Rejected Ideas</Text>
-        <TouchableOpacity 
-          style={styles.filterButton} 
+        <TouchableOpacity
+          style={styles.filterButton}
           onPress={() => setShowFilters(!showFilters)}
         >
           <Text style={styles.filterButtonText}>
@@ -388,8 +464,8 @@ export default function RejectedByMeScreen() {
         <View style={styles.filtersContainer}>
           <Text style={styles.filterLabel}>Create Date Range</Text>
 
-          <TouchableOpacity 
-            style={styles.dateInput} 
+          <TouchableOpacity
+            style={styles.dateInput}
             onPress={() => setShowFromPicker(true)}
           >
             <Text style={styles.dateInputText}>
@@ -414,8 +490,8 @@ export default function RejectedByMeScreen() {
             />
           )}
 
-          <TouchableOpacity 
-            style={styles.dateInput} 
+          <TouchableOpacity
+            style={styles.dateInput}
             onPress={() => setShowToPicker(true)}
           >
             <Text style={styles.dateInputText}>
@@ -495,16 +571,16 @@ export default function RejectedByMeScreen() {
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             {selectedIdea && ideaDetail && (
               <>
-                <TouchableOpacity 
-                  style={styles.collapsibleHeader} 
-                  onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} 
+                <TouchableOpacity
+                  style={styles.collapsibleHeader}
+                  onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
-                  <Ionicons 
-                    name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color="#2c5aa0" 
+                  <Ionicons
+                    name={employeeInfoExpanded ? "chevron-up" : "chevron-down"}
+                    size={24}
+                    color="#2c5aa0"
                   />
                 </TouchableOpacity>
 
@@ -567,16 +643,16 @@ export default function RejectedByMeScreen() {
                   </View>
                 )}
 
-                <TouchableOpacity 
-                  style={styles.collapsibleHeader} 
-                  onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} 
+                <TouchableOpacity
+                  style={styles.collapsibleHeader}
+                  onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
-                  <Ionicons 
-                    name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color="#2c5aa0" 
+                  <Ionicons
+                    name={ideaInfoExpanded ? "chevron-up" : "chevron-down"}
+                    size={24}
+                    color="#2c5aa0"
                   />
                 </TouchableOpacity>
 
@@ -613,35 +689,36 @@ export default function RejectedByMeScreen() {
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
                       <View style={{ flex: 1, alignItems: 'flex-end' }}>
                         {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
-                          <TouchableOpacity 
-                            style={styles.imagePreviewContainer} 
-                            onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
-                          >
-                            <Image 
-                              source={{ 
-                                uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath 
-                              }} 
-                              style={styles.thumbnailSmall} 
-                              contentFit="cover"
-                              cachePolicy="none"
-                            />
-                          </TouchableOpacity>
+                          ideaDetail.beforeImplementationImagePath?.toLowerCase().includes('.pdf') || ideaDetail.imagePath?.toLowerCase().includes('.pdf') ? (
+                            <TouchableOpacity
+                              onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                            >
+                              <View style={styles.pdfThumbnailContainer}>
+                                <Ionicons name="document-text" size={30} color="#FF5722" />
+                                <Text style={styles.pdfThumbnailText}>PDF</Text>
+                              </View>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity
+                              style={styles.imagePreviewContainer}
+                              onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                            >
+                              <Image
+                                source={{
+                                  uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath
+                                }}
+                                style={styles.thumbnailSmall}
+                                contentFit="cover"
+                                cachePolicy="none"
+                              />
+                            </TouchableOpacity>
+                          )
                         ) : (
                           <Text style={styles.valueDetail}>N/A</Text>
                         )}
                       </View>
                     </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Status:</Text>
-                      <Text 
-                        style={[
-                          styles.statusBadgeDetail, 
-                          { backgroundColor: getStatusColor(ideaDetail.ideaStatus || ideaDetail.status) }
-                        ]}
-                      >
-                        {ideaDetail.ideaStatus || ideaDetail.status || "N/A"}
-                      </Text>
-                    </View>
+
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Idea Description:</Text>
                       <Text style={styles.valueDetail}>
@@ -703,28 +780,28 @@ export default function RejectedByMeScreen() {
 
                 {shouldShowImplementationDetails(ideaDetail) && (
                   <>
-                    <TouchableOpacity 
-                      style={styles.collapsibleHeader} 
-                      onPress={() => setShowImplementationDetails(!showImplementationDetails)} 
+                    <TouchableOpacity
+                      style={styles.collapsibleHeader}
+                      onPress={() => setShowImplementationDetails(!showImplementationDetails)}
                       activeOpacity={0.7}
                     >
                       <Text style={styles.collapsibleHeaderText}>
                         Implementation Details
                       </Text>
-                      <Ionicons 
-                        name={showImplementationDetails ? "chevron-up" : "chevron-down"} 
-                        size={24} 
-                        color="#2c5aa0" 
+                      <Ionicons
+                        name={showImplementationDetails ? "chevron-up" : "chevron-down"}
+                        size={24}
+                        color="#2c5aa0"
                       />
                     </TouchableOpacity>
-                    
+
                     {showImplementationDetails && (
                       <View style={styles.cardDetail}>
                         <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Implementation Status:</Text>
-                          <Text 
+                          <Text
                             style={[
-                              styles.statusBadgeDetail, 
+                              styles.statusBadgeDetail,
                               { backgroundColor: getStatusColor(ideaDetail.implementationCycle?.status) }
                             ]}
                           >
@@ -734,19 +811,19 @@ export default function RejectedByMeScreen() {
                         <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Implementation Details:</Text>
                           <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.implementation || 
-                             ideaDetail.implementationDetail || 
-                             ideaDetail.implementation || 
-                             "Not provided"}
+                            {ideaDetail.implementationCycle?.implementation ||
+                              ideaDetail.implementationDetail ||
+                              ideaDetail.implementation ||
+                              "Not provided"}
                           </Text>
                         </View>
                         <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
                           <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.outcome || 
-                             ideaDetail.implementationOutcome || 
-                             ideaDetail.outcome || 
-                             "Not provided"}
+                            {ideaDetail.implementationCycle?.outcome ||
+                              ideaDetail.implementationOutcome ||
+                              ideaDetail.outcome ||
+                              "Not provided"}
                           </Text>
                         </View>
                         {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
@@ -757,56 +834,70 @@ export default function RejectedByMeScreen() {
                             </Text>
                           </View>
                         )}
-                        {(ideaDetail.implementationCycle?.beforeImplementationImagePath || 
-                          ideaDetail.beforeImplementationImagePath || 
+
+                        {/* Before Implementation with PDF Support */}
+                        {(ideaDetail.implementationCycle?.beforeImplementationImagePath ||
+                          ideaDetail.beforeImplementationImagePath ||
                           ideaDetail.imagePath) && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>Before Implementation:</Text>
-                            <TouchableOpacity onPress={() => {
-                              const imagePath = ideaDetail.implementationCycle?.beforeImplementationImagePath || 
-                                               ideaDetail.beforeImplementationImagePath || 
-                                               ideaDetail.imagePath;
-                              openImagePreview(imagePath);
-                            }}>
-                              <Image 
-                                source={{
-                                  uri: ideaDetail.implementationCycle?.beforeImplementationImagePath || 
-                                       ideaDetail.beforeImplementationImagePath || 
-                                       ideaDetail.imagePath
-                                }}
-                                style={styles.implementationImage} 
-                                contentFit="cover"
-                                cachePolicy="none"
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        )}
-                        {(ideaDetail.implementationCycle?.afterImplementationImagePath || 
+                            <View style={styles.rowDetailWithBorder}>
+                              <Text style={styles.labelDetail}>Before Implementation:</Text>
+                              {(() => {
+                                const imagePath = ideaDetail.implementationCycle?.beforeImplementationImagePath ||
+                                  ideaDetail.beforeImplementationImagePath ||
+                                  ideaDetail.imagePath;
+                                return imagePath.toLowerCase().includes('.pdf') ? (
+                                  <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                    <View style={styles.pdfThumbnailContainer}>
+                                      <Ionicons name="document-text" size={30} color="#FF5722" />
+                                      <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                ) : (
+                                  <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                    <Image
+                                      source={{ uri: imagePath }}
+                                      style={styles.thumbnailSmall}
+                                      contentFit="cover"
+                                      cachePolicy="none"
+                                    />
+                                  </TouchableOpacity>
+                                );
+                              })()}
+                            </View>
+                          )}
+
+                        {/* After Implementation with PDF Support */}
+                        {(ideaDetail.implementationCycle?.afterImplementationImagePath ||
                           ideaDetail.afterImplementationImagePath) && (
-                          <View style={styles.implementationImageSection}>
-                            <Text style={styles.imageLabel}>After Implementation:</Text>
-                            <TouchableOpacity onPress={() => {
-                              const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || 
-                                               ideaDetail.afterImplementationImagePath;
-                              openImagePreview(imagePath);
-                            }}>
-                              <Image 
-                                source={{
-                                  uri: ideaDetail.implementationCycle?.afterImplementationImagePath || 
-                                       ideaDetail.afterImplementationImagePath
-                                }}
-                                style={styles.implementationImage} 
-                                contentFit="cover"
-                                cachePolicy="none"
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        )}
+                            <View style={styles.rowDetailWithBorder}>
+                              <Text style={styles.labelDetail}>After Implementation:</Text>
+                              {(() => {
+                                const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath ||
+                                  ideaDetail.afterImplementationImagePath;
+                                return imagePath.toLowerCase().includes('.pdf') ? (
+                                  <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                    <View style={styles.pdfThumbnailContainer}>
+                                      <Ionicons name="document-text" size={30} color="#FF5722" />
+                                      <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                ) : (
+                                  <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                    <Image
+                                      source={{ uri: imagePath }}
+                                      style={styles.thumbnailSmall}
+                                      contentFit="cover"
+                                      cachePolicy="none"
+                                    />
+                                  </TouchableOpacity>
+                                );
+                              })()}
+                            </View>
+                          )}
                       </View>
                     )}
                   </>
                 )}
-
                 <View style={styles.cardDetail}>
                   <Text style={styles.cardHeading}>Remarks</Text>
                   {(() => {
@@ -819,8 +910,8 @@ export default function RejectedByMeScreen() {
                         key={index}
                         title={remark.approverName || remark.title || "Unknown"}
                         comment={remark.comments || remark.comment || "No comment"}
-                        date={remark.approvalDate || remark.date ? 
-                              formatDateTime(remark.approvalDate || remark.date) : ""}
+                        date={remark.approvalDate || remark.date ?
+                          formatDateTime(remark.approvalDate || remark.date) : ""}
                       />
                     ));
                   })()}
@@ -846,9 +937,9 @@ export default function RejectedByMeScreen() {
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             <View style={styles.timelineCardContainer}>
               <View style={styles.timelineContainer}>
-                {ideaDetail?.timeline && 
-                 Array.isArray(ideaDetail.timeline) && 
-                 ideaDetail.timeline.length > 0 ? (
+                {ideaDetail?.timeline &&
+                  Array.isArray(ideaDetail.timeline) &&
+                  ideaDetail.timeline.length > 0 ? (
                   ideaDetail.timeline.map((item, idx) => (
                     <TimelineItem
                       key={idx}
@@ -1416,5 +1507,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#2c5aa0'
+  },
+
+  pdfThumbnailContainer: { 
+    width: 60, 
+    height: 60, 
+    borderRadius: 6, 
+    borderWidth: 1, 
+    borderColor: '#FF5722', 
+    backgroundColor: '#FFF3E0', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  pdfThumbnailText: { 
+    fontSize: 10, 
+    color: '#FF5722', 
+    fontWeight: 'bold', 
+    marginTop: 2 
   },
 });
