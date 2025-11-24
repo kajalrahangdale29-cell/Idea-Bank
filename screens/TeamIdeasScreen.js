@@ -22,29 +22,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TEAM_IDEAS_URL, IDEA_DETAIL_URL, UPDATE_STATUS_URL } from "../src/context/api";
 
-// ✅ FIXED: URL Normalization Function
 const normalizeImagePath = (path) => {
   if (!path) return null;
 
-  // Remove any duplicate BASE_URL patterns
   let cleanPath = path;
   const basePattern = 'https://ideabank-api-dev.abisaio.com';
 
-  // Count occurrences of the base URL
   const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
 
-  // If BASE_URL appears more than once, keep only the last occurrence
   if (occurrences > 1) {
     const lastIndex = cleanPath.lastIndexOf(basePattern);
     cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
   }
 
-  // If it's already a full URL, return as-is
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
   }
-
-  // Otherwise, prepend BASE_URL
   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
   return fullUrl;

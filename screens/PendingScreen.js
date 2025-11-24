@@ -27,7 +27,6 @@ import {
   SUBMIT_URL
 } from "../src/context/api";
 
-// ✅ FIXED: URL Normalization Function
 const normalizeImagePath = (path) => {
   if (!path) return null;
 
