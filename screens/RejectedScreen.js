@@ -41,6 +41,11 @@ const normalizeImagePath = (path) => {
   return fullUrl;
 };
 
+const getAlternateImageUrl = (url) => {
+  if (!url) return null;
+  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
   const date = new Date(dateString);
@@ -148,6 +153,8 @@ export default function RejectedByMeScreen() {
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showImage, setShowImage] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
+  const [imageRetryUrl, setImageRetryUrl] = useState(null);
+  const [imageLoadError, setImageLoadError] = useState({});
   const [totalItems, setTotalItems] = useState(0);
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
@@ -156,6 +163,15 @@ export default function RejectedByMeScreen() {
   const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
+
+  const handleImageError = (error) => {
+    if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
+      setCurrentImageUrl(imageRetryUrl);
+      setImageRetryUrl(null);
+    } else {
+      Alert.alert('Error', 'Failed to load image');
+    }
+  };
 
   const fetchRejectedIdeas = async () => {
     setLoading(true);
@@ -380,6 +396,7 @@ export default function RejectedByMeScreen() {
     }
 
     setCurrentImageUrl(finalUrl);
+    setImageRetryUrl(getAlternateImageUrl(finalUrl));
     setShowImage(true);
   };
 
@@ -698,7 +715,7 @@ export default function RejectedByMeScreen() {
                                 <Text style={styles.pdfThumbnailText}>PDF</Text>
                               </View>
                             </TouchableOpacity>
-                          ) : (
+                          ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
                             <TouchableOpacity
                               style={styles.imagePreviewContainer}
                               onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
@@ -710,8 +727,29 @@ export default function RejectedByMeScreen() {
                                 style={styles.thumbnailSmall}
                                 contentFit="cover"
                                 cachePolicy="none"
+                                placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                                transition={1000}
+                                onError={(e) => {
+                                  const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
+                                  if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+                                    setIdeaDetail(prev => ({
+                                      ...prev,
+                                      beforeImplementationImagePath: altUrl
+                                    }));
+                                  } else {
+                                    setImageLoadError(prev => ({
+                                      ...prev,
+                                      [`before_${ideaDetail.id}`]: true
+                                    }));
+                                  }
+                                }}
                               />
                             </TouchableOpacity>
+                          ) : (
+                            <View style={styles.imageErrorContainer}>
+                              <Ionicons name="image-outline" size={24} color="#999" />
+                              <Text style={styles.imageErrorText}>Image unavailable</Text>
+                            </View>
                           )
                         ) : (
                           <Text style={styles.valueDetail}>N/A</Text>
@@ -852,15 +890,36 @@ export default function RejectedByMeScreen() {
                                       <Text style={styles.pdfThumbnailText}>PDF</Text>
                                     </View>
                                   </TouchableOpacity>
-                                ) : (
+                                ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
                                   <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
                                     <Image
                                       source={{ uri: imagePath }}
                                       style={styles.thumbnailSmall}
                                       contentFit="cover"
                                       cachePolicy="none"
+                                      placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                                      transition={1000}
+                                      onError={(e) => {
+                                        const altUrl = getAlternateImageUrl(imagePath);
+                                        if (altUrl && imagePath !== altUrl) {
+                                          setIdeaDetail(prev => ({
+                                            ...prev,
+                                            beforeImplementationImagePath: altUrl
+                                          }));
+                                        } else {
+                                          setImageLoadError(prev => ({
+                                            ...prev,
+                                            [`before_${ideaDetail.id}`]: true
+                                          }));
+                                        }
+                                      }}
                                     />
                                   </TouchableOpacity>
+                                ) : (
+                                  <View style={styles.imageErrorContainer}>
+                                    <Ionicons name="image-outline" size={24} color="#999" />
+                                    <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                  </View>
                                 );
                               })()}
                             </View>
@@ -881,15 +940,31 @@ export default function RejectedByMeScreen() {
                                       <Text style={styles.pdfThumbnailText}>PDF</Text>
                                     </View>
                                   </TouchableOpacity>
-                                ) : (
+                                ) : !imageLoadError[`after_${ideaDetail.id}`] ? (
                                   <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
                                     <Image
                                       source={{ uri: imagePath }}
                                       style={styles.thumbnailSmall}
                                       contentFit="cover"
                                       cachePolicy="none"
+                                      onError={() => {
+                                        const altUrl = getAlternateImageUrl(imagePath);
+                                        if (altUrl && imagePath !== altUrl) {
+                                          setIdeaDetail(prev => ({
+                                            ...prev,
+                                            afterImplementationImagePath: altUrl
+                                          }));
+                                        } else {
+                                          setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
+                                        }
+                                      }}
                                     />
                                   </TouchableOpacity>
+                                ) : (
+                                  <View style={styles.imageErrorContainer}>
+                                    <Ionicons name="image-outline" size={24} color="#999" />
+                                    <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                  </View>
                                 );
                               })()}
                             </View>
@@ -968,6 +1043,7 @@ export default function RejectedByMeScreen() {
             onPress={() => {
               setShowImage(false);
               setCurrentImageUrl(null);
+              setImageRetryUrl(null);
             }}
           >
             <Ionicons name="close" size={24} color="#fff" />
@@ -978,7 +1054,7 @@ export default function RejectedByMeScreen() {
               style={styles.fullImage}
               contentFit="contain"
               cachePolicy="none"
-              onError={(e) => Alert.alert('Error', 'Failed to load image')}
+              onError={handleImageError}
             />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>

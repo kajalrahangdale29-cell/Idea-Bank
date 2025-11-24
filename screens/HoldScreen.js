@@ -11,6 +11,8 @@ const normalizeImagePath = (path) => {
   if (!path) return null;
 
   let cleanPath = path;
+
+  
   const basePattern = 'https://ideabank-api-dev.abisaio.com';
 
   const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
@@ -27,6 +29,11 @@ const normalizeImagePath = (path) => {
   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
   return fullUrl;
+};
+
+const getAlternateImageUrl = (url) => {
+  if (!url) return null;
+  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
 };
 
 const formatDate = (dateString) => {
@@ -138,6 +145,8 @@ const HoldScreen = () => {
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showImage, setShowImage] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
+  const [imageRetryUrl, setImageRetryUrl] = useState(null);
+  const [imageLoadError, setImageLoadError] = useState({});
   const [showRemarkModal, setShowRemarkModal] = useState(false);
   const [remarkType, setRemarkType] = useState("");
   const [remarkText, setRemarkText] = useState("");
@@ -146,6 +155,15 @@ const HoldScreen = () => {
   const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
+
+  const handleImageError = (error) => {
+    if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
+      setCurrentImageUrl(imageRetryUrl);
+      setImageRetryUrl(null);
+    } else {
+      Alert.alert('Error', 'Failed to load image');
+    }
+  };
 
   const fetchHoldIdeas = async (from, to) => {
     try {
@@ -400,6 +418,7 @@ const HoldScreen = () => {
     }
 
     setCurrentImageUrl(finalUrl);
+    setImageRetryUrl(getAlternateImageUrl(finalUrl));
     setShowImage(true);
   };
   const renderIdeaCard = ({ item }) => (
@@ -669,7 +688,7 @@ const HoldScreen = () => {
                                 <Text style={styles.pdfThumbnailText}>PDF</Text>
                               </View>
                             </TouchableOpacity>
-                          ) : (
+                          ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
                             <TouchableOpacity
                               style={styles.imagePreviewContainer}
                               onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
@@ -679,8 +698,29 @@ const HoldScreen = () => {
                                 style={styles.thumbnailSmall}
                                 contentFit="cover"
                                 cachePolicy="none"
+                                placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                                transition={1000}
+                                onError={(e) => {
+                                  const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
+                                  if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+                                    setIdeaDetail(prev => ({
+                                      ...prev,
+                                      beforeImplementationImagePath: altUrl
+                                    }));
+                                  } else {
+                                    setImageLoadError(prev => ({
+                                      ...prev,
+                                      [`before_${ideaDetail.id}`]: true
+                                    }));
+                                  }
+                                }}
                               />
                             </TouchableOpacity>
+                          ) : (
+                            <View style={styles.imageErrorContainer}>
+                              <Ionicons name="image-outline" size={24} color="#999" />
+                              <Text style={styles.imageErrorText}>Image unavailable</Text>
+                            </View>
                           )
                         ) : (
                           <Text style={styles.valueDetail}>N/A</Text>
@@ -803,15 +843,36 @@ const HoldScreen = () => {
                                       <Text style={styles.pdfThumbnailText}>PDF</Text>
                                     </View>
                                   </TouchableOpacity>
-                                ) : (
+                                ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
                                   <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
                                     <Image
                                       source={{ uri: imagePath }}
                                       style={styles.thumbnailSmall}
                                       contentFit="cover"
                                       cachePolicy="none"
+                                      placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                                      transition={1000}
+                                      onError={(e) => {
+                                        const altUrl = getAlternateImageUrl(imagePath);
+                                        if (altUrl && imagePath !== altUrl) {
+                                          setIdeaDetail(prev => ({
+                                            ...prev,
+                                            beforeImplementationImagePath: altUrl
+                                          }));
+                                        } else {
+                                          setImageLoadError(prev => ({
+                                            ...prev,
+                                            [`before_${ideaDetail.id}`]: true
+                                          }));
+                                        }
+                                      }}
                                     />
                                   </TouchableOpacity>
+                                ) : (
+                                  <View style={styles.imageErrorContainer}>
+                                    <Ionicons name="image-outline" size={24} color="#999" />
+                                    <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                  </View>
                                 );
                               })()}
                             </View>
@@ -832,15 +893,31 @@ const HoldScreen = () => {
                                       <Text style={styles.pdfThumbnailText}>PDF</Text>
                                     </View>
                                   </TouchableOpacity>
-                                ) : (
+                                ) : !imageLoadError[`after_${ideaDetail.id}`] ? (
                                   <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
                                     <Image
                                       source={{ uri: imagePath }}
                                       style={styles.thumbnailSmall}
                                       contentFit="cover"
                                       cachePolicy="none"
+                                      onError={() => {
+                                        const altUrl = getAlternateImageUrl(imagePath);
+                                        if (altUrl && imagePath !== altUrl) {
+                                          setIdeaDetail(prev => ({
+                                            ...prev,
+                                            afterImplementationImagePath: altUrl
+                                          }));
+                                        } else {
+                                          setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
+                                        }
+                                      }}
                                     />
                                   </TouchableOpacity>
+                                ) : (
+                                  <View style={styles.imageErrorContainer}>
+                                    <Ionicons name="image-outline" size={24} color="#999" />
+                                    <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                  </View>
                                 );
                               })()}
                             </View>
@@ -973,7 +1050,7 @@ const HoldScreen = () => {
         <View style={styles.imageModal}>
           <TouchableOpacity
             style={styles.closeButtonImage}
-            onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}
+            onPress={() => { setShowImage(false); setCurrentImageUrl(null); setImageRetryUrl(null); }}
           >
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
@@ -983,7 +1060,7 @@ const HoldScreen = () => {
               style={styles.fullImage}
               contentFit="contain"
               cachePolicy="none"
-              onError={(e) => Alert.alert('Error', 'Failed to load image')}
+              onError={handleImageError}
             />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>

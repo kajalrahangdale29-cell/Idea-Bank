@@ -50,6 +50,11 @@ const normalizeImagePath = (path) => {
   return fullUrl;
 };
 
+const getAlternateImageUrl = (url) => {
+  if (!url) return null;
+  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
   const date = new Date(dateString);
@@ -392,6 +397,8 @@ export default function PendingScreen() {
   const [selectedIdea, setSelectedIdea] = useState(null);
   const [showImage, setShowImage] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
+  const [imageRetryUrl, setImageRetryUrl] = useState(null);
+  const [imageLoadError, setImageLoadError] = useState({});
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [ideaDetail, setIdeaDetail] = useState(null);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
@@ -405,6 +412,15 @@ export default function PendingScreen() {
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
   const [showImplementationForm, setShowImplementationForm] = useState(false);
+
+  const handleImageError = (error) => {
+    if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
+      setCurrentImageUrl(imageRetryUrl);
+      setImageRetryUrl(null);
+    } else {
+      Alert.alert('Error', 'Failed to load image');
+    }
+  };
 
   useEffect(() => {
     fetchAllIdeas();
@@ -736,6 +752,7 @@ export default function PendingScreen() {
     }
 
     setCurrentImageUrl(finalUrl);
+    setImageRetryUrl(getAlternateImageUrl(finalUrl));
     setShowImage(true);
   };
   return (
@@ -989,7 +1006,7 @@ export default function PendingScreen() {
                               <Text style={styles.pdfThumbnailText}>PDF</Text>
                             </View>
                           </TouchableOpacity>
-                        ) : (
+                        ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
                           <TouchableOpacity
                             onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
                           >
@@ -997,8 +1014,29 @@ export default function PendingScreen() {
                               source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }}
                               style={styles.thumbnailSmall}
                               contentFit="cover"
+                              placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                              transition={1000}
+                              onError={(e) => {
+                                const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
+                                if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+                                  setIdeaDetail(prev => ({
+                                    ...prev,
+                                    beforeImplementationImagePath: altUrl
+                                  }));
+                                } else {
+                                  setImageLoadError(prev => ({
+                                    ...prev,
+                                    [`before_${ideaDetail.id}`]: true
+                                  }));
+                                }
+                              }}
                             />
                           </TouchableOpacity>
+                        ) : (
+                          <View style={styles.imageErrorContainer}>
+                            <Ionicons name="image-outline" size={24} color="#999" />
+                            <Text style={styles.imageErrorText}>Image unavailable</Text>
+                          </View>
                         )
                       ) : (
                         <Text style={styles.valueDetail}>N/A</Text>
@@ -1086,7 +1124,7 @@ export default function PendingScreen() {
                                   <Text style={styles.pdfThumbnailText}>PDF</Text>
                                 </View>
                               </TouchableOpacity>
-                            ) : (
+                            ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
                               <TouchableOpacity
                                 onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}
                               >
@@ -1094,8 +1132,32 @@ export default function PendingScreen() {
                                   source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }}
                                   style={styles.thumbnailSmall}
                                   contentFit="cover"
+                                  placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                                  transition={1000}
+                                  onError={(e) => {
+                                    const altUrl = getAlternateImageUrl(ideaDetail.implementationCycle.beforeImplementationImagePath);
+                                    if (altUrl && ideaDetail.implementationCycle.beforeImplementationImagePath !== altUrl) {
+                                      setIdeaDetail(prev => ({
+                                        ...prev,
+                                        implementationCycle: {
+                                          ...prev.implementationCycle,
+                                          beforeImplementationImagePath: altUrl
+                                        }
+                                      }));
+                                    } else {
+                                      setImageLoadError(prev => ({
+                                        ...prev,
+                                        [`before_${ideaDetail.id}`]: true
+                                      }));
+                                    }
+                                  }}
                                 />
                               </TouchableOpacity>
+                            ) : (
+                              <View style={styles.imageErrorContainer}>
+                                <Ionicons name="image-outline" size={24} color="#999" />
+                                <Text style={styles.imageErrorText}>Image unavailable</Text>
+                              </View>
                             )}
                           </View>
                         )}
@@ -1117,14 +1179,33 @@ export default function PendingScreen() {
                                     <Text style={styles.pdfThumbnailText}>PDF</Text>
                                   </View>
                                 </TouchableOpacity>
-                              ) : (
+                              ) : !imageLoadError[`after_${ideaDetail.id}`] ? (
                                 <TouchableOpacity onPress={() => openImagePreview(fullUrl)}>
                                   <Image
                                     source={{ uri: fullUrl }}
                                     style={styles.thumbnailSmall}
                                     contentFit="cover"
+                                    onError={() => {
+                                      const altUrl = getAlternateImageUrl(fullUrl);
+                                      if (altUrl && fullUrl !== altUrl) {
+                                        setIdeaDetail(prev => ({
+                                          ...prev,
+                                          implementationCycle: {
+                                            ...prev.implementationCycle,
+                                            afterImplementationImagePath: altUrl
+                                          }
+                                        }));
+                                      } else {
+                                        setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
+                                      }
+                                    }}
                                   />
                                 </TouchableOpacity>
+                              ) : (
+                                <View style={styles.imageErrorContainer}>
+                                  <Ionicons name="image-outline" size={24} color="#999" />
+                                  <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                </View>
                               );
                             })()}
                           </View>
@@ -1277,7 +1358,7 @@ export default function PendingScreen() {
         <View style={styles.imageModal}>
           <TouchableOpacity
             style={styles.closeButtonImage}
-            onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}
+            onPress={() => { setShowImage(false); setCurrentImageUrl(null); setImageRetryUrl(null); }}
           >
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
@@ -1286,7 +1367,7 @@ export default function PendingScreen() {
               source={{ uri: currentImageUrl }}
               style={styles.fullImage}
               contentFit="contain"
-              onError={(e) => Alert.alert('Error', 'Failed to load image')}
+              onError={handleImageError}
             />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>

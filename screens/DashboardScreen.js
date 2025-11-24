@@ -18,21 +18,22 @@ const normalizeImagePath = (path) => {
   if (!path) return null;
   let cleanPath = path;
   const basePattern = 'https://ideabank-api-dev.abisaio.com';
-
-  const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-
+  const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
   if (occurrences > 1) {
     const lastIndex = cleanPath.lastIndexOf(basePattern);
     cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
   }
-
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
   }
-
   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
   return fullUrl;
+};
+
+const getAlternateImageUrl = (url) => {
+  if (!url) return null;
+  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
 };
 
 const formatDateTime = (dateString) => {
@@ -91,6 +92,8 @@ const DashboardScreen = () => {
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showImage, setShowImage] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
+  const [imageRetryUrl, setImageRetryUrl] = useState(null);
+  const [imageLoadError, setImageLoadError] = useState({});
 
   const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
@@ -98,6 +101,15 @@ const DashboardScreen = () => {
 
   const NOTIFICATIONS_STORAGE_KEY = 'user_notifications_7day';
   const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+  const handleImageError = (error) => {
+    if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
+      setCurrentImageUrl(imageRetryUrl);
+      setImageRetryUrl(null);
+    } else {
+      Alert.alert('Error', 'Failed to load image');
+    }
+  };
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -509,10 +521,12 @@ const DashboardScreen = () => {
     setEmployeeInfoExpanded(false);
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
+    setImageLoadError({});
   };
 
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
+
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
         'PDF Document',
@@ -523,10 +537,7 @@ const DashboardScreen = () => {
             text: 'Open',
             onPress: () => {
               Linking.openURL(finalUrl).catch(err => {
-                Toast.show('Unable to open PDF. Please try accessing it from a web browser.', {
-                  duration: Toast.durations.LONG,
-                  position: Toast.positions.BOTTOM,
-                });
+                Alert.alert('Error', 'Unable to open PDF. Please try accessing it from a web browser.');
               });
             }
           }
@@ -536,6 +547,7 @@ const DashboardScreen = () => {
     }
 
     setCurrentImageUrl(finalUrl);
+    setImageRetryUrl(getAlternateImageUrl(finalUrl));
     setShowImage(true);
   };
 
@@ -976,7 +988,7 @@ const DashboardScreen = () => {
                                 <Text style={styles.pdfThumbnailText}>PDF</Text>
                               </View>
                             </TouchableOpacity>
-                          ) : (
+                          ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
                             <TouchableOpacity
                               style={styles.imagePreviewContainer}
                               onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
@@ -986,8 +998,29 @@ const DashboardScreen = () => {
                                 style={styles.thumbnailSmall}
                                 contentFit="cover"
                                 cachePolicy="none"
+                                placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                                transition={1000}
+                                onError={(e) => {
+                                  const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
+                                  if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+                                    setIdeaDetail(prev => ({
+                                      ...prev,
+                                      beforeImplementationImagePath: altUrl
+                                    }));
+                                  } else {
+                                    setImageLoadError(prev => ({
+                                      ...prev,
+                                      [`before_${ideaDetail.id}`]: true
+                                    }));
+                                  }
+                                }}
                               />
                             </TouchableOpacity>
+                          ) : (
+                            <View style={styles.imageErrorContainer}>
+                              <Ionicons name="image-outline" size={24} color="#999" />
+                              <Text style={styles.imageErrorText}>Image unavailable</Text>
+                            </View>
                           )
                         ) : (
                           <Text style={styles.valueDetail}>N/A</Text>
@@ -1071,61 +1104,66 @@ const DashboardScreen = () => {
                           </View>
                         )}
 
-                        {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
+                        {/* Before Implementation with PDF Support */}
+                        {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>Before Implementation:</Text>
-                            {(() => {
-                              const imagePath = ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath;
-                              return imagePath.toLowerCase().includes('.pdf') ? (
-                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
-                                  <View style={styles.pdfThumbnailContainer}>
-                                    <Ionicons name="document-text" size={30} color="#FF5722" />
-                                    <Text style={styles.pdfThumbnailText}>PDF</Text>
-                                  </View>
-                                </TouchableOpacity>
-                              ) : (
-                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
-                                  <Image
-                                    source={{ uri: imagePath }}
-                                    style={styles.thumbnailSmall}
-                                    contentFit="cover"
-                                    cachePolicy="none"
-                                    onError={(e) => {
-                                      console.log('Before image load error:', e.nativeEvent.error);
-                                    }}
-                                  />
-                                </TouchableOpacity>
-                              );
-                            })()}
+                            {ideaDetail.implementationCycle.beforeImplementationImagePath.toLowerCase().includes('.pdf') ? (
+                              <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
+                                <View style={styles.pdfThumbnailContainer}>
+                                  <Ionicons name="document-text" size={30} color="#FF5722" />
+                                  <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ) : (
+                              <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
+                                <Image
+                                  source={{ uri: ideaDetail.implementationCycle.beforeImplementationImagePath }}
+                                  style={styles.thumbnailSmall}
+                                  contentFit="cover"
+                                />
+                              </TouchableOpacity>
+                            )}
                           </View>
                         )}
 
-                        {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
+                        {/* After Implementation with PDF Support */}
+                        {ideaDetail.afterImplementationImagePath && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>After Implementation:</Text>
-                            {(() => {
-                              const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
-                              return imagePath.toLowerCase().includes('.pdf') ? (
-                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
-                                  <View style={styles.pdfThumbnailContainer}>
-                                    <Ionicons name="document-text" size={30} color="#FF5722" />
-                                    <Text style={styles.pdfThumbnailText}>PDF</Text>
-                                  </View>
-                                </TouchableOpacity>
-                              ) : (
-                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
-                                  <Image
-                                    source={{ uri: imagePath }}
-                                    style={styles.thumbnailSmall}
-                                    contentFit="cover"
-                                    cachePolicy="none"
-                                    onError={(e) => {
-                                      console.log('After image load error:', e.nativeEvent.error);
-                                    }}
-                                  />
-                                </TouchableOpacity>
-                              );
-                            })()}
+                            {ideaDetail.afterImplementationImagePath.toLowerCase().includes('.pdf') ? (
+                              <TouchableOpacity onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}>
+                                <View style={styles.pdfThumbnailContainer}>
+                                  <Ionicons name="document-text" size={30} color="#FF5722" />
+                                  <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ) : !imageLoadError[`after_${ideaDetail.id}`] ? (
+                              <TouchableOpacity onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}>
+                                <Image
+                                  source={{ uri: ideaDetail.afterImplementationImagePath }}
+                                  style={styles.thumbnailSmall}
+                                  contentFit="cover"
+                                  cachePolicy="none"
+                                  onError={() => {
+                                    const altUrl = getAlternateImageUrl(ideaDetail.afterImplementationImagePath);
+                                    if (altUrl && ideaDetail.afterImplementationImagePath !== altUrl) {
+                                      setIdeaDetail(prev => ({
+                                        ...prev,
+                                        afterImplementationImagePath: altUrl
+                                      }));
+                                    } else {
+                                      setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
+                                    }
+                                  }}
+                                />
+                              </TouchableOpacity>
+                            ) : (
+                              <View style={styles.imageErrorContainer}>
+                                <Ionicons name="image-outline" size={24} color="#999" />
+                                <Text style={styles.imageErrorText}>Image unavailable</Text>
+                              </View>
+                            )}
                           </View>
                         )}
                       </View>
@@ -1192,11 +1230,11 @@ const DashboardScreen = () => {
 
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
-          <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); }}>
+          <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); setImageRetryUrl(null); }}>
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" cachePolicy="none" onError={() => Toast.show('Failed to load image', { duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM })} />
+            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" onError={handleImageError} />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
           )}
