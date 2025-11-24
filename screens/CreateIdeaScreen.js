@@ -1475,8 +1475,7 @@ export default function CreateIdeaScreen() {
         const selectedFile = result.assets ? result.assets[0] : result;
         setFile(selectedFile.uri);
         setFileType('pdf');
-        // CRITICAL: Clean filename - web compatible format
-        const timestamp = Date.now();
+        const timestamp = Date.now();  
         const cleanName = `document_${timestamp}.pdf`;
         setFileName(cleanName);
         setShowFileOptions(false);
@@ -1606,8 +1605,6 @@ export default function CreateIdeaScreen() {
     }
     return formData;
   };
-
-  // CRITICAL FIX: Multiple field names ko check karo
   const extractFilePath = (responseData) => {
     const possibleFields = [
       'beforeImplementationImage',
