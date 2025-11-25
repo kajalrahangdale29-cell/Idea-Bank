@@ -42,6 +42,15 @@ export default function CreateIdeaScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [teamMembersError, setTeamMembersError] = useState('');
   const [mobileNumberError, setMobileNumberError] = useState('');
+  const [ideaDescriptionError, setIdeaDescriptionError] = useState('');
+  const [proposedSolutionError, setProposedSolutionError] = useState('');
+  const [benefitError, setBenefitError] = useState('');
+  const [solutionCategoryError, setSolutionCategoryError] = useState('');
+  const [ideaThemeError, setIdeaThemeError] = useState('');
+  const [fileError, setFileError] = useState('');
+  const [dateError, setDateError] = useState('');
+  const [beSupportNeededError, setBeSupportNeededError] = useState('');
+  const [canImplementOtherLocationError, setCanImplementOtherLocationError] = useState('');
 
   const resetForm = () => {
     setIdeaDescription('');
@@ -60,12 +69,21 @@ export default function CreateIdeaScreen() {
     setImageScale(1);
     setTeamMembersError('');
     setMobileNumberError('');
+    setIdeaDescriptionError('');
+    setProposedSolutionError('');
+    setBenefitError('');
+    setSolutionCategoryError('');
+    setIdeaThemeError('');
+    setFileError('');
+    setDateError('');
+    setBeSupportNeededError('');
+    setCanImplementOtherLocationError('');
   };
 
   const validateTeamMembers = (text) => {
     const regex = /^[a-zA-Z\s,.]*$/;
     if (!regex.test(text)) {
-      setTeamMembersError('Numbers are not allowed');
+      setTeamMembersError('Numbers or special characters are not allowed');
       return false;
     }
     setTeamMembersError('');
@@ -73,14 +91,18 @@ export default function CreateIdeaScreen() {
   };
 
   const handleTeamMembersChange = (text) => {
-    if (validateTeamMembers(text)) {
-      setTeamMembers(text);
-    }
+    setTeamMembers(text);
+    validateTeamMembers(text);
   };
 
   const validateMobileNumber = (text) => {
-    if (text.length > 0 && text.length < 10) {
-      setMobileNumberError('Mobile number must be 10 digits');
+    const trimmedText = text.trim();
+    if (!trimmedText) {
+      setMobileNumberError('Mobile number is required.');
+      return false;
+    }
+    if (trimmedText.length !== 10 || !/^\d{10}$/.test(trimmedText)) {
+      setMobileNumberError('Mobile number must be exactly 10 digits.');
       return false;
     }
     setMobileNumberError('');
@@ -115,6 +137,7 @@ export default function CreateIdeaScreen() {
         const cleanFileName = `image_${timestamp}.${extension}`;
         setFileName(cleanFileName);
         setShowFileOptions(false);
+        validateFile(asset.uri);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick image');
@@ -143,6 +166,7 @@ export default function CreateIdeaScreen() {
         const cleanFileName = `camera_${timestamp}.${extension}`;
         setFileName(cleanFileName);
         setShowFileOptions(false);
+        validateFile(asset.uri);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to capture image');
@@ -163,6 +187,7 @@ export default function CreateIdeaScreen() {
         const cleanName = `document_${timestamp}.pdf`;
         setFileName(cleanName);
         setShowFileOptions(false);
+        validateFile(selectedFile.uri);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick PDF file');
@@ -321,14 +346,93 @@ export default function CreateIdeaScreen() {
     return `${BASE_URL}/${cleanPath}`;
   };
 
-  const handleSaveDraft = async () => {
-    if (!ideaDescription.trim()) {
-      Alert.alert('Required Field', 'Idea Description is required to save draft.');
-      return;
+  const validateIdeaDescription = (value) => {
+    if (!value.trim()) {
+      setIdeaDescriptionError('Idea Description is required.');
+      return false;
     }
+    setIdeaDescriptionError('');
+    return true;
+  };
 
-    if (mobileNumber && !/^\d{10}$/.test(mobileNumber)) {
-      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10 digit mobile number.');
+  const validateProposedSolution = (value) => {
+    if (!value.trim()) {
+      setProposedSolutionError('Proposed Solution is required.');
+      return false;
+    }
+    setProposedSolutionError('');
+    return true;
+  };
+
+  const validateBenefit = (value) => {
+    if (!value.trim()) {
+      setBenefitError('Process Improvement/Cost Benefit is required.');
+      return false;
+    }
+    setBenefitError('');
+    return true;
+  };
+
+  const validateSolutionCategory = (value) => {
+    if (!value) {
+      setSolutionCategoryError('Solution Category is required.');
+      return false;
+    }
+    setSolutionCategoryError('');
+    return true;
+  };
+
+  const validateIdeaTheme = (value) => {
+    if (!value) {
+      setIdeaThemeError('Idea Theme is required.');
+      return false;
+    }
+    setIdeaThemeError('');
+    return true;
+  };
+
+  const validateFile = (value) => {
+    if (!value) {
+      setFileError('Before Implementation file is required.');
+      return false;
+    }
+    setFileError('');
+    return true;
+  };
+
+  const validateDate = (value) => {
+    if (!value) {
+      setDateError('Planned Completion Date is required.');
+      return false;
+    }
+    setDateError('');
+    return true;
+  };
+
+  const validateBeSupportNeeded = (value) => {
+    if (value === null) {
+      setBeSupportNeededError('Please select if BE Team Support is needed.');
+      return false;
+    }
+    setBeSupportNeededError('');
+    return true;
+  };
+
+  const validateCanImplementOtherLocation = (value) => {
+    if (value === null) {
+      setCanImplementOtherLocationError('Please select if can be implemented to other location.');
+      return false;
+    }
+    setCanImplementOtherLocationError('');
+    return true;
+  };
+
+  const handleSaveDraft = async () => {
+    const isIdeaDescriptionValid = validateIdeaDescription(ideaDescription);
+    const isMobileNumberValid = mobileNumber ? validateMobileNumber(mobileNumber) : true;
+
+    if (!isIdeaDescriptionValid || !isMobileNumberValid) {
+      Alert.alert('Validation Error', 'Please correct the highlighted fields.');
       return;
     }
 
@@ -397,52 +501,32 @@ export default function CreateIdeaScreen() {
   };
 
   const handleBeforeSubmit = () => {
-    if (!ideaDescription.trim()) {
-      Alert.alert('Required Field', 'Idea Description is required.');
-      return;
-    }
-    if (!proposedSolution.trim()) {
-      Alert.alert('Required Field', 'Proposed Solution is required.');
-      return;
-    }
-    if (!benefit.trim()) {
-      Alert.alert('Required Field', 'Process Improvement/Cost Benefit is required.');
-      return;
-    }
-    if (!teamMembers.trim()) {
-      Alert.alert('Required Field', 'Team Members is required.');
-      return;
-    }
-    if (!solutionCategory) {
-      Alert.alert('Required Field', 'Solution Category is required.');
-      return;
-    }
-    if (!ideaTheme) {
-      Alert.alert('Required Field', 'Idea Theme is required.');
-      return;
-    }
-    if (!file) {
-      Alert.alert('Required Field', 'Before Implementation file is required.');
-      return;
-    }
-    if (!date) {
-      Alert.alert('Required Field', 'Planned Completion Date is required.');
-      return;
-    }
-    if (!mobileNumber) {
-      Alert.alert('Required Field', 'Mobile Number is required.');
-      return;
-    }
-    if (!/^\d{10}$/.test(mobileNumber)) {
-      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10 digit mobile number.');
-      return;
-    }
-    if (beSupportNeeded === null) {
-      Alert.alert('Required Field', 'Please select if BE Team Support is needed.');
-      return;
-    }
-    if (canImplementOtherLocation === null) {
-      Alert.alert('Required Field', 'Please select if can be implemented to other location.');
+    const isIdeaDescriptionValid = validateIdeaDescription(ideaDescription);
+    const isProposedSolutionValid = validateProposedSolution(proposedSolution);
+    const isBenefitValid = validateBenefit(benefit);
+    const isTeamMembersValid = validateTeamMembers(teamMembers);
+    const isSolutionCategoryValid = validateSolutionCategory(solutionCategory);
+    const isIdeaThemeValid = validateIdeaTheme(ideaTheme);
+    const isFileValid = validateFile(file);
+    const isDateValid = validateDate(date);
+    const isMobileNumberValid = validateMobileNumber(mobileNumber);
+    const isBeSupportNeededValid = validateBeSupportNeeded(beSupportNeeded);
+    const isCanImplementOtherLocationValid = validateCanImplementOtherLocation(canImplementOtherLocation);
+
+    if (
+      !isIdeaDescriptionValid ||
+      !isProposedSolutionValid ||
+      !isBenefitValid ||
+      !isTeamMembersValid ||
+      !isSolutionCategoryValid ||
+      !isIdeaThemeValid ||
+      !isFileValid ||
+      !isDateValid ||
+      !isMobileNumberValid ||
+      !isBeSupportNeededValid ||
+      !isCanImplementOtherLocationValid
+    ) {
+      Alert.alert('Validation Error', 'Please correct the highlighted fields before submitting.');
       return;
     }
     
@@ -569,8 +653,12 @@ export default function CreateIdeaScreen() {
               icon={<MaterialIcons name="title" size={20} color="#666" />}
               placeholder="Enter idea description..."
               value={ideaDescription}
-              onChangeText={setIdeaDescription}
+              onChangeText={(text) => {
+                setIdeaDescription(text);
+                validateIdeaDescription(text);
+              }}
               maxLength={300}
+              error={ideaDescriptionError}
             />
 
             <InputField
@@ -579,9 +667,13 @@ export default function CreateIdeaScreen() {
               icon={<MaterialIcons name="description" size={20} color="#666" />}
               placeholder="Enter proposed solution..."
               value={proposedSolution}
-              onChangeText={setProposedSolution}
+              onChangeText={(text) => {
+                setProposedSolution(text);
+                validateProposedSolution(text);
+              }}
               multiline
               maxLength={500}
+              error={proposedSolutionError}
             />
 
             <InputField
@@ -590,9 +682,13 @@ export default function CreateIdeaScreen() {
               icon={<FontAwesome name="lightbulb-o" size={20} color="#666" />}
               placeholder="Enter tentative Benefit..."
               value={benefit}
-              onChangeText={setBenefit}
+              onChangeText={(text) => {
+                setBenefit(text);
+                validateBenefit(text);
+              }}
               multiline
               maxLength={200}
+              error={benefitError}
             />
 
             <InputField
@@ -611,7 +707,10 @@ export default function CreateIdeaScreen() {
               required
               icon={<Ionicons name="bulb-outline" size={20} color="#666" />}
               selectedValue={solutionCategory}
-              onValueChange={setSolutionCategory}
+              onValueChange={(value) => {
+                setSolutionCategory(value);
+                validateSolutionCategory(value);
+              }}
               options={[
                 'Quick Win',
                 'Kaizen',
@@ -625,6 +724,7 @@ export default function CreateIdeaScreen() {
                 'Efficiency Improvement',
                 'Others',
               ]}
+              error={solutionCategoryError}
             />
 
             <PickerField
@@ -632,7 +732,10 @@ export default function CreateIdeaScreen() {
               required
               icon={<MaterialIcons name="category" size={20} color="#666" />}
               selectedValue={ideaTheme}
-              onValueChange={setIdeaTheme}
+              onValueChange={(value) => {
+                setIdeaTheme(value);
+                validateIdeaTheme(value);
+              }}
               options={[
                 'Productivity',
                 'Quality',
@@ -642,6 +745,7 @@ export default function CreateIdeaScreen() {
                 'Morale',
                 'Environment',
               ]}
+              error={ideaThemeError}
             />
 
             <View style={styles.inputBlock}>
@@ -649,7 +753,7 @@ export default function CreateIdeaScreen() {
                 Before Implementation (JPG, PNG, PDF){' '}
                 <Text style={styles.required}>*</Text>
               </Text>
-              <View style={styles.fileInputRow}>
+              <View style={[styles.fileInputRow, fileError && styles.inputError]}>
                 <TouchableOpacity
                   style={styles.chooseFileButton}
                   onPress={() => setShowFileOptions(true)}
@@ -664,6 +768,8 @@ export default function CreateIdeaScreen() {
                   {fileName || 'No file chosen'}
                 </Text>
               </View>
+              {fileError ? <Text style={styles.errorText}>{fileError}</Text> : null}
+
 
               {file && fileType === 'image' && (
                 <TouchableOpacity
@@ -775,7 +881,7 @@ export default function CreateIdeaScreen() {
                 Planned Completion Date <Text style={styles.required}>*</Text>
               </Text>
               <TouchableOpacity
-                style={styles.dateInputWeb}
+                style={[styles.dateInputWeb, dateError && styles.inputError]}
                 onPress={() => setShowDatePicker(true)}
               >
                 <Text style={styles.dateDisplayText}>
@@ -783,6 +889,7 @@ export default function CreateIdeaScreen() {
                 </Text>
                 <Feather name="calendar" size={18} color="#666" />
               </TouchableOpacity>
+              {dateError ? <Text style={styles.errorText}>{dateError}</Text> : null}
               {date && getRemainingDays(date) !== null && (
                 <Text style={styles.daysRemainingText}>
                   ({getRemainingDays(date)} days)
@@ -796,7 +903,15 @@ export default function CreateIdeaScreen() {
                 mode="date"
                 display="default"
                 minimumDate={new Date()}
-                onChange={onChangeDate}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) {
+                    setDate(selectedDate);
+                    validateDate(selectedDate);
+                  } else {
+                    validateDate(null);
+                  }
+                }}
               />
             )}
 
@@ -816,14 +931,22 @@ export default function CreateIdeaScreen() {
               label="Is BE Team Support Needed?"
               required
               value={beSupportNeeded}
-              setValue={setBeSupportNeeded}
+              setValue={(value) => {
+                setBeSupportNeeded(value);
+                validateBeSupportNeeded(value);
+              }}
+              error={beSupportNeededError}
             />
 
             <RadioField
               label="Can Be Implemented To Other Location?"
               required
               value={canImplementOtherLocation}
-              setValue={setCanImplementOtherLocation}
+              setValue={(value) => {
+                setCanImplementOtherLocation(value);
+                validateCanImplementOtherLocation(value);
+              }}
+              error={canImplementOtherLocationError}
             />
 
             <View style={styles.buttonRow}>
@@ -893,7 +1016,7 @@ const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, 
     <Text style={styles.label}>
       {label} {required && <Text style={styles.required}>*</Text>}
     </Text>
-    <View style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline]}>
+    <View style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline, error && styles.inputError]}>
       <View style={styles.iconContainer}>{icon}</View>
       <TextInput
         style={[styles.input, multiline && styles.textArea]}
@@ -911,12 +1034,12 @@ const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, 
   </View>
 );
 
-const PickerField = ({ label, icon, selectedValue, onValueChange, options, required }) => (
+const PickerField = ({ label, icon, selectedValue, onValueChange, options, required, error }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>
       {label} {required && <Text style={styles.required}>*</Text>}
     </Text>
-    <View style={styles.inputWrapper}>
+    <View style={[styles.inputWrapper, error && styles.inputError]}>
       <View style={styles.iconContainer}>{icon}</View>
       <Picker selectedValue={selectedValue} onValueChange={onValueChange} style={styles.picker} dropdownIconColor="#666">
         <Picker.Item label="Select" value="" />
@@ -925,15 +1048,16 @@ const PickerField = ({ label, icon, selectedValue, onValueChange, options, requi
         ))}
       </Picker>
     </View>
+    {error ? <Text style={styles.errorText}>{error}</Text> : null}
   </View>
 );
 
-const RadioField = ({ label, value, setValue, required }) => (
+const RadioField = ({ label, value, setValue, required, error }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>
       {label} {required && <Text style={styles.required}>*</Text>}
     </Text>
-    <View style={styles.radioRow}>
+    <View style={[styles.radioRow, error && styles.inputError]}>
       <TouchableOpacity style={styles.radioOption} onPress={() => setValue('Yes')}>
         <View style={[styles.radioCircle, value === 'Yes' && styles.radioSelected]} />
         <Text style={styles.radioText}>Yes</Text>
@@ -943,6 +1067,7 @@ const RadioField = ({ label, value, setValue, required }) => (
         <Text style={styles.radioText}>No</Text>
       </TouchableOpacity>
     </View>
+    {error ? <Text style={styles.errorText}>{error}</Text> : null}
   </View>
 );
 
@@ -975,8 +1100,9 @@ const styles = StyleSheet.create({
   inputWrapperMultiline: { alignItems: 'flex-start', paddingTop: 12 },
   iconContainer: { justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   input: { flex: 1, fontSize: 16, color: '#333' },
-  picker: { flex: 1, color: '#333' },
+  inputError: { borderColor: 'red', borderWidth: 1 },
   textArea: { height: 100, textAlignVertical: 'top', paddingTop: 0 },
+  inputError: { borderColor: 'red', borderWidth: 1 },
   charCount: { alignSelf: 'flex-end', fontSize: 12, color: '#888', marginTop: 4 },
   errorText: { color: 'red', fontSize: 12, marginTop: 4, fontWeight: '500' },
   fileInputRow: {

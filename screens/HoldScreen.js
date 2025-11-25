@@ -312,9 +312,21 @@ const HoldScreen = () => {
     setRemarkText("");
   };
 
+  const getRemarkModalTitle = () => {
+    if (remarkType === "approve") return "Enter Remark for Approved";
+    if (remarkType === "reject") return "Enter Remark for Rejected";
+    if (remarkType === "hold") return "Enter Remark for On Hold";
+    return "Enter Remark";
+  };
+
   const submitStatusUpdate = async () => {
     if (!remarkText.trim()) {
       Alert.alert("Required", "Please enter a remark before submitting.");
+      return;
+    }
+
+    if (remarkText.trim().length > 100) {
+      Alert.alert("Character Limit", "Remark cannot exceed 100 characters.");
       return;
     }
 
@@ -397,7 +409,6 @@ const HoldScreen = () => {
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
 
-    // Check if it's a PDF
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
         'PDF Document',
@@ -965,15 +976,18 @@ const HoldScreen = () => {
         <View style={styles.remarkModalOverlay}>
           <View style={styles.remarkModalContainer}>
             <View style={styles.remarkModalHeader}>
-              <Text style={styles.remarkModalTitle}>
-                {remarkType === "approve" ? "Enter Remark for Approved" : "Enter Remark for Rejected"}
-              </Text>
-              <TouchableOpacity style={styles.remarkCloseButton} onPress={closeRemarkModal}>
+              <Text style={styles.remarkModalTitle}>{getRemarkModalTitle()}</Text>
+              <TouchableOpacity
+                style={styles.remarkCloseButton}
+                onPress={closeRemarkModal}
+              >
                 <Ionicons name="close" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
             <View style={styles.remarkModalBody}>
-              <Text style={styles.remarkLabel}>Remark *</Text>
+              <Text style={styles.remarkLabel}>
+                Remark * (Max 100 characters)
+              </Text>
               <TextInput
                 style={styles.remarkTextArea}
                 placeholder="Enter your remark here..."
@@ -983,7 +997,11 @@ const HoldScreen = () => {
                 textAlignVertical="top"
                 value={remarkText}
                 onChangeText={setRemarkText}
+                maxLength={100}
               />
+              <Text style={styles.characterCount}>
+                {remarkText.length}/100
+              </Text>
             </View>
             <View style={styles.remarkModalFooter}>
               <TouchableOpacity
@@ -1187,6 +1205,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#2c5aa0'
+  },
+  characterCount: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "right",
+    marginTop: 4,
   },
 
   pdfThumbnailContainer: { 
