@@ -1597,7 +1597,7 @@ export default function EditIdeaScreen() {
 
   const [beSupportNeeded, setBeSupportNeeded] = useState(parseYesNo(safeIdeaData.isBETeamSupportNeeded));
   const [canImplementOtherLocation, setCanImplementOtherLocation] = useState(
-    parseYesNo(safeIdeaData.canBeImplementedToOtherLocations || safeIdeaData.canBeImplementedToOtherLocation)
+    parseYesNo(safeIdeaData.canBeImplementedToOtherLocations)
   );
 
   const [showConfirm, setShowConfirm] = useState(false);

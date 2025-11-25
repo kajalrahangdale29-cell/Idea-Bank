@@ -85,8 +85,10 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
-      // ✅ FIXED: Better response handling
+      
       if (data.success === true || (response.ok && data.token)) {
+        // Save login state 
+        await AsyncStorage.setItem("isLoggedIn", "true");
         // Store user data
         await AsyncStorage.setItem("userData", JSON.stringify(data));
 

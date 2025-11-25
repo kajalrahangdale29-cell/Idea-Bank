@@ -810,7 +810,7 @@ export default function RejectedByMeScreen() {
                         Can Be Implemented To Other Locations:
                       </Text>
                       <Text style={styles.valueDetail}>
-                        {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
+                        {ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}
                       </Text>
                     </View>
                   </View>

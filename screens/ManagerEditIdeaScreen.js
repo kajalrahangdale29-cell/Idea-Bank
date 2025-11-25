@@ -109,14 +109,132 @@ export default function ManagerEditIdeaScreen() {
     return 'No';
   });
   const [canImplementOtherLocation, setCanImplementOtherLocation] = useState(() => {
-    if (ideaData.canBeImplementedToOtherLocations === true || ideaData.canBeImplementedToOtherLocations === 'true' || ideaData.canBeImplementedToOtherLocations === 'Yes' || ideaData.canBeImplementedToOtherLocation === true || ideaData.canBeImplementedToOtherLocation === 'Yes') return 'Yes';
-    if (ideaData.canBeImplementedToOtherLocations === false || ideaData.canBeImplementedToOtherLocations === 'false' || ideaData.canBeImplementedToOtherLocations === 'No' || ideaData.canBeImplementedToOtherLocation === false || ideaData.canBeImplementedToOtherLocation === 'No') return 'No';
+    const value = ideaData.canBeImplementedToOtherLocations;
+    if (value === true || value === 'true' || value === 'Yes') return 'Yes';
     return 'No';
   });
   const [showConfirm, setShowConfirm] = useState(false);
   const [showFileOptions, setShowFileOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+
+  const [ideaDescriptionError, setIdeaDescriptionError] = useState('');
+  const [proposedSolutionError, setProposedSolutionError] = useState('');
+  const [benefitError, setBenefitError] = useState('');
+  const [teamMembersError, setTeamMembersError] = useState('');
+  const [mobileNumberError, setMobileNumberError] = useState('');
+  const [solutionCategoryError, setSolutionCategoryError] = useState('');
+  const [ideaThemeError, setIdeaThemeError] = useState('');
+  const [fileError, setFileError] = useState('');
+  const [dateError, setDateError] = useState('');
+  const [beSupportNeededError, setBeSupportNeededError] = useState('');
+  const [canImplementOtherLocationError, setCanImplementOtherLocationError] = useState('');
+
+  const validateIdeaDescription = (value) => {
+    if (!String(value || '').trim()) {
+      setIdeaDescriptionError('Idea Description is required.');
+      return false;
+    }
+    setIdeaDescriptionError('');
+    return true;
+  };
+
+  const validateProposedSolution = (value) => {
+    if (!String(value || '').trim()) {
+      setProposedSolutionError('Proposed Solution is required.');
+      return false;
+    }
+    setProposedSolutionError('');
+    return true;
+  };
+
+  const validateBenefit = (value) => {
+    if (!String(value || '').trim()) {
+      setBenefitError('Process Improvement/Cost Benefit is required.');
+      return false;
+    }
+    setBenefitError('');
+    return true;
+  };
+
+  const validateTeamMembers = (text) => {
+    const t = String(text || '');
+    const regex = /^[a-zA-Z\s,.]*$/;
+    if (!regex.test(t)) {
+      setTeamMembersError('Numbers or special characters are not allowed');
+      return false;
+    }
+    setTeamMembersError('');
+    return true;
+  };
+
+  const validateMobileNumber = (text) => {
+    const trimmedText = String(text || '').trim();
+    if (!trimmedText) {
+      setMobileNumberError('Mobile number is required.');
+      return false;
+    }
+    if (trimmedText.length !== 10 || !/^\d{10}$/.test(trimmedText)) {
+      setMobileNumberError('Mobile number must be exactly 10 digits.');
+      return false;
+    }
+    setMobileNumberError('');
+    return true;
+  };
+
+  const validateSolutionCategory = (value) => {
+    if (!String(value || '').trim()) {
+      setSolutionCategoryError('Solution Category is required.');
+      return false;
+    }
+    setSolutionCategoryError('');
+    return true;
+  };
+
+  const validateIdeaTheme = (value) => {
+    if (!String(value || '').trim()) {
+      setIdeaThemeError('Idea Theme is required.');
+      return false;
+    }
+    setIdeaThemeError('');
+    return true;
+  };
+
+  const validateFile = (value) => {
+    if (!value) {
+      setFileError('Before Implementation file is required.');
+      return false;
+    }
+    setFileError('');
+    return true;
+  };
+
+  const validateDate = (value) => {
+    if (!value || isNaN(new Date(value).getTime())) {
+      setDateError('Planned Completion Date is required.');
+      return false;
+    }
+    setDateError('');
+    return true;
+  };
+
+  const validateBeSupportNeeded = (value) => {
+    if (value === null || typeof value === 'undefined') {
+      setBeSupportNeededError('Please select if BE Team Support is needed.');
+      return false;
+    }
+    setBeSupportNeededError('');
+    return true;
+  };
+
+  const validateCanImplementOtherLocation = (value) => {
+    if (value === null || typeof value === 'undefined') {
+      setCanImplementOtherLocationError('Please select if can be implemented to other location.');
+      return false;
+    }
+    setCanImplementOtherLocationError('');
+    return true;
+  };
 
   const fetchEmployeeDetails = useCallback(async () => {
     if (activeTab !== 'employee') return;
@@ -268,40 +386,37 @@ export default function ManagerEditIdeaScreen() {
   };
 
   const handleBeforeSubmit = useCallback(() => {
-    if (!ideaDescription.trim()) {
-      Alert.alert('Required Field', 'Please enter idea description.');
-      return;
-    }
-    if (!proposedSolution.trim()) {
-      Alert.alert('Required Field', 'Please enter proposed solution.');
-      return;
-    }
-    if (!solutionCategory) {
-      Alert.alert('Required Field', 'Please select solution category.');
-      return;
-    }
-    if (!file) {
-      Alert.alert('Required Field', 'Please upload before implementation image/PDF.');
-      return;
-    }
-    if (!date) {
-      Alert.alert('Required Field', 'Please select planned completion date.');
-      return;
-    }
-    
-    // FIX: Improved mobile number validation
-    const trimmedMobile = mobileNumber.trim();
-    if (!trimmedMobile) {
-      Alert.alert('Required Field', 'Please enter mobile number.');
-      return;
-    }
-    if (!/^\d{10}$/.test(trimmedMobile)) {
-      Alert.alert('Invalid Mobile', 'Please enter a valid 10-digit mobile number without spaces or special characters.');
+    const isIdeaDescriptionValid = validateIdeaDescription(ideaDescription);
+    const isProposedSolutionValid = validateProposedSolution(proposedSolution);
+    const isBenefitValid = validateBenefit(benefit);
+    const isTeamMembersValid = validateTeamMembers(teamMembers);
+    const isSolutionCategoryValid = validateSolutionCategory(solutionCategory);
+    const isIdeaThemeValid = validateIdeaTheme(ideaTheme);
+    const isFileValid = validateFile(file);
+    const isDateValid = validateDate(date);
+    const isMobileNumberValid = validateMobileNumber(mobileNumber);
+    const isBeSupportNeededValid = validateBeSupportNeeded(beSupportNeeded);
+    const isCanImplementOtherLocationValid = validateCanImplementOtherLocation(canImplementOtherLocation);
+
+    if (
+      !isIdeaDescriptionValid ||
+      !isProposedSolutionValid ||
+      !isBenefitValid ||
+      !isTeamMembersValid ||
+      !isSolutionCategoryValid ||
+      !isIdeaThemeValid ||
+      !isFileValid ||
+      !isDateValid ||
+      !isMobileNumberValid ||
+      !isBeSupportNeededValid ||
+      !isCanImplementOtherLocationValid
+    ) {
+      Alert.alert('Validation Error', 'Please correct the highlighted fields before submitting.');
       return;
     }
     
     setShowConfirm(true);
-  }, [ideaDescription, proposedSolution, solutionCategory, file, date, mobileNumber]);
+  }, [ideaDescription, proposedSolution, benefit, teamMembers, solutionCategory, ideaTheme, file, date, mobileNumber, beSupportNeeded, canImplementOtherLocation]);
 
   const handleFinalSubmit = async () => {
     setShowConfirm(false);
@@ -565,8 +680,12 @@ export default function ManagerEditIdeaScreen() {
               icon={<MaterialIcons name="title" size={20} color="#666" />}
               placeholder="Enter idea description..."
               value={ideaDescription}
-              onChangeText={setIdeaDescription}
+              onChangeText={(text) => {
+                setIdeaDescription(text);
+                validateIdeaDescription(text);
+              }}
               maxLength={300}
+              error={ideaDescriptionError}
             />
 
             <InputField
@@ -575,28 +694,42 @@ export default function ManagerEditIdeaScreen() {
               icon={<MaterialIcons name="description" size={20} color="#666" />}
               placeholder="Enter proposed solution..."
               value={proposedSolution}
-              onChangeText={setProposedSolution}
+              onChangeText={(text) => {
+                setProposedSolution(text);
+                validateProposedSolution(text);
+              }}
               multiline
               maxLength={500}
+              error={proposedSolutionError}
             />
 
             <InputField
               label="Process Improvement/Cost Benefit"
+              required
               icon={<FontAwesome name="lightbulb-o" size={20} color="#666" />}
               placeholder="Enter tentative benefit..."
               value={benefit}
-              onChangeText={setBenefit}
+              onChangeText={(text) => {
+                setBenefit(text);
+                validateBenefit(text);
+              }}
               multiline
               maxLength={200}
+              error={benefitError}
             />
 
             <InputField
               label="Team Members"
+              required
               icon={<MaterialIcons name="group" size={20} color="#666" />}
               placeholder="Enter team members..."
               value={teamMembers}
-              onChangeText={setTeamMembers}
+              onChangeText={(text) => {
+                setTeamMembers(text);
+                validateTeamMembers(text);
+              }}
               maxLength={100}
+              error={teamMembersError}
             />
 
             <PickerField
@@ -604,7 +737,10 @@ export default function ManagerEditIdeaScreen() {
               required
               icon={<Ionicons name="bulb-outline" size={20} color="#666" />}
               selectedValue={solutionCategory}
-              onValueChange={setSolutionCategory}
+              onValueChange={(value) => {
+                setSolutionCategory(value);
+                validateSolutionCategory(value);
+              }}
               options={[
                 'Quick Win',
                 'Kaizen',
@@ -618,13 +754,18 @@ export default function ManagerEditIdeaScreen() {
                 'Efficiency Improvement',
                 'Others',
               ]}
+              error={solutionCategoryError}
             />
 
             <PickerField
               label="Idea Theme"
+              required
               icon={<MaterialIcons name="category" size={20} color="#666" />}
               selectedValue={ideaTheme}
-              onValueChange={setIdeaTheme}
+              onValueChange={(value) => {
+                setIdeaTheme(value);
+                validateIdeaTheme(value);
+              }}
               options={[
                 'Productivity',
                 'Quality',
@@ -634,13 +775,14 @@ export default function ManagerEditIdeaScreen() {
                 'Morale',
                 'Environment',
               ]}
+              error={ideaThemeError}
             />
 
             <View style={styles.inputBlock}>
               <Text style={styles.label}>
                 Before Implementation Image/PDF <Text style={styles.required}>*</Text>
               </Text>
-              <View style={styles.fileInputRow}>
+              <View style={[styles.fileInputRow, fileError && styles.inputError]}>
                 <TouchableOpacity 
                   activeOpacity={0.7}
                   style={styles.chooseFileButton} 
@@ -652,6 +794,7 @@ export default function ManagerEditIdeaScreen() {
                   {fileName || 'No file chosen'}
                 </Text>
               </View>
+              {fileError ? <Text style={styles.errorText}>{fileError}</Text> : null}
 
               {file && fileType === 'image' && (
                 <TouchableOpacity 
@@ -779,7 +922,7 @@ export default function ManagerEditIdeaScreen() {
               </Text>
               <TouchableOpacity 
                 activeOpacity={0.7}
-                style={styles.dateInputWeb} 
+                style={[styles.dateInputWeb, dateError && styles.inputError]} 
                 onPress={() => setShowDatePicker(true)}
               >
                 <Text style={styles.dateDisplayText}>
@@ -787,6 +930,7 @@ export default function ManagerEditIdeaScreen() {
                 </Text>
                 <Feather name="calendar" size={18} color="#666" />
               </TouchableOpacity>
+              {dateError ? <Text style={styles.errorText}>{dateError}</Text> : null}
               {date && getRemainingDays(date) !== null && (
                 <Text style={styles.daysRemainingText}>
                   ({getRemainingDays(date)} days remaining)
@@ -800,7 +944,15 @@ export default function ManagerEditIdeaScreen() {
                 mode="date"
                 display="default"
                 minimumDate={new Date()}
-                onChange={onChangeDate}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) {
+                    setDate(selectedDate);
+                    validateDate(selectedDate);
+                  } else {
+                    validateDate(null);
+                  }
+                }}
               />
             )}
 
@@ -811,24 +963,35 @@ export default function ManagerEditIdeaScreen() {
               placeholder="Enter 10-digit mobile number"
               value={mobileNumber}
               onChangeText={(text) => {
-                // Remove any non-numeric characters
                 const cleaned = text.replace(/\D/g, '');
                 setMobileNumber(cleaned);
+                validateMobileNumber(cleaned);
               }}
               maxLength={10}
               keyboardType="numeric"
+              error={mobileNumberError}
             />
 
             <RadioField 
               label="Is BE Team Support Needed?" 
+              required
               value={beSupportNeeded} 
-              setValue={setBeSupportNeeded} 
+              setValue={(value) => {
+                setBeSupportNeeded(value);
+                validateBeSupportNeeded(value);
+              }}
+              error={beSupportNeededError}
             />
             
             <RadioField 
               label="Can Be Implemented To Other Location?" 
+              required
               value={canImplementOtherLocation} 
-              setValue={setCanImplementOtherLocation} 
+              setValue={(value) => {
+                setCanImplementOtherLocation(value);
+                validateCanImplementOtherLocation(value);
+              }}
+              error={canImplementOtherLocationError}
             />
 
             <TouchableOpacity
@@ -886,12 +1049,12 @@ export default function ManagerEditIdeaScreen() {
   );
 }
 
-const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, maxLength, required, keyboardType }) => (
+const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, maxLength, required, keyboardType, error }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>
       {label} {required && <Text style={styles.required}>*</Text>}
     </Text>
-    <View style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline]}>
+    <View style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline, error && styles.inputError]}>
       {icon}
       <TextInput
         style={[styles.input, multiline && styles.textArea]}
@@ -904,18 +1067,19 @@ const InputField = ({ label, icon, placeholder, value, onChangeText, multiline, 
         maxLength={maxLength}
       />
     </View>
+    {error ? <Text style={styles.errorText}>{error}</Text> : null}
     {maxLength && (
       <Text style={styles.charCount}>{value.length}/{maxLength}</Text>
     )}
   </View>
 );
 
-const PickerField = ({ label, icon, selectedValue, onValueChange, options, required }) => (
+const PickerField = ({ label, icon, selectedValue, onValueChange, options, required, error }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>
       {label} {required && <Text style={styles.required}>*</Text>}
     </Text>
-    <View style={styles.inputWrapper}>
+    <View style={[styles.inputWrapper, error && styles.inputError]}>
       {icon}
       <Picker 
         selectedValue={selectedValue} 
@@ -929,13 +1093,14 @@ const PickerField = ({ label, icon, selectedValue, onValueChange, options, requi
         ))}
       </Picker>
     </View>
+    {error ? <Text style={styles.errorText}>{error}</Text> : null}
   </View>
 );
 
-const RadioField = ({ label, value, setValue }) => (
+const RadioField = ({ label, value, setValue, required, error }) => (
   <View style={styles.inputBlock}>
-    <Text style={styles.label}>{label}</Text>
-    <View style={styles.radioRow}>
+    <Text style={styles.label}>{label} {required && <Text style={styles.required}>*</Text>}</Text>
+    <View style={[styles.radioRow, error && styles.inputError]}>
       <TouchableOpacity 
         activeOpacity={0.7}
         style={styles.radioOption} 
@@ -953,6 +1118,7 @@ const RadioField = ({ label, value, setValue }) => (
         <Text style={styles.radioText}>No</Text>
       </TouchableOpacity>
     </View>
+    {error ? <Text style={styles.errorText}>{error}</Text> : null}
   </View>
 );
 
@@ -1040,12 +1206,8 @@ const styles = StyleSheet.create({
     height: 100, 
     textAlignVertical: 'top' 
   },
-  charCount: { 
-    alignSelf: 'flex-end', 
-    fontSize: 12, 
-    color: '#888', 
-    marginTop: 4 
-  },
+  inputError: { borderColor: 'red', borderWidth: 1 },
+  errorText: { color: 'red', fontSize: 12, marginTop: 4, fontWeight: '500' },
   fileInputRow: {
     flexDirection: 'row',
     alignItems: 'center',

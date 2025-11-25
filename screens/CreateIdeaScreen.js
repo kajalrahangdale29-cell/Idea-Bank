@@ -1100,6 +1100,7 @@ const styles = StyleSheet.create({
   inputWrapperMultiline: { alignItems: 'flex-start', paddingTop: 12 },
   iconContainer: { justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   input: { flex: 1, fontSize: 16, color: '#333' },
+  picker: { flex: 1, marginLeft: 10, color: '#333' },
   inputError: { borderColor: 'red', borderWidth: 1 },
   textArea: { height: 100, textAlignVertical: 'top', paddingTop: 0 },
   inputError: { borderColor: 'red', borderWidth: 1 },

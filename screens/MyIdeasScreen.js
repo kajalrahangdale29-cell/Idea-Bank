@@ -5,7 +5,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MY_IDEAS_URL, IDEA_DETAIL_URL, DELETE_IDEA_URL, SUBMIT_URL } from '../src/context/api';
+import { MY_IDEAS_URL, IDEA_DETAIL_URL, DELETE_IDEA_URL, SUBMIT_URL, EDIT_IMPLEMENTATION_URL } from '../src/context/api';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -114,7 +114,7 @@ const getStatusColor = (status) => {
 const isImplementationPhase = (status) => {
   if (!status) return false;
   const s = status.toLowerCase();
-  return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation");
+  return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation") || s.includes("approved") || s.includes("closed") || s.includes("implementation submitted");
 };
 
 const parseRemarks = (remarkData) => {
@@ -150,6 +150,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
   const [imageRetryUrl, setImageRetryUrl] = useState(null);
   const [imageLoadError, setImageLoadError] = useState({});
+  const navigation = useNavigation();
 
   const fetchIdeaDetail = async (ideaId) => {
     if (!ideaId) return;
@@ -280,13 +281,23 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   };
 
   const handleEdit = (idea) => {
+    const hasImplementation = idea.implementationCycle && Object.keys(idea.implementationCycle).length > 0;
     if (isImplementationPhase(idea.ideaStatus)) {
-      setShowImplementationForm(true);
+      if (hasImplementation) {
+        navigation.navigate('ImplementationDetails', { ideaId: idea.id, ideaData: idea, onSuccess: () => {
+          refreshIdeas();
+          closeModal();
+        } });
+        closeModal();
+      } else {
+        setShowImplementationForm(true);
+      }
     } else {
       editIdea(idea);
       closeModal();
     }
   };
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -578,7 +589,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                     <View style={styles.rowDetail}>
                       <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
                       <Text style={styles.valueDetail}>
-                        {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
+                        {ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}
                       </Text>
                     </View>
                   </View>
@@ -771,6 +782,14 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                   const canEdit = canEditIdea(status);
                   const canDelete = status === "draft" || status === "published";
                   const inImplementation = isImplementationPhase(status);
+                  const hasImplementation = ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0;
+
+                  let buttonText = 'Edit';
+                  if (inImplementation && hasImplementation) {
+                    buttonText = 'Edit Implementation';
+                  } else if (inImplementation) {
+                    buttonText = 'Submit Implementation';
+                  }
 
                   return (canEdit || canDelete || inImplementation) && (
                     <View style={styles.buttonRow}>
@@ -781,7 +800,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                         >
                           <Ionicons name="create-outline" size={18} color="#fff" />
                           <Text style={styles.buttonText}>
-                            {inImplementation ? 'Submit Implementation' : 'Edit'}
+                            {buttonText}
                           </Text>
                         </TouchableOpacity>
                       )}
