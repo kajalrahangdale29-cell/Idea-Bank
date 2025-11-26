@@ -393,15 +393,16 @@ const DashboardScreen = () => {
 
       if (response?.success && response?.data) {
         const detail = response.data;
+        const afterImagePath = detail.afterImplementationImagePath || detail.implementationCycle?.afterImplementationImagePath;
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
           imagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
-          afterImplementationImagePath: normalizeImagePath(detail.afterImplementationImagePath),
+          afterImplementationImagePath: normalizeImagePath(afterImagePath),
           implementationCycle: detail.implementationCycle ? {
             ...detail.implementationCycle,
             beforeImplementationImagePath: normalizeImagePath(detail.implementationCycle.beforeImplementationImagePath),
-            afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
+            afterImplementationImagePath: normalizeImagePath(afterImagePath)
           } : null
         };
         setIdeaDetail(normalizedDetail);

@@ -224,56 +224,64 @@ export default function AllTeamIdeasScreen() {
     }
   };
 
+  useEffect(() => {
+    applyFiltersRealTime();
+  }, [searchIdeaNumber]);
+
+  const applyFiltersRealTime = () => {
+    let filteredIdeas = [...allIdeasOriginal];
+
+    if (searchIdeaNumber.trim()) {
+      const searchTerm = searchIdeaNumber.trim().toLowerCase();
+      filteredIdeas = filteredIdeas.filter(idea =>
+        (idea.ideaNumber && idea.ideaNumber.toLowerCase().includes(searchTerm)) ||
+        (idea.ownerName && idea.ownerName.toLowerCase().includes(searchTerm)) ||
+        (idea.description && idea.description.toLowerCase().includes(searchTerm))
+      );
+    }
+
+    if (fromDate || toDate) {
+      filteredIdeas = filteredIdeas.filter(idea => {
+        if (!idea.creationDate) return false;
+
+        const ideaDate = new Date(idea.creationDate);
+        ideaDate.setHours(0, 0, 0, 0);
+
+        if (fromDate && toDate) {
+          const from = new Date(fromDate);
+          from.setHours(0, 0, 0, 0);
+          const to = new Date(toDate);
+          to.setHours(23, 59, 59, 999);
+          return ideaDate >= from && ideaDate <= to;
+        } else if (fromDate) {
+          const from = new Date(fromDate);
+          from.setHours(0, 0, 0, 0);
+          return ideaDate >= from;
+        } else if (toDate) {
+          const to = new Date(toDate);
+          to.setHours(23, 59, 59, 999);
+          return ideaDate <= to;
+        }
+        return true;
+      });
+    }
+
+    if (selectedStatus && selectedStatus !== "") {
+      filteredIdeas = filteredIdeas.filter(idea => {
+        if (!idea.status) return false;
+        return idea.status.toLowerCase() === selectedStatus.toLowerCase();
+      });
+    }
+
+    setIdeas(filteredIdeas);
+    setTotalItems(filteredIdeas.length);
+  }
+
   const applyFilters = () => {
     setLoading(true);
 
     try {
-      let filteredIdeas = [...allIdeasOriginal];
-
-      if (searchIdeaNumber.trim()) {
-        const searchTerm = searchIdeaNumber.trim().toLowerCase();
-        filteredIdeas = filteredIdeas.filter(idea =>
-          (idea.ideaNumber && idea.ideaNumber.toLowerCase().includes(searchTerm)) ||
-          (idea.ownerName && idea.ownerName.toLowerCase().includes(searchTerm)) ||
-          (idea.description && idea.description.toLowerCase().includes(searchTerm))
-        );
-      }
-
-      if (fromDate || toDate) {
-        filteredIdeas = filteredIdeas.filter(idea => {
-          if (!idea.creationDate) return false;
-
-          const ideaDate = new Date(idea.creationDate);
-          ideaDate.setHours(0, 0, 0, 0);
-
-          if (fromDate && toDate) {
-            const from = new Date(fromDate);
-            from.setHours(0, 0, 0, 0);
-            const to = new Date(toDate);
-            to.setHours(23, 59, 59, 999);
-            return ideaDate >= from && ideaDate <= to;
-          } else if (fromDate) {
-            const from = new Date(fromDate);
-            from.setHours(0, 0, 0, 0);
-            return ideaDate >= from;
-          } else if (toDate) {
-            const to = new Date(toDate);
-            to.setHours(23, 59, 59, 999);
-            return ideaDate <= to;
-          }
-          return true;
-        });
-      }
-
-      if (selectedStatus && selectedStatus !== "") {
-        filteredIdeas = filteredIdeas.filter(idea => {
-          if (!idea.status) return false;
-          return idea.status.toLowerCase() === selectedStatus.toLowerCase();
-        });
-      }
-
-      setIdeas(filteredIdeas);
-      setTotalItems(filteredIdeas.length);
+      applyFiltersRealTime();
       setShowFilters(false);
 
     } catch (error) {
