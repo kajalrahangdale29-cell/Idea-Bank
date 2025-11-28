@@ -56,7 +56,7 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
-      console.log('Attempting login with:', { username: trimmedUsername }); // Debug log
+      console.log('Attempting login with:', { username: trimmedUsername }); 
 
       const response = await fetch(LOGIN_URL, {
         method: "POST",
@@ -69,15 +69,15 @@ export default function LoginScreen({ navigation }) {
         }),
       });
 
-      console.log('Response status:', response.status); // Debug log
+      console.log('Response status:', response.status); 
 
       const text = await response.text();
-      console.log('Response text:', text); // Debug log
+      console.log('Response text:', text); 
 
       let data;
       try {
         data = JSON.parse(text);
-        console.log('Parsed data:', data); // Debug log
+        console.log('Parsed data:', data); 
       } catch (parseError) {
         console.error('JSON parse error:', parseError);
         setLoading(false);
@@ -87,9 +87,9 @@ export default function LoginScreen({ navigation }) {
 
       
       if (data.success === true || (response.ok && data.token)) {
-        // Save login state 
+       
         await AsyncStorage.setItem("isLoggedIn", "true");
-        // Store user data
+        
         await AsyncStorage.setItem("userData", JSON.stringify(data));
 
         if (data.token) {
@@ -128,7 +128,6 @@ export default function LoginScreen({ navigation }) {
 
       } else {
         setLoading(false);
-        // Show specific error message from API
         const errorMessage = data?.message || data?.error || "Invalid Employee ID or Password";
         Alert.alert("Login Failed", errorMessage);
       }
@@ -137,7 +136,6 @@ export default function LoginScreen({ navigation }) {
       setLoading(false);
       console.error("Login error:", error);
       
-      // More specific error messages
       if (error.message === 'Network request failed') {
         Alert.alert("Connection Error", "Please check your internet connection and try again");
       } else {
