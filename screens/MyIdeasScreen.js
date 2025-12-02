@@ -114,7 +114,8 @@ const getStatusColor = (status) => {
 const isImplementationPhase = (status) => {
   if (!status) return false;
   const s = status.toLowerCase();
-  return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation") || s.includes("approved") || s.includes("closed") || s.includes("implementation submitted");
+  return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation") || s.includes("approved") || s.includes("closed")    || s.includes("implementation submitted")
+    || s.includes("rm approval pending"); // <--- ADD THIS LINE
 };
 
 const parseRemarks = (remarkData) => {
