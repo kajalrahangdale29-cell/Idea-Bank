@@ -1259,14 +1259,18 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
       }
 
       const url = isEditing ? `https://ideabank-api-dev.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}` : SUBMIT_URL;
-      console.log('📤 Submitting implementation form to:', url);
-      
-      const response = await axios.post(url, formData, {
+      console.log(`📤 Submitting implementation form to: ${url} with method: ${isEditing ? 'PUT' : 'POST'}`);
+
+      const axiosConfig = {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
-      });
+      };
+      
+      const response = isEditing 
+        ? await axios.put(url, formData, axiosConfig)
+        : await axios.post(url, formData, axiosConfig);
 
       if (response.data?.success) {
         console.log(`✅ Implementation ${isEditing ? 'updated' : 'submitted'} successfully`);
