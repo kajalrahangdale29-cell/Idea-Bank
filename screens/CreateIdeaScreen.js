@@ -81,6 +81,10 @@ export default function CreateIdeaScreen() {
   };
 
   const validateTeamMembers = (text) => {
+    if (!text.trim()) {
+      setTeamMembersError('Team Members is required.');
+      return false;
+    }
     const regex = /^[a-zA-Z\s,.]*$/;
     if (!regex.test(text)) {
       setTeamMembersError('Numbers or special characters are not allowed');

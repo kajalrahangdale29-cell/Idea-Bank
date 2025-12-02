@@ -350,7 +350,11 @@ export default function EditIdeaScreen() {
   };
 
   const validateTeamMembers = (text) => {
-    const t = String(text || '');
+    const t = String(text || '').trim();
+    if (!t) {
+      setTeamMembersError('Team Members is required.');
+      return false;
+    }
     const regex = /^[a-zA-Z\s,.]*$/;
     if (!regex.test(t)) {
       setTeamMembersError('Numbers or special characters are not allowed');
