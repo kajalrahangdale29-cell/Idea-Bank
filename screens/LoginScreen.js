@@ -157,6 +157,11 @@ export default function LoginScreen({ navigation }) {
       .catch((err) => console.error('An error occurred', err));
   };
 
+const handleEmployeeIDChange = (text) => {
+    const numericText = text.replace(/[^0-9]/g, '');
+    setUserName(numericText);
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -193,7 +198,7 @@ export default function LoginScreen({ navigation }) {
                   style={styles.input}
                   placeholder="MYIB Employee ID"
                   value={username}
-                  onChangeText={setUserName}
+                  onChangeText={handleEmployeeIDChange}
                   keyboardType="numeric"
                   maxLength={8}
                   placeholderTextColor="#999"
@@ -210,6 +215,7 @@ export default function LoginScreen({ navigation }) {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={secureTextEntry}
+                  maxLength={50}
                   placeholderTextColor="#999"
                   autoCapitalize="none"
                   returnKeyType="done"
