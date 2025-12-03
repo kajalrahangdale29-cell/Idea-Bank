@@ -1,5 +1,11 @@
+
 {
   "expo": {
+    "name": "IdeaBank",
+    "slug": "ideabank",
+
+    "icon": "./assets/ico_n.png",
+
     "plugins": [
       [
         "expo-splash-screen",
@@ -11,14 +17,20 @@
       ],
       "expo-font"
     ],
+
     "extra": {
       "eas": {
         "projectId": "056d47d2-3909-4447-b504-44ee13a06d7f"
       }
     },
+
     "android": {
-      "package": "com.kr_1701.login_app"
-      
+      "package": "com.kr_1701.login_app",
+
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/ideabank_logo.png",
+        "backgroundColor": "#FFFFFF"
+      }
     }
   }
 }

@@ -114,7 +114,7 @@ const getStatusColor = (status) => {
 const isImplementationPhase = (status) => {
   if (!status) return false;
   const s = status.toLowerCase();
-  return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation") || s.includes("approved") || s.includes("closed")    || s.includes("implementation submitted")
+  return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation") || s.includes("approved") || s.includes("closed") || s.includes("implementation submitted")
     || s.includes("rm approval pending"); // <--- ADD THIS LINE
 };
 
@@ -171,10 +171,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
         const afterImagePath = detail.afterImplementationImagePath || detail.implementationCycle?.afterImplementationImagePath;
         const normalizedAfterImagePath = normalizeImagePath(afterImagePath);
 
-        console.log('📸 Before Image Path:', beforeImagePath);
-        console.log('📸 Normalized Before:', normalizedBeforeImagePath);
-        console.log('📸 After Image Path:', afterImagePath);
-        console.log('📸 Normalized After:', normalizedAfterImagePath);
 
         const normalizedDetail = {
           ...detail,
@@ -198,7 +194,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
         Alert.alert("Error", response?.message || "Idea details not found.");
       }
     } catch (error) {
-      console.error('Error fetching idea detail:', error);
       Alert.alert("Error", "Failed to fetch idea details.");
     } finally {
       setLoadingDetail(false);
@@ -217,7 +212,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
 
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
-    console.log('🖼️ Opening image preview:', finalUrl);
 
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
@@ -244,9 +238,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   };
 
   const handleImageError = (error) => {
-    console.error('❌ Image load error:', error);
     if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
-      console.log('🔄 Retrying with alternate URL:', imageRetryUrl);
       setCurrentImageUrl(imageRetryUrl);
       setImageRetryUrl(null);
     } else {
@@ -266,7 +258,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
           {
             text: 'Copy URL for Backend Team',
             onPress: () => {
-              console.log('📋 Backend team needs to check this URL:', currentImageUrl);
               Alert.alert('URL Copied to Console', 'Check your development console for the URL');
             }
           },
@@ -377,8 +368,8 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
           <ImplementationForm
             ideaDetail={ideaDetail}
             onClose={() => {
-                closeModal();
-                setIsEditingImplementation(false);
+              closeModal();
+              setIsEditingImplementation(false);
             }}
             refreshIdeas={refreshIdeas}
             isEditing={isEditingImplementation}
@@ -518,17 +509,14 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                               placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
                               transition={1000}
                               onError={(e) => {
-                                console.log("❌ Before Image load error for ID:", ideaDetail.id);
-                                console.log("❌ Failed URL:", ideaDetail.beforeImplementationImagePath);
                                 const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
                                 if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
-                                  console.log("🔄 Trying alternate URL:", altUrl);
+
                                   setIdeaDetail(prev => ({
                                     ...prev,
                                     beforeImplementationImagePath: altUrl
                                   }));
                                 } else {
-                                  console.log("❌ No alternate URL available, showing error state");
                                   setImageLoadError(prev => ({
                                     ...prev,
                                     [`before_${ideaDetail.id}`]: true
@@ -536,7 +524,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                                 }
                               }}
                               onLoad={() => {
-                                console.log("✅ Before Image loaded successfully:", ideaDetail.beforeImplementationImagePath);
                               }}
                             />
                           ) : (
@@ -596,7 +583,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                     <View style={styles.rowDetail}>
                       <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
                       <Text style={styles.valueDetail}>
-                        {ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}
+                        {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
                       </Text>
                     </View>
                   </View>
@@ -925,7 +912,6 @@ export default function MyIdeasScreen() {
         setIdeas([]);
       }
     } catch (error) {
-      console.error('Error fetching ideas:', error);
       Alert.alert("Error", "Failed to load ideas from server.");
     }
   };
@@ -978,7 +964,6 @@ export default function MyIdeasScreen() {
                 Alert.alert("Error", response.data?.message || "Failed to delete idea.");
               }
             } catch (error) {
-              console.error('Error deleting idea:', error);
               Alert.alert("Error", "Failed to delete idea. Please try again.");
             }
           }
@@ -1134,7 +1119,6 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
             onClose();
           }
         } catch (error) {
-          console.error('Error fetching implementation details:', error);
           Alert.alert('Error', 'An error occurred while fetching details for editing.');
           onClose();
         } finally {
@@ -1143,12 +1127,12 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
       };
       fetchImplementationDetails();
     } else {
-        setImplementationDetails('');
-        setOutcomesBenefits('');
-        setAfterImage(null);
-        setAfterImageName('');
-        setAfterImageType('');
-        setIsNewFile(false);
+      setImplementationDetails('');
+      setOutcomesBenefits('');
+      setAfterImage(null);
+      setAfterImageName('');
+      setAfterImageType('');
+      setIsNewFile(false);
     }
   }, [isEditing, ideaDetail?.id, onClose]);
 
@@ -1208,7 +1192,6 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
         setShowFileOptions(false);
       }
     } catch (error) {
-      console.error('Error picking PDF:', error);
       Alert.alert('Error', 'Failed to pick PDF file');
     }
   };
@@ -1259,7 +1242,6 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
       }
 
       const url = isEditing ? `https://ideabank-api-dev.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}` : SUBMIT_URL;
-      console.log(`📤 Submitting implementation form to: ${url} with method: ${isEditing ? 'PUT' : 'POST'}`);
 
       const axiosConfig = {
         headers: {
@@ -1267,13 +1249,12 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
           'Content-Type': 'multipart/form-data'
         }
       };
-      
-      const response = isEditing 
+
+      const response = isEditing
         ? await axios.put(url, formData, axiosConfig)
         : await axios.post(url, formData, axiosConfig);
 
       if (response.data?.success) {
-        console.log(`✅ Implementation ${isEditing ? 'updated' : 'submitted'} successfully`);
         const pattern = [0, 100, 50, 100];
         Vibration.vibrate(pattern);
         Alert.alert(
@@ -1288,11 +1269,9 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
           }]
         );
       } else {
-        console.log(`❌ Implementation ${isEditing ? 'update' : 'submission'} failed:`, response.data?.message);
         Alert.alert('Error', response.data?.message || `Failed to ${isEditing ? 'update' : 'submit'} implementation`);
       }
     } catch (error) {
-      console.error(`❌ Error ${isEditing ? 'updating' : 'submitting'} implementation:`, error);
       Alert.alert('Error', error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'submit'} implementation. Please try again.`);
     } finally {
       setIsSubmitting(false);
