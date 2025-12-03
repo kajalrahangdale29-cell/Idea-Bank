@@ -5,6 +5,11 @@
     "slug": "ideabank",
 
     "icon": "./assets/ico_n.png",
+    "splash": {
+      "image": "./assets/ideabank_logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E0F7FA"
+    },
 
     "plugins": [
       [
@@ -24,8 +29,21 @@
       }
     },
 
+    "ios": {
+      "supportsTablet": true,
+      "splash": {
+        "image": "./assets/ideabank_logo.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#E0F7FA"
+      }
+    },
     "android": {
       "package": "com.kr_1701.login_app",
+      "splash": {
+        "image": "./assets/ideabank_logo.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#E0F7FA"
+      },
 
       "adaptiveIcon": {
         "foregroundImage": "./assets/ideabank_logo.png",
