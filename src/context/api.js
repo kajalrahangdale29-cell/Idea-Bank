@@ -25,8 +25,20 @@ export const UPDATE_STATUS_URL = BASE_URL + "/api/Approval/UpdateStatus";
 export const GET_PENDING_COUNT_URL = BASE_URL + "/api/Approval/GetPendingApprovalsCount";
 
 export const EMPLOYEE_GET_URL = BASE_URL + "/EmployeeInfo";
-export const NOTIFICATION_USER_URL = (userId) => `${BASE_URL}/user/${userId}`;
-export const NOTIFICATION_COUNT_URL = (userId) => `${BASE_URL}/unread/count/${userId}`; 
+export const NOTIFICATION_USER_URL = (userId, scope) => {
+  let url = `${BASE_URL}/user/${userId}`;
+  if (scope && scope !== 'self') {
+    url += `?scope=${scope}`;
+  }
+  return url;
+};
+export const NOTIFICATION_COUNT_URL = (userId, scope) => { 
+  let url = `${BASE_URL}/unread/count/${userId}`;
+  if (scope && scope !== 'self') {
+    url += `?scope=${scope}`;
+  }
+  return url; 
+}; 
 export const MARK_READ_URL = (notificationId) => `${BASE_URL}/markread/${notificationId}`; 
 export const CLEAR_ALL_URL = (userId) => `${BASE_URL}/clearall/${userId}`; 
 export const REDIRECT_NOTIFICATION_URL = (notificationId) => `${BASE_URL}/redirect/${notificationId}`; 

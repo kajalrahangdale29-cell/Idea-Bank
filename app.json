@@ -1,8 +1,7 @@
-
 {
   "expo": {
     "name": "IdeaBank",
-    "slug": "ideabank",
+    "slug": "login_app",
 
     "icon": "./assets/ico_n.png",
     "splash": {
@@ -37,16 +36,17 @@
         "backgroundColor": "#E0F7FA"
       }
     },
+
     "android": {
-      "package": "com.kr_1701.login_app",
+      "package": "com.kr1701.ideabank",
+      "versionCode": 1,
       "splash": {
         "image": "./assets/ideabank_logo.png",
         "resizeMode": "contain",
         "backgroundColor": "#E0F7FA"
       },
-
       "adaptiveIcon": {
-        "foregroundImage": "./assets/ideabank_logo.png",
+        "foregroundImage": "./assets/ico_n.png",
         "backgroundColor": "#FFFFFF"
       }
     }

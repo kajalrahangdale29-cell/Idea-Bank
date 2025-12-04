@@ -79,7 +79,6 @@ export default function LoginScreen({ navigation }) {
         Alert.alert("Error", "Invalid response from server");
         return;
       }
-
       
       if (data.success === true || (response.ok && data.token)) {
        
@@ -101,7 +100,6 @@ export default function LoginScreen({ navigation }) {
           await AsyncStorage.setItem("isBETeamMember", JSON.stringify(data.employee.isBETeamMember || false));
         }
 
-        // Set user in context
         setUser({ 
           name: data.employee?.name || data.employee?.employeeName || 'User', 
           id: trimmedUsername,

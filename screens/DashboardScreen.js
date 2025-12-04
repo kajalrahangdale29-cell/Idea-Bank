@@ -219,7 +219,7 @@ const DashboardScreen = () => {
             case 1: return { ...card, count: stats.inProgress ?? 0 };
             case 2: return { ...card, count: stats.approved ?? 0 };
             case 3: return { ...card, count: stats.hold ?? 0 };
-            case 4: return { ...card, count: stats.cancelled ?? 0 };
+            case 4: return { ...card, count: stats.rejected ?? 0 };
             default: return card;
           }
         }));
@@ -251,7 +251,7 @@ const DashboardScreen = () => {
 
   const fetchUnreadCount = async (systemId, authToken) => {
     try {
-      const url = NOTIFICATION_COUNT_URL(systemId);
+      const url = NOTIFICATION_COUNT_URL(systemId, scope);
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -284,7 +284,7 @@ const DashboardScreen = () => {
 
     setLoadingNotifications(true);
     try {
-      const url = NOTIFICATION_USER_URL(employeeSystemId);
+      const url = NOTIFICATION_USER_URL(employeeSystemId, scope);
       const response = await fetch(url, {
         method: 'GET',
         headers: {
