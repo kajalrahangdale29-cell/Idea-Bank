@@ -56,7 +56,6 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
-      console.log('Attempting login with:', { username: trimmedUsername }); 
 
       const response = await fetch(LOGIN_URL, {
         method: "POST",
@@ -69,17 +68,13 @@ export default function LoginScreen({ navigation }) {
         }),
       });
 
-      console.log('Response status:', response.status); 
 
       const text = await response.text();
-      console.log('Response text:', text); 
 
       let data;
       try {
         data = JSON.parse(text);
-        console.log('Parsed data:', data); 
       } catch (parseError) {
-        console.error('JSON parse error:', parseError);
         setLoading(false);
         Alert.alert("Error", "Invalid response from server");
         return;
