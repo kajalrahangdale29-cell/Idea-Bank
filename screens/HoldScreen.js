@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, ScrollView, SafeAreaView, Linking } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from 'expo-image';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -15,7 +16,7 @@ const normalizeImagePath = (path) => {
   
   const basePattern = 'https://ideabank-api-dev.abisaio.com';
 
-  const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+  const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\\]/g, '\\$&'), 'g')) || []).length;
 
   if (occurrences > 1) {
     const lastIndex = cleanPath.lastIndexOf(basePattern);
@@ -63,8 +64,9 @@ function TimelineItem({ status, date, description, isLast }) {
     if (s.includes('edited')) return "#9C27B0";
     if (s.includes('approved')) return "#4CAF50";
     if (s.includes('pending')) return "#FF9800";
-    if (s.includes('implementation')) return "#9C27B0";
+    if (s.includes('implementation')) return "#3F51B5";
     if (s.includes('rejected')) return "#F44336";
+    if (s.includes('closed')) return "#FF3B30";
     if (s.includes('hold')) return "#FFC107";
     return "#9E9E9E";
   };
@@ -129,6 +131,7 @@ const parseRemarks = (remarkData) => {
 };
 
 const HoldScreen = () => {
+  const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
   const [ideas, setIdeas] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -376,7 +379,7 @@ const HoldScreen = () => {
 
         Alert.alert("Success", successMessage, [{
           text: "OK",
-          onPress: () => fetchHoldIdeas()
+          onPress: () => fetchHoldIdeas() 
         }]);
 
         fetchHoldIdeas();
@@ -959,7 +962,7 @@ const HoldScreen = () => {
             )}
           </ScrollView>
 
-          <View style={styles.actionButtonsContainer}>
+          <View style={[styles.actionButtonsContainer, { paddingBottom: insets.bottom + 16 }]}>
             <TouchableOpacity style={styles.approveButton} onPress={() => openRemarkModal("approve")}>
               <Ionicons name="checkmark-circle" size={18} color="#fff" />
               <Text style={styles.actionButtonText}>Approve</Text>
@@ -1134,7 +1137,7 @@ const styles = StyleSheet.create({
   closeButton: { backgroundColor: '#f0f0f0', borderRadius: 18, width: 32, height: 32, justifyContent: "center", alignItems: "center" },
   timelineButtonHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e3f2fd', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#2c5aa0' },
   timelineButtonText: { color: '#2c5aa0', fontSize: 14, fontWeight: '600', marginLeft: 6 },
-  modalScrollContent: { padding: 16, paddingBottom: 90 },
+  modalScrollContent: { padding: 16, paddingBottom: 120 },
   cardDetail: { backgroundColor: "#fff", padding: 16, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
   cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
   labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
@@ -1168,7 +1171,25 @@ const styles = StyleSheet.create({
   imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
   closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
   fullImage: { width: "80%", height: "60%" },
-  actionButtonsContainer: { flexDirection: 'row', backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#e0e0e0', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 4, gap: 10 },
+  actionButtonsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    gap: 10,
+  },
   approveButton: { flex: 1, backgroundColor: '#4CAF50', paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, elevation: 2 },
   rejectButton: { flex: 1, backgroundColor: '#F44336', paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, elevation: 2 },
   actionButtonText: { color: '#fff', fontSize: 13, fontWeight: 'bold', textTransform: 'uppercase' },

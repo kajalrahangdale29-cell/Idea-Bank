@@ -232,8 +232,7 @@ export default function RejectedByMeScreen() {
   useEffect(() => {
     fetchRejectedIdeas();
   }, []);
-
-  // ✅ FIXED: Real-time search (like Pending Screen)
+  
   const filteredIdeas = Array.isArray(ideas)
     ? ideas.filter(idea => {
       const searchLower = searchText.trim().toLowerCase();

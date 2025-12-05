@@ -63,14 +63,15 @@ const formatDateTime = (dateString) => {
 
 function TimelineItem({ status, date, description, isLast }) {
   const getCircleColor = (status) => {
-    if (!status) return "#9E9E9E";
-    const s = status.toLowerCase();
-    if (s.includes("created")) return "#2196F3";
-    if (s.includes("edited")) return "#9C27B0";
-    if (s.includes("approved")) return "#4CAF50";
-    if (s.includes("implementation")) return "#3F51B5";
-    if (s.includes("rejected")) return "#F44336";
-    if (s.includes("pending")) return "#FF9800";
+    const s = status?.toLowerCase() || '';
+    if (s.includes('created')) return "#2196F3";
+    if (s.includes('edited')) return "#9C27B0";
+    if (s.includes('approved')) return "#4CAF50";
+    if (s.includes('pending')) return "#FF9800";
+    if (s.includes('implementation')) return "#3F51B5";
+    if (s.includes('rejected')) return "#F44336";
+    if (s.includes('closed')) return "#FF3B30";
+    if (s.includes('hold')) return "#FFC107";
     return "#9E9E9E";
   };
 
