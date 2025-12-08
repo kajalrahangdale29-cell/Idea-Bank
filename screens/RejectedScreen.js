@@ -66,16 +66,16 @@ const formatDateTime = (dateString) => {
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
 
-function TimelineItem({ status, date, description, isLast }) {
+function TimelineItem({ status, date, description, isLast, isFirst }) {
   const getCircleColor = (status) => {
-    if (!status) return "#9E9E9E";
-    const s = status.toLowerCase();
-    if (s.includes("created")) return "#2196F3";
-    if (s.includes("edited")) return "#9C27B0";
-    if (s.includes("approved")) return "#4CAF50";
-    if (s.includes("implementation")) return "#3F51B5";
-    if (s.includes("rejected")) return "#F44336";
-    if (s.includes("pending")) return "#FF9800";
+    const s = status?.toLowerCase() || '';
+    if (s.includes('created')) return "#2196F3";
+    if (s.includes('edited')) return "#9C27B0";
+    if (s.includes('approved')) return "#4CAF50";
+    if (s.includes('pending')) return "#FF9800";
+    if (s.includes('implementation')) return "#3F51B5";
+    if (s.includes('rejected')) return "#F44336";
+    if (s.includes('closed')) return "#FF3B30";
     return "#9E9E9E";
   };
 
@@ -87,8 +87,14 @@ function TimelineItem({ status, date, description, isLast }) {
       </View>
       <View style={styles.timelineContent}>
         <Text style={styles.timelineStatus}>{status}</Text>
-        {description && <Text style={styles.timelineDescription}>{description}</Text>}
-        {date && <Text style={styles.timelineDate}>{formatDateTime(date)}</Text>}
+        {description && (
+          <Text style={styles.timelineDescription}>{description}</Text>
+        )}
+        {date && (
+          <Text style={styles.timelineDate}>
+            {formatDateTime(date)}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -1021,6 +1027,7 @@ export default function RejectedByMeScreen() {
                       date={item.date || item.approvalDate}
                       description={item.description || item.comments}
                       isLast={idx === ideaDetail.timeline.length - 1}
+                      isFirst={idx === 0}
                     />
                   ))
                 ) : (

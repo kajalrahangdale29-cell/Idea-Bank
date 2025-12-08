@@ -55,8 +55,9 @@ function TimelineItem({ status, date, description, isLast, isFirst }) {
     if (s.includes('edited')) return "#9C27B0";
     if (s.includes('approved')) return "#4CAF50";
     if (s.includes('pending')) return "#FF9800";
-    if (s.includes('implementation')) return "#9C27B0";
+    if (s.includes('implementation')) return "#3F51B5";
     if (s.includes('rejected')) return "#F44336";
+    if (s.includes('closed')) return "#FF3B30";
     return "#9E9E9E";
   };
 
@@ -68,16 +69,12 @@ function TimelineItem({ status, date, description, isLast, isFirst }) {
       </View>
       <View style={styles.timelineContent}>
         <Text style={styles.timelineStatus}>{status}</Text>
-        {description && <Text style={styles.timelineDescription}>{description}</Text>}
+        {description && (
+          <Text style={styles.timelineDescription}>{description}</Text>
+        )}
         {date && (
           <Text style={styles.timelineDate}>
-            {new Date(date).toLocaleDateString('en-IN', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
+            {formatDateTime(date)}
           </Text>
         )}
       </View>

@@ -57,7 +57,7 @@ const formatDateTime = (dateString) => {
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
 
-function TimelineItem({ status, date, description, isLast }) {
+function TimelineItem({ status, date, description, isLast, isFirst }) {
   const getCircleColor = (status) => {
     const s = status?.toLowerCase() || '';
     if (s.includes('created')) return "#2196F3";
@@ -67,7 +67,6 @@ function TimelineItem({ status, date, description, isLast }) {
     if (s.includes('implementation')) return "#3F51B5";
     if (s.includes('rejected')) return "#F44336";
     if (s.includes('closed')) return "#FF3B30";
-    if (s.includes('hold')) return "#FFC107";
     return "#9E9E9E";
   };
 
@@ -79,8 +78,14 @@ function TimelineItem({ status, date, description, isLast }) {
       </View>
       <View style={styles.timelineContent}>
         <Text style={styles.timelineStatus}>{status}</Text>
-        {description && <Text style={styles.timelineDescription}>{description}</Text>}
-        {date && <Text style={styles.timelineDate}>{formatDateTime(date)}</Text>}
+        {description && (
+          <Text style={styles.timelineDescription}>{description}</Text>
+        )}
+        {date && (
+          <Text style={styles.timelineDate}>
+            {formatDateTime(date)}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -1034,10 +1039,7 @@ const HoldScreen = () => {
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
             <Text style={styles.timelineModalTitle}>Progress Timeline</Text>
-            <TouchableOpacity
-              style={styles.closeButtonTimeline}
-              onPress={() => setShowTimelineModal(false)}
-            >
+            <TouchableOpacity style={styles.closeButtonTimeline} onPress={() => setShowTimelineModal(false)}>
               <Ionicons name="close" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -1053,6 +1055,7 @@ const HoldScreen = () => {
                       date={item.date || item.approvalDate}
                       description={item.description || item.comments}
                       isLast={idx === ideaDetail.timeline.length - 1}
+                      isFirst={idx === 0}
                     />
                   ))
                 ) : (

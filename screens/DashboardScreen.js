@@ -672,7 +672,7 @@ const DashboardScreen = () => {
     );
   };
 
-  function TimelineItem({ status, date, description, isLast }) {
+  function TimelineItem({ status, date, description, isLast, isFirst }) {
     const getCircleColor = (status) => {
     const s = status?.toLowerCase() || '';
     if (s.includes('created')) return "#2196F3";
@@ -682,7 +682,6 @@ const DashboardScreen = () => {
     if (s.includes('implementation')) return "#3F51B5";
     if (s.includes('rejected')) return "#F44336";
     if (s.includes('closed')) return "#FF3B30";
-    if (s.includes('hold')) return "#FFC107";
     return "#9E9E9E";
   };
 
@@ -694,7 +693,9 @@ const DashboardScreen = () => {
         </View>
         <View style={styles.timelineContent}>
           <Text style={styles.timelineStatus}>{status}</Text>
-          {description && <Text style={styles.timelineDescription}>{description}</Text>}
+          {description && (
+            <Text style={styles.timelineDescription}>{description}</Text>
+          )}
           {date && (
             <Text style={styles.timelineDate}>
               {formatDateTime(date)}
@@ -1217,6 +1218,7 @@ const DashboardScreen = () => {
                       date={item.date || item.approvalDate}
                       description={safeRenderValue(item.description || item.comments)}
                       isLast={idx === ideaDetail.timeline.length - 1}
+                      isFirst={idx === 0}
                     />
                   ))
                 ) : (

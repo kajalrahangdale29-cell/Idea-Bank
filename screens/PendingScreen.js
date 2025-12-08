@@ -74,36 +74,35 @@ const formatDateTime = (dateString) => {
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
 
-function TimelineItem({ status, date, description, isLast }) {
+function TimelineItem({ status, date, description, isLast, isFirst }) {
   const getCircleColor = (status) => {
-    if (!status) return "#9E9E9E";
-    const s = status.toLowerCase();
-    if (s.includes("created")) return "#2196F3";
-    if (s.includes("edited")) return "#9C27B0";
-    if (s.includes("approved")) return "#4CAF50";
-    if (s.includes("implementation")) return "#3F51B5";
-    if (s.includes("rejected")) return "#F44336";
-    if (s.includes("pending")) return "#FF9800";
+    const s = status?.toLowerCase() || '';
+    if (s.includes('created')) return "#2196F3";
+    if (s.includes('edited')) return "#9C27B0";
+    if (s.includes('approved')) return "#4CAF50";
+    if (s.includes('pending')) return "#FF9800";
+    if (s.includes('implementation')) return "#3F51B5";
+    if (s.includes('rejected')) return "#F44336";
+    if (s.includes('closed')) return "#FF3B30";
     return "#9E9E9E";
   };
 
   return (
-    <View style={{ flexDirection: "row", marginBottom: 12 }}>
-      <View style={{ alignItems: "center", marginRight: 12 }}>
-        <View style={{
-          width: 14,
-          height: 14,
-          borderRadius: 7,
-          backgroundColor: getCircleColor(status),
-          borderWidth: 2,
-          borderColor: "#fff",
-        }} />
-        {!isLast && <View style={{ width: 2, flex: 1, backgroundColor: "#E0E0E0", marginTop: 2 }} />}
+    <View style={styles.timelineItem}>
+      <View style={styles.timelineLeft}>
+        <View style={[styles.timelineCircle, { backgroundColor: getCircleColor(status) }]} />
+        {!isLast && <View style={styles.timelineLine} />}
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontWeight: "bold", fontSize: 14, color: "#333" }}>{status}</Text>
-        {description && <Text style={{ fontSize: 12, color: "#555", marginVertical: 2 }}>{description}</Text>}
-        {date && <Text style={{ fontSize: 11, color: "#999" }}>{formatDateTime(date)}</Text>}
+      <View style={styles.timelineContent}>
+        <Text style={styles.timelineStatus}>{status}</Text>
+        {description && (
+          <Text style={styles.timelineDescription}>{description}</Text>
+        )}
+        {date && (
+          <Text style={styles.timelineDate}>
+            {formatDateTime(date)}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -1335,10 +1334,11 @@ export default function PendingScreen() {
                   ideaDetail.timeline.map((item, idx) => (
                     <TimelineItem
                       key={idx}
-                      status={item.status || item.approvalStage || "N/A"}
+                      status={item.status || item.approvalStage || item.approvalstage || "N/A"}
                       date={item.date || item.approvalDate}
                       description={item.description || item.comments}
                       isLast={idx === ideaDetail.timeline.length - 1}
+                      isFirst={idx === 0}
                     />
                   ))
                 ) : (
@@ -1444,7 +1444,68 @@ const styles = StyleSheet.create({
   timelineContainer: { paddingLeft: 4, paddingTop: 4 },
   noTimelineContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
   noTimelineText: { color: "#999", textAlign: "center", marginTop: 10, fontSize: 15, fontStyle: 'italic' },
-  imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
+timelineItem: {
+    flexDirection: "row",
+    marginBottom: 20,
+  },
+  timelineLeft: {
+    alignItems: "center",
+    marginRight: 15,
+    width: 20,
+  },
+  timelineCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 3,
+    borderColor: "#fff",
+    elevation: 2,
+  },
+  timelineLine: {
+    width: 3,
+    backgroundColor: "#E0E0E0",
+    flex: 1,
+    marginTop: 4,
+  },
+  timelineContent: {
+    flex: 1,
+    paddingBottom: 5,
+  },
+  timelineStatus: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  timelineDescription: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  timelineDate: {
+    fontSize: 12,
+    color: "#999",
+    fontStyle: "italic",
+  },
+  noTimelineContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40
+  },
+  noTimelineText: {
+    color: "#999",
+    textAlign: "center",
+    marginTop: 10,
+    fontSize: 15,
+    fontStyle: 'italic'
+  },
+  imageModal: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
   fullImage: { width: "90%", height: "70%" },
   actionButtonsContainer: {

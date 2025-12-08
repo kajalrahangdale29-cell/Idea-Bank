@@ -60,16 +60,16 @@ const formatDateTime = (dateString) => {
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
 
-function TimelineItem({ status, date, description, isLast }) {
+function TimelineItem({ status, date, description, isLast, isFirst }) {
   const getCircleColor = (status) => {
-    if (!status) return "#9E9E9E";
-    const s = status.toLowerCase();
-    if (s.includes("created")) return "#2196F3";
-    if (s.includes("edited")) return "#9C27B0";
-    if (s.includes("approved")) return "#4CAF50";
-    if (s.includes("implementation")) return "#3F51B5";
-    if (s.includes("rejected")) return "#F44336";
-    if (s.includes("pending")) return "#FF9800";
+    const s = status?.toLowerCase() || '';
+    if (s.includes('created')) return "#2196F3";
+    if (s.includes('edited')) return "#9C27B0";
+    if (s.includes('approved')) return "#4CAF50";
+    if (s.includes('pending')) return "#FF9800";
+    if (s.includes('implementation')) return "#3F51B5";
+    if (s.includes('rejected')) return "#F44336";
+    if (s.includes('closed')) return "#FF3B30";
     return "#9E9E9E";
   };
 
@@ -81,8 +81,14 @@ function TimelineItem({ status, date, description, isLast }) {
       </View>
       <View style={styles.timelineContent}>
         <Text style={styles.timelineStatus}>{status}</Text>
-        {description && <Text style={styles.timelineDescription}>{description}</Text>}
-        {date && <Text style={styles.timelineDate}>{formatDateTime(date)}</Text>}
+        {description && (
+          <Text style={styles.timelineDescription}>{description}</Text>
+        )}
+        {date && (
+          <Text style={styles.timelineDate}>
+            {formatDateTime(date)}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -1586,13 +1592,11 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
             <Text style={styles.timelineModalTitle}>Progress Timeline</Text>
-            <TouchableOpacity
-              style={styles.closeButtonTimeline}
-              onPress={() => setShowTimelineModal(false)}
-            >
+            <TouchableOpacity style={styles.closeButtonTimeline} onPress={() => setShowTimelineModal(false)}>
               <Ionicons name="close" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
+
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             <View style={styles.timelineCardContainer}>
               <View style={styles.timelineContainer}>
@@ -1600,16 +1604,17 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
                   ideaDetail.timeline.map((item, idx) => (
                     <TimelineItem
                       key={idx}
-                      status={item.status || item.approvalStage || "N/A"}
+                      status={item.status || item.approvalStage || item.approvalstage || "N/A"}
                       date={item.date || item.approvalDate}
                       description={item.description || item.comments}
                       isLast={idx === ideaDetail.timeline.length - 1}
+                      isFirst={idx === 0}
                     />
                   ))
                 ) : (
-                  <View style={styles.noDataContainer}>
-                    <Ionicons name="time-outline" size={40} color="#ccc" />
-                    <Text style={styles.noDataText}>No timeline data available</Text>
+                  <View style={styles.noTimelineContainer}>
+                    <Ionicons name="time-outline" size={48} color="#ccc" />
+                    <Text style={styles.noTimelineText}>No timeline data available</Text>
                   </View>
                 )}
               </View>
@@ -2028,6 +2033,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#999",
     fontStyle: "italic"
+  },
+  noTimelineContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40
+  },
+  noTimelineText: {
+    color: "#999",
+    textAlign: "center",
+    marginTop: 10,
+    fontSize: 15,
+    fontStyle: 'italic'
   },
   noTimelineContainer: {
     alignItems: 'center',
