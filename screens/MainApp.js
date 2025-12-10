@@ -406,8 +406,9 @@ function CustomDrawerContent(props) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.logoutConfirmBtn}
-                onPress={() => {
+                onPress={async () => {
                   setLogoutVisible(false);
+                  await AsyncStorage.clear();
                   props.navigation.replace("Login");
                 }}
               >
@@ -431,7 +432,7 @@ function DrawerScreens() {
         headerTitleStyle: { fontWeight: "bold" },
         drawerStyle: { 
           backgroundColor: "#0f4c5c",
-          width: 280, // Increased drawer width
+          width: 280, 
         },
         drawerActiveBackgroundColor: "#4aa3c0",
         drawerInactiveTintColor: "#fff",
@@ -573,7 +574,7 @@ export default function MainApp() {
 }
 
 const styles = StyleSheet.create({
-  // Main drawer item styles
+  
   drawerItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -596,7 +597,6 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
 
-  // Sub-menu item styles
   subDrawerItem: {
     flexDirection: "row",
     alignItems: "center",

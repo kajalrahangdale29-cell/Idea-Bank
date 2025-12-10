@@ -13,7 +13,6 @@ const normalizeImagePath = (path) => {
 
   let cleanPath = path;
 
-  
   const basePattern = 'https://ideabank-api-dev.abisaio.com';
 
   const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\\]/g, '\\$&'), 'g')) || []).length;
@@ -338,13 +337,8 @@ const HoldScreen = () => {
       return;
     }
 
-    const originalIdea = ideas.find(i =>
-      i.ideaId === (ideaDetail?.ideaId || ideaDetail?.id) ||
-      i.id === (ideaDetail?.ideaId || ideaDetail?.id)
-    );
-
-    if (!originalIdea && !ideaDetail) {
-      Alert.alert("Error", "Unable to find idea record.");
+    if (!ideaDetail) {
+      Alert.alert("Error", "Unable to find idea details.");
       return;
     }
 
@@ -359,14 +353,23 @@ const HoldScreen = () => {
         hold: "Hold"
       };
 
-      const ideaIdValue = originalIdea?.ideaId || ideaDetail?.ideaId || originalIdea?.id || ideaDetail?.id;
-      const recordId = originalIdea?.id || ideaDetail?.id;
+      const recordId = ideaDetail.id || ideaDetail.pendingApprovalId;
+      const ideaIdValue = ideaDetail.ideaId || ideaDetail.id;
+      const approvalStageValue = ideaDetail.approvalStage || ideaDetail.approvalstage || "Manager";
+
+      console.log("Submitting with:", {
+        id: recordId,
+        ideaId: ideaIdValue,
+        status: statusMap[remarkType],
+        approvalstage: approvalStageValue,
+        comments: remarkText.trim()
+      });
 
       const formData = new FormData();
       formData.append('id', recordId.toString());
       formData.append('ideaId', ideaIdValue.toString());
       formData.append('status', statusMap[remarkType]);
-      formData.append('approvalstage', originalIdea?.approvalStage || ideaDetail?.approvalStage || "Manager");
+      formData.append('approvalstage', approvalStageValue);
       formData.append('comments', remarkText.trim());
 
       const response = await axios.post(UPDATE_STATUS_URL, formData, {
@@ -375,6 +378,8 @@ const HoldScreen = () => {
           'Content-Type': 'multipart/form-data'
         }
       });
+
+      console.log("API Response:", response.data);
 
       if (response.data && (response.data.success === true || response.status === 200)) {
         const successMessage = response.data.message || `Idea ${remarkType === 'approve' ? 'approved' : remarkType === 'reject' ? 'rejected' : 'updated'} successfully!`;
@@ -392,6 +397,8 @@ const HoldScreen = () => {
         Alert.alert("Error", response.data?.message || "Failed to update status.");
       }
     } catch (error) {
+      console.error("Submit error:", error.response?.data || error.message);
+      
       let errorMessage = "Failed to update.";
       if (error.response?.status === 404) {
         errorMessage = "API endpoint not found.";
@@ -406,7 +413,6 @@ const HoldScreen = () => {
       setSubmittingStatus(false);
     }
   };
-
   const closeModal = () => {
     setSelectedIdea(null);
     setIdeaDetail(null);

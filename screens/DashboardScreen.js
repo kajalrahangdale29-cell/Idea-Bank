@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Dimensions, Modal, FlatList, ActivityIndicator, SafeAreaView, Linking, Alert } from 'react-native';
 import {
   widthPercentageToDP as wp,
@@ -76,9 +76,9 @@ const DashboardScreen = () => {
     { title: 'Rejected', icon: 'close-circle-outline', count: 0, color: '#ffe4e6', iconColor: '#d32f2f' },
   ]);
 
-  const [scope, setScope] = useState('self'); 
+  const [scope, setScope] = useState('self');
   const [permissions, setPermissions] = useState({ canViewTeam: false, canViewAll: false });
-  const [availableScopes, setAvailableScopes] = useState(['self']); 
+  const [availableScopes, setAvailableScopes] = useState(['self']);
   const [showScopeDropdown, setShowScopeDropdown] = useState(false);
 
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -98,6 +98,10 @@ const DashboardScreen = () => {
   const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
+
+  const isInitialMount = useRef(true);
+  const isFetchingDashboard = useRef(false);
+  const isFetchingNotifications = useRef(false);
 
   const NOTIFICATIONS_STORAGE_KEY = 'user_notifications_7day';
   const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -121,10 +125,12 @@ const DashboardScreen = () => {
           setEmployeeUsername(parsed.employee.username);
           setEmployeeSystemId(parsed.employee.id);
           setToken(parsed.token);
-          await fetchDashboard(parsed.token);
+
+          await loadStoredNotifications(parsed.employee.id);
+
+          await fetchDashboard(parsed.token, 'self');
 
           fetchUnreadCount(parsed.employee.id, parsed.token);
-          loadStoredNotifications(parsed.employee.id);
         }
       } catch (error) {
         console.error("Error loading user data:", error);
@@ -135,6 +141,11 @@ const DashboardScreen = () => {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (isInitialMount.current) {
+        isInitialMount.current = false;
+        return;
+      }
+
       if (employeeSystemId && token) {
         fetchDashboard(token, scope);
         fetchUnreadCount(employeeSystemId, token);
@@ -153,6 +164,10 @@ const DashboardScreen = () => {
         const currentTime = Date.now();
 
         const validNotifications = parsedData.filter(notif => {
+         
+          if (!notif.isRead) {
+            return true;
+          }
           const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
           return (currentTime - notifTime) < SEVEN_DAYS_MS;
         });
@@ -170,7 +185,6 @@ const DashboardScreen = () => {
       console.error("Error loading stored notifications:", error);
     }
   };
-
   const saveNotificationsToStorage = async (systemId, notificationsList) => {
     try {
       const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
@@ -187,13 +201,15 @@ const DashboardScreen = () => {
     }
   };
 
-  const fetchDashboard = async (authToken, requestedScope = '') => {
+  const fetchDashboard = async (authToken, requestedScope = 'self') => {
     if (!authToken) return;
+    if (isFetchingDashboard.current) return;
+
+    isFetchingDashboard.current = true;
+
     try {
-      let url = DASHBOARD_URL;
-      if (requestedScope && requestedScope.trim() !== '') {
-        url = `${DASHBOARD_URL}?scope=${encodeURIComponent(requestedScope)}`;
-      }
+     
+      const url = `${DASHBOARD_URL}?scope=${encodeURIComponent(requestedScope)}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -219,10 +235,11 @@ const DashboardScreen = () => {
             case 1: return { ...card, count: stats.inProgress ?? 0 };
             case 2: return { ...card, count: stats.approved ?? 0 };
             case 3: return { ...card, count: stats.hold ?? 0 };
-            case 4: return { ...card, count: stats.rejected ?? 0 };
+            case 4: return { ...card, count: stats.cancelled ?? stats.rejected ?? 0 };
             default: return card;
           }
         }));
+
         const userObj = jsonData.data?.user || {};
         const canViewTeam = !!jsonData.data?.permissions?.canViewTeam || !!userObj.isManager;
         const canViewAll = !!jsonData.data?.permissions?.canViewAll || !!userObj.isAdmin;
@@ -233,25 +250,24 @@ const DashboardScreen = () => {
         if (canViewAll) scopesAvailable.push('all');
         setAvailableScopes(scopesAvailable);
 
-        const backendScope = (jsonData.data?.scope || '').toString().toLowerCase();
-        if (backendScope && scopesAvailable.includes(backendScope)) {
-          setScope(backendScope);
-        } else {
-          if (canViewAll) setScope('all');
-          else if (canViewTeam) setScope('team');
-          else setScope('self');
+        if (isInitialMount.current) {
+          setScope('self');
         }
       } else {
         console.error('Dashboard fetch failed', jsonData);
       }
     } catch (err) {
       console.error("Dashboard fetch error:", err);
+    } finally {
+      isFetchingDashboard.current = false;
     }
   };
 
   const fetchUnreadCount = async (systemId, authToken) => {
+    if (isFetchingNotifications.current) return; 
+
     try {
-      const url = NOTIFICATION_COUNT_URL(systemId, scope);
+      const url = NOTIFICATION_COUNT_URL(systemId, 'self'); 
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -281,10 +297,13 @@ const DashboardScreen = () => {
 
   const fetchNotifications = async () => {
     if (!employeeSystemId || !token) return;
+    if (isFetchingNotifications.current) return; 
 
+    isFetchingNotifications.current = true;
     setLoadingNotifications(true);
+
     try {
-      const url = NOTIFICATION_USER_URL(employeeSystemId, scope);
+      const url = NOTIFICATION_USER_URL(employeeSystemId, 'self'); 
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -345,6 +364,7 @@ const DashboardScreen = () => {
       await loadStoredNotifications(employeeSystemId);
     } finally {
       setLoadingNotifications(false);
+      isFetchingNotifications.current = false;
     }
   };
 
@@ -674,16 +694,16 @@ const DashboardScreen = () => {
 
   function TimelineItem({ status, date, description, isLast, isFirst }) {
     const getCircleColor = (status) => {
-    const s = status?.toLowerCase() || '';
-    if (s.includes('created')) return "#2196F3";
-    if (s.includes('edited')) return "#9C27B0";
-    if (s.includes('approved')) return "#4CAF50";
-    if (s.includes('pending')) return "#FF9800";
-    if (s.includes('implementation')) return "#3F51B5";
-    if (s.includes('rejected')) return "#F44336";
-    if (s.includes('closed')) return "#FF3B30";
-    return "#9E9E9E";
-  };
+      const s = status?.toLowerCase() || '';
+      if (s.includes('created')) return "#2196F3";
+      if (s.includes('edited')) return "#9C27B0";
+      if (s.includes('approved')) return "#4CAF50";
+      if (s.includes('pending')) return "#FF9800";
+      if (s.includes('implementation')) return "#3F51B5";
+      if (s.includes('rejected')) return "#F44336";
+      if (s.includes('closed')) return "#FF3B30";
+      return "#9E9E9E";
+    };
 
     return (
       <View style={styles.timelineItem}>
@@ -719,7 +739,9 @@ const DashboardScreen = () => {
   const changeScope = async (newScope) => {
     setShowScopeDropdown(false);
     if (newScope === scope) return;
+
     setScope(newScope);
+
     await fetchDashboard(token, newScope);
   };
 
@@ -730,7 +752,6 @@ const DashboardScreen = () => {
     if (s === 'all') return 'All Ideas';
     return 'My Ideas';
   };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>

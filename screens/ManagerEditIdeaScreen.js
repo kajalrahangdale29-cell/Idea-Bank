@@ -64,10 +64,8 @@ export default function ManagerEditIdeaScreen() {
   const [benefit, setBenefit] = useState(ideaData.tentativeBenefit || '');
   const [teamMembers, setTeamMembers] = useState(ideaData.teamMembers || '');
   
-  // FIX: Handle empty mobile number from API
   const [mobileNumber, setMobileNumber] = useState(() => {
     const existingMobile = ideaData.mobileNumber || '';
-    // If mobile number is empty or invalid, try to get from user data
     if (!existingMobile || existingMobile.trim() === '') {
       return '';
     }
@@ -266,7 +264,6 @@ export default function ManagerEditIdeaScreen() {
         reportingManagerEmail: data.data.managerEmail || '',
       });
       
-      // FIX: Auto-fill mobile number from employee details if not present
       if (!mobileNumber || mobileNumber.trim() === '') {
         const employeeMobile = data.data.mobileNumber || '';
         if (employeeMobile && /^\d{10}$/.test(employeeMobile)) {
@@ -448,7 +445,6 @@ export default function ManagerEditIdeaScreen() {
       formData.append('TentativeBenefit', benefit.trim());
       formData.append('TeamMembers', teamMembers.trim());
       
-      // FIX: Ensure mobile number is properly trimmed and validated
       formData.append('MobileNumber', mobileNumber.trim());
       
       formData.append('SolutionCategory', solutionCategory);
@@ -457,7 +453,6 @@ export default function ManagerEditIdeaScreen() {
       formData.append('IsBETeamSupportNeeded', beSupportNeeded === 'Yes' ? 'true' : 'false');
       formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation === 'Yes' ? 'true' : 'false');
 
-      // FIX: Only append file if it's a new file
       if (file && isNewFile) {
         try {
           let fileUri = file;

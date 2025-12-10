@@ -589,7 +589,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                     <View style={styles.rowDetail}>
                       <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
                       <Text style={styles.valueDetail}>
-                        {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
+                        {ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}
                       </Text>
                     </View>
                   </View>

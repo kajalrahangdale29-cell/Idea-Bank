@@ -282,7 +282,6 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas }) {
         Alert.alert('Error', response.data?.message || 'Failed to submit');
       }
     } catch (error) {
-      console.error('Submit error:', error);
       Alert.alert('Error', error.response?.data?.message || 'Failed to submit. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -471,7 +470,6 @@ export default function PendingScreen() {
       setTotalItems(apiTotalItems || allIdeas.length);
 
     } catch (error) {
-      console.error("❌ Error fetching pending ideas:", error);
       setIdeas([]);
       setAllIdeasOriginal([]);
       setTotalItems(0);
@@ -480,13 +478,11 @@ export default function PendingScreen() {
     }
   };
 
-  // ✅ FIXED: Apply date filters only
   const applyFilters = () => {
     setLoading(true);
     try {
       let filteredIdeas = [...allIdeasOriginal];
 
-      // Date filtering only
       if (fromDate || toDate) {
         filteredIdeas = filteredIdeas.filter(idea => {
           if (!idea.creationDate) return false;
@@ -517,13 +513,11 @@ export default function PendingScreen() {
       setShowFilters(false);
 
     } catch (error) {
-      console.error("Filter error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ FIXED: Clear date filters only
   const clearFilters = () => {
     setFromDate(null);
     setToDate(null);
@@ -532,7 +526,6 @@ export default function PendingScreen() {
     setTotalItems(allIdeasOriginal.length);
   };
 
-  // ✅ FIXED: Real-time search filtering (separate from date filter)
   const filteredIdeas = Array.isArray(ideas)
     ? ideas.filter(idea => {
       const searchLower = searchIdeaNumber.trim().toLowerCase();
@@ -545,7 +538,6 @@ export default function PendingScreen() {
     })
     : [];
 
-  // ✅ FIXED: fetchIdeaDetail with URL normalization
   const fetchIdeaDetail = async (ideaId) => {
     if (!ideaId) return;
     try {
@@ -558,7 +550,6 @@ export default function PendingScreen() {
       if (response?.success && response?.data) {
         const detail = response.data;
 
-        // Normalize all image paths
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
@@ -580,7 +571,6 @@ export default function PendingScreen() {
         Alert.alert("Error", response?.message || "Idea details not found.");
       }
     } catch (error) {
-      console.error('Detail fetch error:', error);
       Alert.alert("Error", "Failed to fetch idea details.");
     } finally {
       setLoadingDetail(false);
@@ -600,7 +590,6 @@ export default function PendingScreen() {
   };
 
   const submitStatusUpdate = async () => {
-    // ✅ FIXED: Maximum 100 character limit for remark
     if (!remarkText.trim()) {
       Alert.alert("Required", "Please enter a remark.");
       return;
@@ -665,7 +654,6 @@ export default function PendingScreen() {
         throw new Error(response.data?.message || "Failed to update status");
       }
     } catch (error) {
-      console.error('Status update error:', error);
       let errorMessage = "Failed to update status.";
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
@@ -728,7 +716,6 @@ export default function PendingScreen() {
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
 
-    // Check if it's a PDF
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
         'PDF Document',
@@ -1058,7 +1045,6 @@ export default function PendingScreen() {
                   </View>
                 )}
 
-                {/* Implementation Details Section - Find this and replace */}
                 {shouldShowImplementationDetails(ideaDetail) && (
                   <>
                     <TouchableOpacity

@@ -191,7 +191,6 @@ export default function MyTeamIdeasScreen() {
     fetchAllIdeas();
   }, []);
 
-  // ✅ REAL-TIME SEARCH: Apply filters whenever search text changes
   useEffect(() => {
     applyFiltersRealTime();
   }, [searchIdeaNumber]);
@@ -549,8 +548,7 @@ export default function MyTeamIdeasScreen() {
 
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
-
-    // Check if it's a PDF
+    
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
         'PDF Document',

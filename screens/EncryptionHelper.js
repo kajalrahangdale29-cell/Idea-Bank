@@ -97,7 +97,7 @@ export const decrypt = (cipherText) => {
 };
 
 export const encrypt = (plainText) => {
-  if (!plainText || plainText.trim() === '') {
+  if (!plainText || plainText.trim() === '') {  
     throw new Error('Plain text cannot be null or empty');
   }
   try {

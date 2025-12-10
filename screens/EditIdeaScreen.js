@@ -24,9 +24,6 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
 
-/* ----------------------
-   Utility helpers
-   ---------------------*/
 const normalizeImagePath = (path) => {
   if (!path) return null;
   try {
@@ -64,13 +61,10 @@ const parseInitialDate = (value) => {
   }
 };
 
-/* ----------------------
-   Component
-   ---------------------*/
 export default function EditIdeaScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const params = route?.params || {}; // defensive
+  const params = route?.params || {}; 
   const ideaData = typeof params.ideaData === 'object' && params.ideaData !== null ? params.ideaData : {};
   const ideaId = params.ideaId;
   const isManagerEditing = params.isManagerEditing || false;
@@ -86,7 +80,6 @@ export default function EditIdeaScreen() {
   const [activeTab, setActiveTab] = useState('idea');
   const [userDetails, setUserDetails] = useState(null);
 
-  // Safe initial states
   const [ideaDescription, setIdeaDescription] = useState(String(ideaData.ideaDescription || ''));
   const [proposedSolution, setProposedSolution] = useState(String(ideaData.proposedSolution || ''));
   const [solutionCategory, setSolutionCategory] = useState(String(ideaData.solutionCategory || ''));
@@ -98,7 +91,6 @@ export default function EditIdeaScreen() {
   const [date, setDate] = useState(parseInitialDate(ideaData.plannedImplementationDuration));
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // File handling - use safeExistingFile to avoid calling string methods on null
   const rawExisting = ideaData.beforeImplementationImagePath || ideaData.imagePath || null;
   const safeExistingFile = typeof rawExisting === 'string' ? normalizeImagePath(rawExisting) : null;
 
@@ -125,7 +117,6 @@ export default function EditIdeaScreen() {
   const [fullScreen, setFullScreen] = useState(false);
   const [imageScale, setImageScale] = useState(1);
 
-  // Radios with safe ideaData
   const safeIdeaData = typeof ideaData === 'object' && ideaData !== null ? ideaData : {};
   const parseYesNo = (v) => {
     if (v === true || v === 'true' || v === 'Yes' || v === 'yes') return 'Yes';
@@ -158,9 +149,7 @@ export default function EditIdeaScreen() {
   const ideaStatus = safeIdeaData.status || safeIdeaData.ideaStatus || 'Draft';
   const showDraftOption = String(ideaStatus).toLowerCase() === 'draft' && !isManagerEditing;
 
-  /* ----------------------
-     Fetch employee details when employee tab opened
-     ---------------------*/
+
   const fetchEmployeeDetails = useCallback(async () => {
     if (activeTab !== 'employee') return;
     try {
@@ -187,8 +176,6 @@ export default function EditIdeaScreen() {
         reportingManagerEmail: data.data.managerEmail || '',
       });
     } catch (error) {
-      // swallow or log in dev
-      // console.warn('fetchEmployeeDetails error', error);
     }
   }, [activeTab]);
 
@@ -196,9 +183,6 @@ export default function EditIdeaScreen() {
     fetchEmployeeDetails();
   }, [fetchEmployeeDetails]);
 
-  /* ----------------------
-     Pickers / File pickers
-     ---------------------*/
   const pickImageFromGallery = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -296,9 +280,6 @@ export default function EditIdeaScreen() {
     }
   };
 
-  /* ----------------------
-     Date helpers & validators
-     ---------------------*/
   const formatDate = (dateObj) => {
     if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) return '';
     const day = String(dateObj.getDate()).padStart(2, '0');
@@ -319,9 +300,6 @@ export default function EditIdeaScreen() {
     return diffDays;
   };
 
-  /* ----------------------
-     Validation functions
-     ---------------------*/
   const validateIdeaDescription = (value) => {
     if (!String(value || '').trim()) {
       setIdeaDescriptionError('Idea Description is required.');
@@ -432,9 +410,6 @@ export default function EditIdeaScreen() {
     return true;
   };
 
-  /* ----------------------
-     Submit handlers
-     ---------------------*/
   const handleBeforeSubmit = useCallback((type) => {
     const isIdeaDescriptionValid = validateIdeaDescription(ideaDescription);
     const isProposedSolutionValid = validateProposedSolution(proposedSolution);
@@ -552,7 +527,6 @@ export default function EditIdeaScreen() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          // Note: Do not set Content-Type when using FormData in RN fetch
         },
         body: formData,
       });
@@ -613,9 +587,6 @@ export default function EditIdeaScreen() {
 
   const handleTabSwitch = useCallback((tab) => setActiveTab(tab), []);
 
-  /* ----------------------
-     Render
-     ---------------------*/
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F8FF' }}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -1036,9 +1007,7 @@ export default function EditIdeaScreen() {
   );
 }
 
-/* ----------------------
-   Small presentational components (fixed)
-   ---------------------*/
+
 const InputField = ({ label, icon, placeholder, value = '', onChangeText = () => {}, multiline = false, maxLength, required, keyboardType, error }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>{label} {required && <Text style={styles.required}>*</Text>}</Text>
@@ -1113,9 +1082,7 @@ const FieldRow = ({ label, value }) => (
   </View>
 );
 
-/* ----------------------
-   Styles (I kept your styles and added errorText)
-   ---------------------*/
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#F5F8FF',
