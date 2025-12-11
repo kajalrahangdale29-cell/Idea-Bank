@@ -150,8 +150,15 @@ export default function ImplementationDetailsScreen() {
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [imageScale, setImageScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
 
   const isEditMode = hasExistingImplementation(ideaDetail);
+
+  useEffect(() => {
+    if (!showImagePreview) {
+      setRotation(0);
+    }
+  }, [showImagePreview]);
 
   useEffect(() => {
     if (!ideaData && ideaId) {
@@ -718,28 +725,36 @@ export default function ImplementationDetailsScreen() {
       <Modal visible={showImagePreview} transparent animationType="fade">
         <View style={styles.imagePreviewModal}>
           <View style={styles.imagePreviewHeader}>
-            <TouchableOpacity onPress={() => setShowImagePreview(false)}>
-              <Ionicons name="close" size={28} color="#fff" />
-            </TouchableOpacity>
-            <View style={styles.zoomControls}>
-              <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut}>
-                <Ionicons name="remove" size={24} color="#fff" />
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.headerButton} onPress={() => setRotation(prev => (prev + 90) % 360)}>
+                <Feather name="rotate-cw" size={24} color="#fff" />
               </TouchableOpacity>
-              <Text style={styles.zoomText}>{Math.round(imageScale * 100)}%</Text>
-              <TouchableOpacity style={styles.zoomButton} onPress={handleZoomIn}>
-                <Ionicons name="add" size={24} color="#fff" />
+              <TouchableOpacity style={styles.headerButton} onPress={() => { setImageScale(1); setRotation(0); }}>
+                <MaterialIcons name="crop-free" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
+            <TouchableOpacity onPress={() => setShowImagePreview(false)} style={styles.headerButton}>
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={styles.imageScrollContent} maximumZoomScale={3} minimumZoomScale={0.5}>
+          <ScrollView contentContainerStyle={styles.imageScrollContent} style={{ flex: 1 }} maximumZoomScale={3} minimumZoomScale={0.5}>
             {(afterImage || existingImageUrl) && (
               <Image 
                 source={{ uri: afterImage || existingImageUrl }} 
-                style={[styles.fullImagePreview, { transform: [{ scale: imageScale }] }]} 
+                style={[styles.fullImagePreview, { transform: [{ scale: imageScale }, { rotate: `${rotation}deg` }] }]} 
                 resizeMode="contain" 
               />
             )}
           </ScrollView>
+          <View style={styles.imagePreviewFooter}>
+            <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut}>
+              <Ionicons name="remove" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.zoomText}>{Math.round(imageScale * 100)}%</Text>
+            <TouchableOpacity style={styles.zoomButton} onPress={handleZoomIn}>
+              <Ionicons name="add" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
 
@@ -1024,17 +1039,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    paddingHorizontal: 20, 
-    paddingTop: 50, 
-    paddingBottom: 15 
-  },
-  zoomControls: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: 'rgba(255,255,255,0.2)', 
-    borderRadius: 20, 
     paddingHorizontal: 10, 
-    paddingVertical: 5 
+    paddingTop: 50, 
+    paddingBottom: 15,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+  },
+  headerButton: {
+    padding: 10,
+  },
+  imagePreviewFooter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 50,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 2,
   },
   zoomButton: { padding: 8 },
   zoomText: { 
@@ -1046,7 +1070,7 @@ const styles = StyleSheet.create({
     textAlign: 'center' 
   },
   imageScrollContent: { 
-    flex: 1, 
+    flexGrow: 1, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },

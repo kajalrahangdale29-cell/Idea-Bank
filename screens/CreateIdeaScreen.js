@@ -51,6 +51,22 @@ export default function CreateIdeaScreen() {
   const [dateError, setDateError] = useState('');
   const [beSupportNeededError, setBeSupportNeededError] = useState('');
   const [canImplementOtherLocationError, setCanImplementOtherLocationError] = useState('');
+  const [rotation, setRotation] = useState(0);
+
+  const handleRotate = () => {
+    setRotation(prev => (prev + 90) % 360);
+  };
+
+  const handleFit = () => {
+    setImageScale(1);
+    setRotation(0);
+  };
+
+  useEffect(() => {
+    if (!fullScreen) {
+      setRotation(0);
+    }
+  }, [fullScreen]);
 
   const resetForm = () => {
     setIdeaDescription('');
@@ -797,17 +813,43 @@ export default function CreateIdeaScreen() {
 
               <Modal visible={fullScreen} transparent={true}>
                 <View style={styles.fullScreenContainer}>
-                  <TouchableOpacity
-                    style={styles.closeButton}
-                    onPress={() => {
-                      setFullScreen(false);
-                      setImageScale(1);
-                    }}
-                  >
-                    <Feather name="x" size={30} color="#fff" />
-                  </TouchableOpacity>
+                  <View style={styles.fullScreenHeader}>
+                    <View style={styles.headerActions}>
+                      <TouchableOpacity style={styles.headerButton} onPress={handleRotate}>
+                        <Feather name="rotate-cw" size={24} color="#fff" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.headerButton} onPress={handleFit}>
+                        <MaterialIcons name="crop-free" size={24} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.headerButton}
+                      onPress={() => {
+                        setFullScreen(false);
+                        setImageScale(1);
+                      }}
+                    >
+                      <Feather name="x" size={30} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
 
-                  <View style={styles.zoomControls}>
+                  <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    style={{ flex: 1 }}
+                    maximumZoomScale={3}
+                    minimumZoomScale={0.5}
+                    showsHorizontalScrollIndicator={false}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <Image
+                      source={{ uri: file }}
+                      style={[styles.fullScreenImage, { transform: [{ scale: imageScale }, { rotate: `${rotation}deg` }] }]}
+                      contentFit="contain"
+                      cachePolicy="none"
+                    />
+                  </ScrollView>
+
+                  <View style={styles.fullScreenFooter}>
                     <TouchableOpacity
                       style={styles.zoomButton}
                       onPress={handleZoomOut}
@@ -822,21 +864,6 @@ export default function CreateIdeaScreen() {
                       <Feather name="plus" size={24} color="#fff" />
                     </TouchableOpacity>
                   </View>
-
-                  <ScrollView
-                    contentContainerStyle={styles.scrollContent}
-                    maximumZoomScale={3}
-                    minimumZoomScale={0.5}
-                    showsHorizontalScrollIndicator={false}
-                    showsVerticalScrollIndicator={false}
-                  >
-                    <Image
-                      source={{ uri: file }}
-                      style={[styles.fullScreenImage, { transform: [{ scale: imageScale }] }]}
-                      contentFit="contain"
-                      cachePolicy="none"
-                    />
-                  </ScrollView>
                 </View>
               </Modal>
 
@@ -1167,13 +1194,32 @@ const styles = StyleSheet.create({
   fieldValue: { flex: 2, color: '#555', fontSize: 14 },
   loadingText: { color: '#555', textAlign: 'center', marginTop: 20, fontSize: 16 },
   fullScreenContainer: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
-    justifyContent: 'center', alignItems: 'center',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
   },
-  closeButton: { position: 'absolute', top: 40, right: 20, zIndex: 3, padding: 10 },
-  zoomControls: {
-    position: 'absolute', bottom: 40, flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 25, padding: 10, zIndex: 2, alignItems: 'center',
+  fullScreenHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingHorizontal: 10,
+    zIndex: 2,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  headerActions: {
+    flexDirection: 'row',
+  },
+  headerButton: {
+    padding: 10,
+  },
+  fullScreenFooter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 50,
+    paddingHorizontal: 10,
+    zIndex: 2,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   zoomButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 },
   zoomText: { color: '#fff', fontSize: 16, fontWeight: '600', marginHorizontal: 10 },

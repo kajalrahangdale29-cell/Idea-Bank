@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ScrollView,
   Modal,
   Linking,
+  Animated,
 } from "react-native";
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -80,6 +81,64 @@ function RemarksCard({ title, comment, date }) {
       <Text style={styles.remarkTitle}>{title}</Text>
       <Text style={styles.remarkComment}>{comment}</Text>
       <Text style={styles.remarkDate}>{date}</Text>
+    </View>
+  );
+}
+
+// Confetti Component
+function ConfettiPiece({ delay, duration, color }) {
+  const translateY = useRef(new Animated.Value(-50)).current;
+  const translateX = useRef(new Animated.Value(Math.random() * 400 - 200)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 800,
+        duration: duration,
+        delay: delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rotate, {
+        toValue: Math.random() > 0.5 ? 360 : -360,
+        duration: duration,
+        delay: delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.confettiPiece,
+        {
+          backgroundColor: color,
+          transform: [
+            { translateY },
+            { translateX },
+            { rotate: rotate.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) },
+          ],
+        },
+      ]}
+    />
+  );
+}
+
+function ConfettiEffect() {
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+  const confettiCount = 50;
+
+  return (
+    <View style={styles.confettiContainer}>
+      {Array.from({ length: confettiCount }).map((_, index) => (
+        <ConfettiPiece
+          key={index}
+          delay={Math.random() * 200}
+          duration={2000 + Math.random() * 1000}
+          color={colors[Math.floor(Math.random() * colors.length)]}
+        />
+      ))}
     </View>
   );
 }
@@ -165,6 +224,7 @@ export default function AllTeamIdeasScreen() {
   const [imageLoadError, setImageLoadError] = useState({});
 
   const [allIdeasOriginal, setAllIdeasOriginal] = useState([]);
+  const [showClosedPopup, setShowClosedPopup] = useState(false);
 
   useEffect(() => {
     fetchAllIdeas();
@@ -337,6 +397,15 @@ export default function AllTeamIdeasScreen() {
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
+
+        // Check if status is Closed and show popup
+        const status = (detail.ideaStatus || detail.status || '').toLowerCase();
+        if (status === 'closed') {
+          setShowClosedPopup(true);
+          setTimeout(() => {
+            setShowClosedPopup(false);
+          }, 3000); // Hide after 3 seconds
+        }
       } else {
         Alert.alert("Error", response?.message || "Idea details not found.");
       }
@@ -369,6 +438,7 @@ export default function AllTeamIdeasScreen() {
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
     setImageLoadError({});
+    setShowClosedPopup(false);
   };
 
   const openImagePreview = (imageUrl) => {
@@ -573,7 +643,6 @@ export default function AllTeamIdeasScreen() {
         </ScrollView>
       )}
 
-      {/* Loading overlay */}
       {loadingDetail && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#004d61" />
@@ -581,9 +650,22 @@ export default function AllTeamIdeasScreen() {
         </View>
       )}
 
-      {/* Fullscreen Modal with Details - Dashboard Style */}
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
+          {/* Confetti Effect */}
+          {showClosedPopup && <ConfettiEffect />}
+
+          {/* Closed Status Popup - Inside Detail Modal */}
+          {showClosedPopup && (
+            <View style={styles.closedPopupContainer}>
+              <View style={styles.closedPopup}>
+                <Text style={styles.closedPopupEmoji}>🎉</Text>
+                <Text style={styles.closedPopupText}>Idea Closed Successfully!</Text>
+                <Text style={styles.closedPopupEmoji}>🎉</Text>
+              </View>
+            </View>
+          )}
+
           <View style={styles.modalHeaderDetail}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
@@ -720,6 +802,7 @@ export default function AllTeamIdeasScreen() {
                         </TouchableOpacity>
                       ) : (<Text style={styles.valueDetail}>N/A</Text>)}
                     </View>
+
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Status:</Text>
                       <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus || ideaDetail.status) }]}>
@@ -977,6 +1060,19 @@ export default function AllTeamIdeasScreen() {
           )}
         </View>
       </Modal>
+
+      {/* Closed Status Popup */}
+      {showClosedPopup && (
+        <View style={styles.closedPopupContainer}>
+          <View style={styles.closedPopup}>
+            <Text style={styles.closedPopupEmoji}>🎉</Text>
+            <Text style={styles.closedPopupText}>Idea Closed Successfully!</Text>
+            <Text style={styles.closedPopupEmoji}>🎉</Text>
+          </View>
+        </View>
+      )}
+
+
     </View>
   );
 }
@@ -1070,4 +1166,45 @@ const styles = StyleSheet.create({
   imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
   closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
   fullImage: { width: "90%", height: "70%" },
+  closedPopupContainer: { position: 'absolute', top: 80, left: 20, right: 20, alignItems: 'center', zIndex: 10000 },
+  closedPopup: { backgroundColor: '#4CAF50', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 6 },
+  closedPopupEmoji: { fontSize: 24, marginHorizontal: 6 },
+  closedPopupText: { fontSize: 16, fontWeight: 'bold', color: '#fff', textAlign: 'center' },
+  popupOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  popupContainer: {
+    width: 300,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  popupText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginVertical: 15,
+    textAlign: 'center',
+    color: '#333',
+  },
+  popupButton: {
+    backgroundColor: '#2c5aa0',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  popupButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });

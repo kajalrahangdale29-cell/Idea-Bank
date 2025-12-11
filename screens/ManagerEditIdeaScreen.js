@@ -127,6 +127,22 @@ export default function ManagerEditIdeaScreen() {
   const [dateError, setDateError] = useState('');
   const [beSupportNeededError, setBeSupportNeededError] = useState('');
   const [canImplementOtherLocationError, setCanImplementOtherLocationError] = useState('');
+  const [rotation, setRotation] = useState(0);
+
+  const handleRotate = useCallback(() => {
+    setRotation(prev => (prev + 90) % 360);
+  }, []);
+
+  const handleFit = useCallback(() => {
+    setImageScale(1);
+    setRotation(0);
+  }, []);
+
+  useEffect(() => {
+    if (!fullScreen) {
+      setRotation(0);
+    }
+  }, [fullScreen]);
 
   const validateIdeaDescription = (value) => {
     if (!String(value || '').trim()) {
@@ -819,29 +835,31 @@ export default function ManagerEditIdeaScreen() {
 
               <Modal visible={fullScreen} transparent={true}>
                 <View style={styles.fullScreenContainer}>
-                  <TouchableOpacity 
-                    activeOpacity={0.7}
-                    style={styles.closeButton} 
-                    onPress={() => {
-                      setFullScreen(false);
-                      setImageScale(1);
-                    }}
-                  >
-                    <Feather name="x" size={30} color="#fff" />
-                  </TouchableOpacity>
-                  
-                  <View style={styles.zoomControls}>
-                    <TouchableOpacity activeOpacity={0.7} style={styles.zoomButton} onPress={handleZoomOut}>
-                      <Feather name="minus" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <Text style={styles.zoomText}>{Math.round(imageScale * 100)}%</Text>
-                    <TouchableOpacity activeOpacity={0.7} style={styles.zoomButton} onPress={handleZoomIn}>
-                      <Feather name="plus" size={24} color="#fff" />
+                  <View style={styles.fullScreenHeader}>
+                    <View style={styles.headerActions}>
+                      <TouchableOpacity style={styles.headerButton} onPress={handleRotate}>
+                        <Feather name="rotate-cw" size={24} color="#fff" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.headerButton} onPress={handleFit}>
+                        <MaterialIcons name="crop-free" size={24} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity 
+                      activeOpacity={0.7}
+                      style={styles.headerButton} 
+                      onPress={() => {
+                        setFullScreen(false);
+                        setImageScale(1);
+                        setRotation(0);
+                      }}
+                    >
+                      <Feather name="x" size={30} color="#fff" />
                     </TouchableOpacity>
                   </View>
-
+                  
                   <ScrollView
                     contentContainerStyle={styles.scrollContent}
+                    style={{ flex: 1 }}
                     maximumZoomScale={3}
                     minimumZoomScale={0.5}
                     showsHorizontalScrollIndicator={false}
@@ -850,7 +868,7 @@ export default function ManagerEditIdeaScreen() {
                     {!imageLoadError ? (
                       <Image
                         source={{ uri: file }}
-                        style={[styles.fullScreenImage, { transform: [{ scale: imageScale }] }]}
+                        style={[styles.fullScreenImage, { transform: [{ scale: imageScale }, { rotate: `${rotation}deg` }] }]}
                         contentFit="contain"
                         onError={() => {
                           const altUrl = getAlternateImageUrl(file);
@@ -868,6 +886,16 @@ export default function ManagerEditIdeaScreen() {
                       </View>
                     )}
                   </ScrollView>
+
+                  <View style={styles.fullScreenFooter}>
+                    <TouchableOpacity activeOpacity={0.7} style={styles.zoomButton} onPress={handleZoomOut}>
+                      <Feather name="minus" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <Text style={styles.zoomText}>{Math.round(imageScale * 100)}%</Text>
+                    <TouchableOpacity activeOpacity={0.7} style={styles.zoomButton} onPress={handleZoomIn}>
+                      <Feather name="plus" size={24} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </Modal>
 
@@ -1361,27 +1389,30 @@ const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.95)',
+  },
+  fullScreenHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingHorizontal: 10,
+    zIndex: 2,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  headerActions: {
+    flexDirection: 'row',
+  },
+  headerButton: {
+    padding: 10,
+  },
+  fullScreenFooter: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    zIndex: 3,
-    padding: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 20,
-  },
-  zoomControls: {
-    position: 'absolute',
-    bottom: 40,
-    flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 25,
-    padding: 10,
+    paddingBottom: 50,
+    paddingHorizontal: 10,
     zIndex: 2,
-    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   zoomButton: {
     width: 44,
