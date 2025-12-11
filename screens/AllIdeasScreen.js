@@ -41,50 +41,6 @@ const getAlternateImageUrl = (url) => {
   return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
 };
 
-function TimelineItem({ status, date, description, isLast, isFirst }) {
-  const getCircleColor = (status) => {
-    const s = status?.toLowerCase() || '';
-    if (s.includes('created')) return "#2196F3";
-    if (s.includes('edited')) return "#9C27B0";
-    if (s.includes('approved')) return "#4CAF50";
-    if (s.includes('pending')) return "#FF9800";
-    if (s.includes('implementation')) return "#3F51B5";
-    if (s.includes('rejected')) return "#F44336";
-    if (s.includes('closed')) return "#FF3B30";
-    return "#9E9E9E";
-  };
-
-  return (
-    <View style={styles.timelineItem}>
-      <View style={styles.timelineLeft}>
-        <View style={[styles.timelineCircle, { backgroundColor: getCircleColor(status) }]} />
-        {!isLast && <View style={styles.timelineLine} />}
-      </View>
-      <View style={styles.timelineContent}>
-        <Text style={styles.timelineStatus}>{status}</Text>
-        {description && (
-          <Text style={styles.timelineDescription}>{description}</Text>
-        )}
-        {date && (
-          <Text style={styles.timelineDate}>
-            {formatDateTime(date)}
-          </Text>
-        )}
-      </View>
-    </View>
-  );
-}
-
-function RemarksCard({ title, comment, date }) {
-  return (
-    <View style={styles.remarkCard}>
-      <Text style={styles.remarkTitle}>{title}</Text>
-      <Text style={styles.remarkComment}>{comment}</Text>
-      <Text style={styles.remarkDate}>{date}</Text>
-    </View>
-  );
-}
-
 // Confetti Component
 function ConfettiPiece({ delay, duration, color }) {
   const translateY = useRef(new Animated.Value(-50)).current;
@@ -139,6 +95,50 @@ function ConfettiEffect() {
           color={colors[Math.floor(Math.random() * colors.length)]}
         />
       ))}
+    </View>
+  );
+}
+
+function TimelineItem({ status, date, description, isLast, isFirst }) {
+  const getCircleColor = (status) => {
+    const s = status?.toLowerCase() || '';
+    if (s.includes('created')) return "#2196F3";
+    if (s.includes('edited')) return "#9C27B0";
+    if (s.includes('approved')) return "#4CAF50";
+    if (s.includes('pending')) return "#FF9800";
+    if (s.includes('implementation')) return "#3F51B5";
+    if (s.includes('rejected')) return "#F44336";
+    if (s.includes('closed')) return "#FF3B30";
+    return "#9E9E9E";
+  };
+
+  return (
+    <View style={styles.timelineItem}>
+      <View style={styles.timelineLeft}>
+        <View style={[styles.timelineCircle, { backgroundColor: getCircleColor(status) }]} />
+        {!isLast && <View style={styles.timelineLine} />}
+      </View>
+      <View style={styles.timelineContent}>
+        <Text style={styles.timelineStatus}>{status}</Text>
+        {description && (
+          <Text style={styles.timelineDescription}>{description}</Text>
+        )}
+        {date && (
+          <Text style={styles.timelineDate}>
+            {formatDateTime(date)}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function RemarksCard({ title, comment, date }) {
+  return (
+    <View style={styles.remarkCard}>
+      <Text style={styles.remarkTitle}>{title}</Text>
+      <Text style={styles.remarkComment}>{comment}</Text>
+      <Text style={styles.remarkDate}>{date}</Text>
     </View>
   );
 }
@@ -476,7 +476,6 @@ export default function AllTeamIdeasScreen() {
       Alert.alert('Error', 'Failed to load image');
     }
   };
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -654,7 +653,7 @@ export default function AllTeamIdeasScreen() {
         <View style={styles.fullModal}>
           {/* Confetti Effect */}
           {showClosedPopup && <ConfettiEffect />}
-
+          
           {/* Closed Status Popup - Inside Detail Modal */}
           {showClosedPopup && (
             <View style={styles.closedPopupContainer}>
@@ -665,7 +664,7 @@ export default function AllTeamIdeasScreen() {
               </View>
             </View>
           )}
-
+          
           <View style={styles.modalHeaderDetail}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
@@ -802,7 +801,6 @@ export default function AllTeamIdeasScreen() {
                         </TouchableOpacity>
                       ) : (<Text style={styles.valueDetail}>N/A</Text>)}
                     </View>
-
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Status:</Text>
                       <Text style={[styles.statusBadgeDetail, { backgroundColor: getStatusColor(ideaDetail.ideaStatus || ideaDetail.status) }]}>
@@ -1060,23 +1058,9 @@ export default function AllTeamIdeasScreen() {
           )}
         </View>
       </Modal>
-
-      {/* Closed Status Popup */}
-      {showClosedPopup && (
-        <View style={styles.closedPopupContainer}>
-          <View style={styles.closedPopup}>
-            <Text style={styles.closedPopupEmoji}>🎉</Text>
-            <Text style={styles.closedPopupText}>Idea Closed Successfully!</Text>
-            <Text style={styles.closedPopupEmoji}>🎉</Text>
-          </View>
-        </View>
-      )}
-
-
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
   header: { backgroundColor: '#fff', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', elevation: 2 },
@@ -1166,45 +1150,10 @@ const styles = StyleSheet.create({
   imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
   closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
   fullImage: { width: "90%", height: "70%" },
+  confettiContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, pointerEvents: 'none' },
+  confettiPiece: { position: 'absolute', width: 10, height: 10, top: -50 },
   closedPopupContainer: { position: 'absolute', top: 80, left: 20, right: 20, alignItems: 'center', zIndex: 10000 },
   closedPopup: { backgroundColor: '#4CAF50', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 6 },
   closedPopupEmoji: { fontSize: 24, marginHorizontal: 6 },
   closedPopupText: { fontSize: 16, fontWeight: 'bold', color: '#fff', textAlign: 'center' },
-  popupOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  popupContainer: {
-    width: 300,
-    padding: 20,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  popupText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginVertical: 15,
-    textAlign: 'center',
-    color: '#333',
-  },
-  popupButton: {
-    backgroundColor: '#2c5aa0',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    marginTop: 10,
-  },
-  popupButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
 });
