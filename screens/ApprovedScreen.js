@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Modal,
   Alert,
   Linking,
+  Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,6 +61,64 @@ const formatDateTime = (dateString) => {
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
+
+// Confetti Component
+function ConfettiPiece({ delay, duration, color }) {
+  const translateY = useRef(new Animated.Value(-50)).current;
+  const translateX = useRef(new Animated.Value(Math.random() * 400 - 200)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 800,
+        duration: duration,
+        delay: delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rotate, {
+        toValue: Math.random() > 0.5 ? 360 : -360,
+        duration: duration,
+        delay: delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.confettiPiece,
+        {
+          backgroundColor: color,
+          transform: [
+            { translateY },
+            { translateX },
+            { rotate: rotate.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) },
+          ],
+        },
+      ]}
+    />
+  );
+}
+
+function ConfettiEffect() {
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+  const confettiCount = 50;
+
+  return (
+    <View style={styles.confettiContainer}>
+      {Array.from({ length: confettiCount }).map((_, index) => (
+        <ConfettiPiece
+          key={index}
+          delay={Math.random() * 200}
+          duration={2000 + Math.random() * 1000}
+          color={colors[Math.floor(Math.random() * colors.length)]}
+        />
+      ))}
+    </View>
+  );
+}
 
 function TimelineItem({ status, date, description, isLast, isFirst }) {
   const getCircleColor = (status) => {
@@ -149,6 +208,9 @@ const ApprovedScreen = () => {
   const [showToPicker, setShowToPicker] = useState(false);
   const [imageRetryUrl, setImageRetryUrl] = useState(null);
   const [imageLoadError, setImageLoadError] = useState({});
+  
+  // New state for closed popup
+  const [showClosedPopup, setShowClosedPopup] = useState(false);
 
   const fetchApprovedIdeas = async () => {
     setLoading(true);
@@ -292,6 +354,15 @@ const ApprovedScreen = () => {
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
+
+        // Check if status is closed and show popup
+        const status = (detail.ideaStatus || detail.status || '').toLowerCase();
+        if (status === 'closed') {
+          setShowClosedPopup(true);
+          setTimeout(() => {
+            setShowClosedPopup(false);
+          }, 3000);
+        }
       } else {
         Alert.alert("Error", "Idea details not found or invalid format.");
       }
@@ -411,6 +482,7 @@ const ApprovedScreen = () => {
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
     setImageLoadError({});
+    setShowClosedPopup(false);
   };
 
   const renderIdeaCard = ({ item }) => (
@@ -539,6 +611,21 @@ const ApprovedScreen = () => {
 
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
+          
+          {/* Confetti Effect */}
+          {showClosedPopup && <ConfettiEffect />}
+
+          {/* Closed Popup Message */}
+          {showClosedPopup && (
+            <View style={styles.closedPopupContainer}>
+              <View style={styles.closedPopup}>
+                <Text style={styles.closedPopupEmoji}>🎉</Text>
+                <Text style={styles.closedPopupText}>Idea Closed Successfully!</Text>
+                <Text style={styles.closedPopupEmoji}>🎉</Text>
+              </View>
+            </View>
+          )}
+
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
@@ -752,7 +839,6 @@ const ApprovedScreen = () => {
                           </View>
                         )}
 
-                        {/* Before Implementation with PDF Support */}
                         {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>Before Implementation:</Text>
@@ -775,7 +861,6 @@ const ApprovedScreen = () => {
                           </View>
                         )}
 
-                        {/* After Implementation with PDF Support */}
                         {ideaDetail.afterImplementationImagePath && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>After Implementation:</Text>
@@ -942,7 +1027,7 @@ const styles = StyleSheet.create({
   cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
   labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
   valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 14 },
-  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
+  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 170, textAlign: 'center' },
   imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
   pdfThumbnailContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#FF5722', backgroundColor: '#FFF3E0', justifyContent: 'center', alignItems: 'center' },
@@ -977,6 +1062,52 @@ const styles = StyleSheet.create({
   fullImage: { width: "80%", height: "60%" },
   collapsibleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#e0e0e0', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
   collapsibleHeaderText: { fontSize: 16, fontWeight: '600', color: '#2c5aa0' },
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+    pointerEvents: 'none',
+  },
+  confettiPiece: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    top: -50,
+  },
+  closedPopupContainer: { 
+    position: 'absolute', 
+    top: 80, 
+    left: 20, 
+    right: 20, 
+    alignItems: 'center', 
+    zIndex: 10000 
+  },
+  closedPopup: { 
+    backgroundColor: '#4CAF50', 
+    paddingHorizontal: 24, 
+    paddingVertical: 14, 
+    borderRadius: 12, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 3 }, 
+    shadowOpacity: 0.3, 
+    shadowRadius: 6, 
+    elevation: 6 
+  },
+  closedPopupEmoji: { 
+    fontSize: 24, 
+    marginHorizontal: 6 
+  },
+  closedPopupText: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    color: '#fff', 
+    textAlign: 'center' 
+  },
 });
 
 export default ApprovedScreen;

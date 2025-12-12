@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Dimensions, Modal, FlatList, ActivityIndicator, SafeAreaView, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Dimensions, Modal, FlatList, ActivityIndicator, SafeAreaView, Linking, Alert, Animated } from 'react-native';
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -60,6 +60,64 @@ const { width } = Dimensions.get('window');
 const isSmallDevice = width < 360;
 const isVeryNarrow = width < 330;
 
+// Confetti Component
+function ConfettiPiece({ delay, duration, color }) {
+  const translateY = useRef(new Animated.Value(-50)).current;
+  const translateX = useRef(new Animated.Value(Math.random() * 400 - 200)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 800,
+        duration: duration,
+        delay: delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rotate, {
+        toValue: Math.random() > 0.5 ? 360 : -360,
+        duration: duration,
+        delay: delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.confettiPiece,
+        {
+          backgroundColor: color,
+          transform: [
+            { translateY },
+            { translateX },
+            { rotate: rotate.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) },
+          ],
+        },
+      ]}
+    />
+  );
+}
+
+function ConfettiEffect() {
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+  const confettiCount = 50;
+
+  return (
+    <View style={styles.confettiContainer}>
+      {Array.from({ length: confettiCount }).map((_, index) => (
+        <ConfettiPiece
+          key={index}
+          delay={Math.random() * 200}
+          duration={2000 + Math.random() * 1000}
+          color={colors[Math.floor(Math.random() * colors.length)]}
+        />
+      ))}
+    </View>
+  );
+}
+
 const DashboardScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -98,6 +156,9 @@ const DashboardScreen = () => {
   const [employeeInfoExpanded, setEmployeeInfoExpanded] = useState(false);
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
+
+  // New state for closed popup
+  const [showClosedPopup, setShowClosedPopup] = useState(false);
 
   const isInitialMount = useRef(true);
   const isFetchingDashboard = useRef(false);
@@ -164,7 +225,6 @@ const DashboardScreen = () => {
         const currentTime = Date.now();
 
         const validNotifications = parsedData.filter(notif => {
-         
           if (!notif.isRead) {
             return true;
           }
@@ -185,6 +245,7 @@ const DashboardScreen = () => {
       console.error("Error loading stored notifications:", error);
     }
   };
+
   const saveNotificationsToStorage = async (systemId, notificationsList) => {
     try {
       const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
@@ -208,7 +269,6 @@ const DashboardScreen = () => {
     isFetchingDashboard.current = true;
 
     try {
-     
       const url = `${DASHBOARD_URL}?scope=${encodeURIComponent(requestedScope)}`;
 
       const response = await fetch(url, {
@@ -264,10 +324,10 @@ const DashboardScreen = () => {
   };
 
   const fetchUnreadCount = async (systemId, authToken) => {
-    if (isFetchingNotifications.current) return; 
+    if (isFetchingNotifications.current) return;
 
     try {
-      const url = NOTIFICATION_COUNT_URL(systemId, 'self'); 
+      const url = NOTIFICATION_COUNT_URL(systemId, 'self');
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -297,13 +357,13 @@ const DashboardScreen = () => {
 
   const fetchNotifications = async () => {
     if (!employeeSystemId || !token) return;
-    if (isFetchingNotifications.current) return; 
+    if (isFetchingNotifications.current) return;
 
     isFetchingNotifications.current = true;
     setLoadingNotifications(true);
 
     try {
-      const url = NOTIFICATION_USER_URL(employeeSystemId, 'self'); 
+      const url = NOTIFICATION_USER_URL(employeeSystemId, 'self');
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -432,6 +492,15 @@ const DashboardScreen = () => {
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
+
+        // Check if idea is closed and show popup with confetti
+        const status = (detail.ideaStatus || detail.status || '').toLowerCase();
+        if (status === 'closed') {
+          setShowClosedPopup(true);
+          setTimeout(() => {
+            setShowClosedPopup(false);
+          }, 3000);
+        }
       } else {
         Toast.show(response?.message || 'Idea details not found', {
           duration: Toast.durations.LONG,
@@ -543,6 +612,7 @@ const DashboardScreen = () => {
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
     setImageLoadError({});
+    setShowClosedPopup(false);
   };
 
   const openImagePreview = (imageUrl) => {
@@ -752,6 +822,7 @@ const DashboardScreen = () => {
     if (s === 'all') return 'All Ideas';
     return 'My Ideas';
   };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -910,6 +981,20 @@ const DashboardScreen = () => {
 
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
+          {/* Confetti Effect when idea is closed */}
+          {showClosedPopup && <ConfettiEffect />}
+
+          {/* Closed Popup */}
+          {showClosedPopup && (
+            <View style={styles.closedPopupContainer}>
+              <View style={styles.closedPopup}>
+                <Text style={styles.closedPopupEmoji}>🎉</Text>
+                <Text style={styles.closedPopupText}>Idea Closed Successfully!</Text>
+                <Text style={styles.closedPopupEmoji}>🎉</Text>
+              </View>
+            </View>
+          )}
+
           <View style={styles.modalHeaderDetail}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
@@ -1639,7 +1724,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: 11,
     fontWeight: '600',
-    maxWidth: 200,
+    maxWidth: 170,
     textAlign: 'center',
   },
   imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -1650,16 +1735,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  tapToEnlargeText: { color: '#2196F3', fontSize: 12, fontWeight: '500' },
-  implementationImageSection: { marginTop: 12, marginBottom: 12 },
-  imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
-  implementationImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-    resizeMode: 'cover',
+  imageErrorContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: '#ddd',
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageErrorText: {
+    fontSize: 9,
+    color: '#999',
+    marginTop: 2,
+    textAlign: 'center',
   },
   remarkCard: {
     backgroundColor: '#f8f9fa',
@@ -1783,5 +1873,52 @@ const styles = StyleSheet.create({
     color: '#FF5722',
     fontWeight: 'bold',
     marginTop: 2
+  },
+  // Confetti and Closed Popup Styles
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+    pointerEvents: 'none',
+  },
+  confettiPiece: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    top: -50,
+  },
+  closedPopupContainer: {
+    position: 'absolute',
+    top: 80,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+    zIndex: 10000,
+  },
+  closedPopup: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  closedPopupEmoji: {
+    fontSize: 24,
+    marginHorizontal: 6,
+  },
+  closedPopupText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
   },
 });

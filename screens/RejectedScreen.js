@@ -1391,7 +1391,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: 11,
     fontWeight: '600',
-    maxWidth: 200,
+    maxWidth: 170,
     textAlign: 'center'
   },
   imagePreviewContainer: {

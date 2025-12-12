@@ -214,45 +214,49 @@ export default function ImplementationDetailsScreen() {
   };
 
   const pickImageFromGallery = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Permission required!');
-      return;
+    if (Platform.OS !== 'web') {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required!');
+        return;
+      }
     }
     
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsEditing: Platform.OS !== 'web',
       quality: 1,
     });
     
     if (!result.canceled) {
-      setAfterImage(result.assets[0].uri);
+      const asset = result.assets[0];
+      setAfterImage(asset.uri);
       setAfterImageType('image');
-      const uriParts = result.assets[0].uri.split('/');
-      setAfterImageName(uriParts[uriParts.length - 1]);
+      setAfterImageName(asset.fileName || `gallery_${Date.now()}.jpg`);
       setKeepExistingImage(false);
       setShowFileOptions(false);
     }
   };
 
   const pickImageFromCamera = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Camera permission required!');
-      return;
+    if (Platform.OS !== 'web') {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Camera permission required!');
+        return;
+      }
     }
     
     let result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
+      allowsEditing: Platform.OS !== 'web',
       quality: 1,
     });
     
     if (!result.canceled) {
-      setAfterImage(result.assets[0].uri);
+      const asset = result.assets[0];
+      setAfterImage(asset.uri);
       setAfterImageType('image');
-      const uriParts = result.assets[0].uri.split('/');
-      setAfterImageName(uriParts[uriParts.length - 1]);
+      setAfterImageName(asset.fileName || `camera_${Date.now()}.jpg`);
       setKeepExistingImage(false);
       setShowFileOptions(false);
     }
@@ -265,8 +269,8 @@ export default function ImplementationDetailsScreen() {
         copyToCacheDirectory: true,
       });
       
-      if (result.type === 'success' || !result.canceled) {
-        const selectedFile = result.assets ? result.assets[0] : result;
+      if (!result.canceled) {
+        const selectedFile = result.assets[0];
         setAfterImage(selectedFile.uri);
         setAfterImageType('pdf');
         setAfterImageName(selectedFile.name);
@@ -311,35 +315,42 @@ export default function ImplementationDetailsScreen() {
       formData.append('Outcome', outcomesBenefits.trim());
 
       if (!keepExistingImage && afterImage && afterImageName) {
-        let fileUri = afterImage;
-        
-        if (Platform.OS === 'android' && 
-            !fileUri.startsWith('file://') && 
-            !fileUri.startsWith('content://')) {
-          fileUri = `file://${fileUri}`;
+        if (Platform.OS === 'web') {
+          const response = await fetch(afterImage);
+          const blob = await response.blob();
+          const cleanName = afterImageName.replace(/[^a-zA-Z0-9._-]/g, '_');
+          formData.append('AfterImplementationImage', blob, cleanName);
+        } else {
+          let fileUri = afterImage;
+          
+          if (Platform.OS === 'android' && 
+              !fileUri.startsWith('file://') && 
+              !fileUri.startsWith('content://')) {
+            fileUri = `file://${fileUri}`;
+          }
+
+          const fileInfo = await FileSystem.getInfoAsync(fileUri);
+          if (!fileInfo.exists) {
+            Alert.alert('File Error', 'Image file not found!');
+            setIsSubmitting(false);
+            return;
+          }
+
+          let mimeType = 'application/octet-stream';
+          const ext = afterImageName.split('.').pop()?.toLowerCase();
+          
+          if (ext === 'pdf') mimeType = 'application/pdf';
+          else if (ext === 'png') mimeType = 'image/png';
+          else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+
+          const cleanName = afterImageName.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+          formData.append('AfterImplementationImage', {
+            uri: fileInfo.uri,
+            type: mimeType,
+            name: cleanName,
+          });
         }
-
-        const fileInfo = await FileSystem.getInfoAsync(fileUri);
-        if (!fileInfo.exists) {
-          Alert.alert('File Error', 'Image file not found!');
-          setIsSubmitting(false);
-          return;
-        }
-
-        let mimeType = 'application/octet-stream';
-        const ext = afterImageName.split('.').pop()?.toLowerCase();
-        
-        if (ext === 'pdf') mimeType = 'application/pdf';
-        else if (ext === 'png') mimeType = 'image/png';
-        else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
-
-        const cleanName = afterImageName.replace(/[^a-zA-Z0-9._-]/g, '_');
-
-        formData.append('AfterImplementationImage', {
-          uri: fileInfo.uri,
-          type: mimeType,
-          name: cleanName,
-        });
       }
 
       const response = await axios.put(apiUrl, formData, {

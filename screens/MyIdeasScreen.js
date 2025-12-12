@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, ActivityIndicator, TextInput, Vibration, Platform, Linking } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, ActivityIndicator, TextInput, Vibration, Platform, Linking, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
@@ -59,6 +59,64 @@ const formatDateTime = (dateString) => {
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
+
+// Confetti Components
+function ConfettiPiece({ delay, duration, color }) {
+  const translateY = useRef(new Animated.Value(-50)).current;
+  const translateX = useRef(new Animated.Value(Math.random() * 400 - 200)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 800,
+        duration: duration,
+        delay: delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rotate, {
+        toValue: Math.random() > 0.5 ? 360 : -360,
+        duration: duration,
+        delay: delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.confettiPiece,
+        {
+          backgroundColor: color,
+          transform: [
+            { translateY },
+            { translateX },
+            { rotate: rotate.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) },
+          ],
+        },
+      ]}
+    />
+  );
+}
+
+function ConfettiEffect() {
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+  const confettiCount = 50;
+
+  return (
+    <View style={styles.confettiContainer}>
+      {Array.from({ length: confettiCount }).map((_, index) => (
+        <ConfettiPiece
+          key={index}
+          delay={Math.random() * 200}
+          duration={2000 + Math.random() * 1000}
+          color={colors[Math.floor(Math.random() * colors.length)]}
+        />
+      ))}
+    </View>
+  );
+}
 
 function TimelineItem({ status, date, description, isLast, isFirst }) {
   const getCircleColor = (status) => {
@@ -121,7 +179,7 @@ const isImplementationPhase = (status) => {
   if (!status) return false;
   const s = status.toLowerCase();
   return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation") || s.includes("approved") || s.includes("closed") || s.includes("implementation submitted")
-    || s.includes("rm approval pending"); // <--- ADD THIS LINE
+    || s.includes("rm approval pending");
 };
 
 const parseRemarks = (remarkData) => {
@@ -158,6 +216,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
   const [imageRetryUrl, setImageRetryUrl] = useState(null);
   const [imageLoadError, setImageLoadError] = useState({});
+  const [showClosedPopup, setShowClosedPopup] = useState(false);
   const navigation = useNavigation();
 
   const fetchIdeaDetail = async (ideaId) => {
@@ -177,7 +236,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
         const afterImagePath = detail.afterImplementationImagePath || detail.implementationCycle?.afterImplementationImagePath;
         const normalizedAfterImagePath = normalizeImagePath(afterImagePath);
 
-
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizedBeforeImagePath,
@@ -195,6 +253,14 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
 
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
+        }
+
+        const status = (detail.ideaStatus || '').toLowerCase();
+        if (status === 'closed') {
+          setShowClosedPopup(true);
+          setTimeout(() => {
+            setShowClosedPopup(false);
+          }, 3000);
         }
       } else {
         Alert.alert("Error", response?.message || "Idea details not found.");
@@ -214,6 +280,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
     setImageLoadError({});
+    setShowClosedPopup(false);
   };
 
   const openImagePreview = (imageUrl) => {
@@ -294,7 +361,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       closeModal();
     }
   };
-
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -386,6 +452,20 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       {/* Idea Details Modal */}
       <Modal visible={!!selectedIdea && !showImplementationForm} animationType="slide">
         <View style={styles.fullModal}>
+          {/* Confetti Effect */}
+          {showClosedPopup && <ConfettiEffect />}
+
+          {/* Closed Status Popup */}
+          {showClosedPopup && (
+            <View style={styles.closedPopupContainer}>
+              <View style={styles.closedPopup}>
+                <Text style={styles.closedPopupEmoji}>🎉</Text>
+                <Text style={styles.closedPopupText}>Idea Closed Successfully!</Text>
+                <Text style={styles.closedPopupEmoji}>🎉</Text>
+              </View>
+            </View>
+          )}
+
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
@@ -517,7 +597,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                               onError={(e) => {
                                 const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
                                 if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
-
                                   setIdeaDetail(prev => ({
                                     ...prev,
                                     beforeImplementationImagePath: altUrl
@@ -1859,7 +1938,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: 11,
     fontWeight: '600',
-    maxWidth: 200,
+    maxWidth: 170,
     textAlign: 'center'
   },
   imagePreviewContainer: {
@@ -2033,18 +2112,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#999",
     fontStyle: "italic"
-  },
-  noTimelineContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40
-  },
-  noTimelineText: {
-    color: "#999",
-    textAlign: "center",
-    marginTop: 10,
-    fontSize: 15,
-    fontStyle: 'italic'
   },
   noTimelineContainer: {
     alignItems: 'center',
@@ -2295,5 +2362,51 @@ const styles = StyleSheet.create({
   fullImagePreview: {
     width: 350,
     height: 500
+  },
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+    pointerEvents: 'none',
+  },
+  confettiPiece: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    top: -50,
+  },
+  closedPopupContainer: {
+    position: 'absolute',
+    top: 80,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+    zIndex: 10000
+  },
+  closedPopup: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6
+  },
+  closedPopupEmoji: {
+    fontSize: 24,
+    marginHorizontal: 6
+  },
+  closedPopupText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center'
   },
 });

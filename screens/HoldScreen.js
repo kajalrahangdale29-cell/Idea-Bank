@@ -1151,7 +1151,7 @@ const styles = StyleSheet.create({
   cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
   labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
   valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 14 },
-  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
+  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 170, textAlign: 'center' },
   imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
   implementationImageSection: { marginTop: 12, marginBottom: 12 },

@@ -49,7 +49,6 @@ const getAlternateImageUrl = (url) => {
   return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
 };
 
-// Confetti Component
 function ConfettiPiece({ delay, duration, color }) {
   const translateY = useRef(new Animated.Value(-50)).current;
   const translateX = useRef(new Animated.Value(Math.random() * 400 - 200)).current;
@@ -453,13 +452,12 @@ export default function MyTeamIdeasScreen() {
           setShowImplementationDetails(true);
         }
 
-        // Check if status is Closed and show popup
         const status = (detail.ideaStatus || detail.status || '').toLowerCase();
         if (status === 'closed') {
           setShowClosedPopup(true);
           setTimeout(() => {
             setShowClosedPopup(false);
-          }, 3000); // Hide after 3 seconds
+          }, 3000); 
         }
       } else if (response?.data) {
         const detail = response.data;
@@ -483,7 +481,6 @@ export default function MyTeamIdeasScreen() {
           setShowImplementationDetails(true);
         }
 
-        // Check if status is Closed and show popup
         const status = (detail.ideaStatus || detail.status || '').toLowerCase();
         if (status === 'closed') {
           setShowClosedPopup(true);
@@ -848,10 +845,9 @@ export default function MyTeamIdeasScreen() {
 
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
-          {/* Confetti Effect */}
+        
           {showClosedPopup && <ConfettiEffect />}
 
-          {/* Closed Status Popup - Inside Detail Modal */}
           {showClosedPopup && (
             <View style={styles.closedPopupContainer}>
               <View style={styles.closedPopup}>
@@ -1398,7 +1394,7 @@ const styles = StyleSheet.create({
   cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
   labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
   valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 14 },
-  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
+  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 170, textAlign: 'center' },
   imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
   imageErrorContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' },

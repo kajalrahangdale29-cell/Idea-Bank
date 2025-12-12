@@ -300,14 +300,16 @@ export default function ManagerEditIdeaScreen() {
   }, []);
 
   const pickImageFromGallery = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Permission Required', 'Please allow gallery access to select images.');
-      return;
+    if (Platform.OS !== 'web') {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow gallery access to select images.');
+        return;
+      }
     }
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsEditing: Platform.OS !== 'web',
       quality: 1,
     });
     if (!result.canceled) {
@@ -315,22 +317,21 @@ export default function ManagerEditIdeaScreen() {
       setFile(asset.uri);
       setFileType('image');
       setIsNewFile(true); 
-      const timestamp = Date.now();
-      const extension = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
-      const cleanFileName = `image_${timestamp}.${extension}`;
-      setFileName(cleanFileName);
+      setFileName(asset.fileName || `gallery_${Date.now()}.jpg`);
       setShowFileOptions(false);
     }
   };
 
   const pickImageFromCamera = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Permission Required', 'Please allow camera access to take photos.');
-      return;
+    if (Platform.OS !== 'web') {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow camera access to take photos.');
+        return;
+      }
     }
     let result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
+      allowsEditing: Platform.OS !== 'web',
       quality: 1,
     });
     if (!result.canceled) {
@@ -338,10 +339,7 @@ export default function ManagerEditIdeaScreen() {
       setFile(asset.uri);
       setFileType('image');
       setIsNewFile(true); 
-      const timestamp = Date.now();
-      const extension = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
-      const cleanFileName = `camera_${timestamp}.${extension}`;
-      setFileName(cleanFileName);
+      setFileName(asset.fileName || `camera_${Date.now()}.jpg`);
       setShowFileOptions(false);
     }
   };
@@ -353,8 +351,8 @@ export default function ManagerEditIdeaScreen() {
         copyToCacheDirectory: true,
       });
       
-      if (result.type === 'success' || !result.canceled) {
-        const selectedFile = result.assets ? result.assets[0] : result;
+      if (!result.canceled) {
+        const selectedFile = result.assets[0];
         setFile(selectedFile.uri);
         setFileType('pdf');
         setIsNewFile(true); 
@@ -471,41 +469,48 @@ export default function ManagerEditIdeaScreen() {
 
       if (file && isNewFile) {
         try {
-          let fileUri = file;
-          if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
-            fileUri = `file://${fileUri}`;
+          if (Platform.OS === 'web') {
+            const response = await fetch(file);
+            const blob = await response.blob();
+            const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+            formData.append('BeforeImplementationImage', blob, cleanFileName);
+          } else {
+            let fileUri = file;
+            if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+              fileUri = `file://${fileUri}`;
+            }
+
+            const fileInfo = await FileSystem.getInfoAsync(fileUri);
+            
+            if (!fileInfo.exists) {
+              throw new Error('File not found on device');
+            }
+
+            let mimeType = 'application/octet-stream';
+            const extension = fileName.split('.').pop()?.toLowerCase();
+            
+            if (fileType === 'pdf' || extension === 'pdf') {
+              mimeType = 'application/pdf';
+            } else if (extension === 'png') {
+              mimeType = 'image/png';
+            } else if (extension === 'jpg' || extension === 'jpeg') {
+              mimeType = 'image/jpeg';
+            } else if (extension === 'gif') {
+              mimeType = 'image/gif';
+            } else if (extension === 'webp') {
+              mimeType = 'image/webp';
+            }
+
+            const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+            formData.append('BeforeImplementationImage', {
+              uri: fileUri,
+              type: mimeType,
+              name: cleanFileName,
+            });
           }
-
-          const fileInfo = await FileSystem.getInfoAsync(fileUri);
-          
-          if (!fileInfo.exists) {
-            throw new Error('File not found on device');
-          }
-
-          let mimeType = 'application/octet-stream';
-          const extension = fileName.split('.').pop()?.toLowerCase();
-          
-          if (fileType === 'pdf' || extension === 'pdf') {
-            mimeType = 'application/pdf';
-          } else if (extension === 'png') {
-            mimeType = 'image/png';
-          } else if (extension === 'jpg' || extension === 'jpeg') {
-            mimeType = 'image/jpeg';
-          } else if (extension === 'gif') {
-            mimeType = 'image/gif';
-          } else if (extension === 'webp') {
-            mimeType = 'image/webp';
-          }
-
-          const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-
-          formData.append('BeforeImplementationImage', {
-            uri: fileUri,
-            type: mimeType,
-            name: cleanFileName,
-          });
-          
         } catch (fileError) {
+          console.error('File processing error:', fileError);
           Alert.alert('File Error', 'Unable to process selected file. Please try again.');
           setIsSubmitting(false);
           return;
