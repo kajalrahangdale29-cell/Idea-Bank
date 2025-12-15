@@ -194,7 +194,7 @@ function CustomDrawerContent(props) {
           </TouchableOpacity>
 
           {/* Team Ideas */}
-          {(roleFlags.isManager || roleFlags.isHod || roleFlags.isBETeamMember) && (
+          {roleFlags.isManager && (
             <TouchableOpacity
               style={styles.subDrawerItem}
               onPress={() => props.navigation.navigate("Team Ideas")}
@@ -656,3 +656,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
 });
+
+// Old code:
+ // {(roleFlags.isManager || roleFlags.isHod || roleFlags.isBETeamMember) && (
+ //   <TouchableOpacity onPress={() => props.navigation.navigate("Team Ideas")}>
+  //     <Text>Team Ideas</Text>
+  //   </TouchableOpacity>
+  // )}
