@@ -157,12 +157,12 @@ const DashboardScreen = () => {
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
 
-  // New state for closed popup
   const [showClosedPopup, setShowClosedPopup] = useState(false);
 
   const isInitialMount = useRef(true);
   const isFetchingDashboard = useRef(false);
   const isFetchingNotifications = useRef(false);
+  const hasLoadedInitialNotifications = useRef(false);
 
   const NOTIFICATIONS_STORAGE_KEY = 'user_notifications_7day';
   const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -182,19 +182,26 @@ const DashboardScreen = () => {
         const storedData = await AsyncStorage.getItem("userData");
         if (storedData) {
           const parsed = JSON.parse(storedData);
+          const userId = parsed.employee.id;
+          
           setEmployeeName(parsed.employee.name);
           setEmployeeUsername(parsed.employee.username);
-          setEmployeeSystemId(parsed.employee.id);
+          setEmployeeSystemId(userId);
           setToken(parsed.token);
 
-          await loadStoredNotifications(parsed.employee.id);
+          await loadStoredNotifications(userId);
+          hasLoadedInitialNotifications.current = true;
 
           await fetchDashboard(parsed.token, 'self');
 
-          fetchUnreadCount(parsed.employee.id, parsed.token);
+          await fetchUnreadCount(userId, parsed.token);
+          
+          
+          setTimeout(() => {
+            fetchNotifications();
+          }, 500);
         }
       } catch (error) {
-        console.error("Error loading user data:", error);
       }
     };
     loadUserData();
@@ -208,9 +215,14 @@ const DashboardScreen = () => {
       }
 
       if (employeeSystemId && token) {
+        loadStoredNotifications(employeeSystemId);
+        
         fetchDashboard(token, scope);
         fetchUnreadCount(employeeSystemId, token);
-        loadStoredNotifications(employeeSystemId);
+        
+        setTimeout(() => {
+          fetchNotifications();
+        }, 300);
       }
     }, [employeeSystemId, token, scope])
   );
@@ -226,10 +238,21 @@ const DashboardScreen = () => {
 
         const validNotifications = parsedData.filter(notif => {
           if (!notif.isRead) {
-            return true;
+            return true; 
           }
           const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
-          return (currentTime - notifTime) < SEVEN_DAYS_MS;
+          const isWithin7Days = (currentTime - notifTime) < SEVEN_DAYS_MS;
+          
+          if (!isWithin7Days) {
+          }
+          
+          return isWithin7Days;
+        });
+
+        validNotifications.sort((a, b) => {
+          const dateA = new Date(a.createdOn || a.storedAt).getTime();
+          const dateB = new Date(b.createdOn || b.storedAt).getTime();
+          return dateB - dateA;
         });
 
         if (validNotifications.length !== parsedData.length) {
@@ -240,9 +263,12 @@ const DashboardScreen = () => {
 
         const unread = validNotifications.filter(n => !n.isRead).length;
         setUnreadCount(unread);
+        
+      } else {
+        setNotifications([]);
+        setUnreadCount(0);
       }
     } catch (error) {
-      console.error("Error loading stored notifications:", error);
     }
   };
 
@@ -251,14 +277,21 @@ const DashboardScreen = () => {
       const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
       const currentTime = Date.now();
 
+      // Ensure all notifications have timestamp
       const notificationsWithTimestamp = notificationsList.map(notif => ({
         ...notif,
         storedAt: notif.storedAt || currentTime
       }));
 
-      await AsyncStorage.setItem(key, JSON.stringify(notificationsWithTimestamp));
+      // Filter: Keep unread always, keep read within 7 days only
+      const validNotifications = notificationsWithTimestamp.filter(notif => {
+        if (!notif.isRead) return true; 
+        const notifTime = new Date(notif.storedAt).getTime();
+        return (currentTime - notifTime) < SEVEN_DAYS_MS;
+      });
+
+      await AsyncStorage.setItem(key, JSON.stringify(validNotifications));
     } catch (error) {
-      console.error("Error saving notifications:", error);
     }
   };
 
@@ -284,7 +317,6 @@ const DashboardScreen = () => {
       try {
         jsonData = JSON.parse(text);
       } catch (e) {
-        console.error("JSON parse error:", e);
       }
 
       if (response.ok && jsonData.success) {
@@ -314,18 +346,14 @@ const DashboardScreen = () => {
           setScope('self');
         }
       } else {
-        console.error('Dashboard fetch failed', jsonData);
       }
     } catch (err) {
-      console.error("Dashboard fetch error:", err);
     } finally {
       isFetchingDashboard.current = false;
     }
   };
 
   const fetchUnreadCount = async (systemId, authToken) => {
-    if (isFetchingNotifications.current) return;
-
     try {
       const url = NOTIFICATION_COUNT_URL(systemId, 'self');
       const response = await fetch(url, {
@@ -344,14 +372,13 @@ const DashboardScreen = () => {
         } else {
           try {
             const data = JSON.parse(text);
-            setUnreadCount(data.data?.unreadCount || data.unreadCount || 0);
+            const apiCount = data.data?.unreadCount || data.unreadCount || 0;
+            setUnreadCount(apiCount);
           } catch (e) {
-            console.error("Count parse error:", e);
           }
         }
       }
     } catch (error) {
-      console.error("Fetch unread count error:", error);
     }
   };
 
@@ -363,6 +390,7 @@ const DashboardScreen = () => {
     setLoadingNotifications(true);
 
     try {
+      
       const url = NOTIFICATION_USER_URL(employeeSystemId, 'self');
       const response = await fetch(url, {
         method: 'GET',
@@ -372,8 +400,13 @@ const DashboardScreen = () => {
         },
       });
 
+      const key = `${NOTIFICATIONS_STORAGE_KEY}_${employeeSystemId}`;
+      const currentTime = Date.now();
+
       if (!response.ok) {
-        await loadStoredNotifications(employeeSystemId);
+        if (!hasLoadedInitialNotifications.current) {
+          await loadStoredNotifications(employeeSystemId);
+        }
         return;
       }
 
@@ -386,26 +419,47 @@ const DashboardScreen = () => {
         newNotifications = data.data;
       }
 
-      const key = `${NOTIFICATIONS_STORAGE_KEY}_${employeeSystemId}`;
       const storedData = await AsyncStorage.getItem(key);
 
       if (storedData) {
         const storedNotifications = JSON.parse(storedData);
-        const currentTime = Date.now();
 
-        const validStoredNotifs = storedNotifications.filter(notif => {
-          const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
-          return (currentTime - notifTime) < SEVEN_DAYS_MS;
+        const mergedMap = new Map();
+        
+        storedNotifications.forEach(storedNotif => {
+          if (!storedNotif.isRead) {
+          
+            mergedMap.set(storedNotif.id, storedNotif);
+          } else {
+            // Keep read ones if within 7 days
+            const notifTime = new Date(storedNotif.storedAt || storedNotif.createdOn).getTime();
+            if ((currentTime - notifTime) < SEVEN_DAYS_MS) {
+              mergedMap.set(storedNotif.id, storedNotif);
+            } else {
+            }
+          }
         });
-
-        const mergedNotifications = [...newNotifications];
-        validStoredNotifs.forEach(storedNotif => {
-          const exists = mergedNotifications.find(n => n.id === storedNotif.id);
-          if (!exists) {
-            mergedNotifications.push(storedNotif);
+        
+        newNotifications.forEach(newNotif => {
+          const existing = mergedMap.get(newNotif.id);
+          if (existing) {
+            mergedMap.set(newNotif.id, {
+              ...newNotif,
+              isRead: existing.isRead, 
+              storedAt: existing.storedAt 
+            });
+          } else {
+            
+            mergedMap.set(newNotif.id, {
+              ...newNotif,
+              storedAt: currentTime
+            });
           }
         });
 
+        const mergedNotifications = Array.from(mergedMap.values());
+
+        // Sort by date (newest first)
         mergedNotifications.sort((a, b) => {
           const dateA = new Date(a.createdOn || a.storedAt).getTime();
           const dateB = new Date(b.createdOn || b.storedAt).getTime();
@@ -414,14 +468,29 @@ const DashboardScreen = () => {
 
         setNotifications(mergedNotifications);
         await saveNotificationsToStorage(employeeSystemId, mergedNotifications);
-      } else {
-        setNotifications(newNotifications);
-        await saveNotificationsToStorage(employeeSystemId, newNotifications);
+        
+        const unreadCount = mergedNotifications.filter(n => !n.isRead).length;
+        setUnreadCount(unreadCount);
+        
+      } else {;
+        
+        const notificationsWithTimestamp = newNotifications.map(notif => ({
+          ...notif,
+          storedAt: currentTime
+        }));
+        
+        setNotifications(notificationsWithTimestamp);
+        await saveNotificationsToStorage(employeeSystemId, notificationsWithTimestamp);
+        
+        const unreadCount = notificationsWithTimestamp.filter(n => !n.isRead).length;
+        setUnreadCount(unreadCount);
+        
       }
 
     } catch (error) {
-      console.error("Fetch notifications error:", error);
-      await loadStoredNotifications(employeeSystemId);
+      if (!hasLoadedInitialNotifications.current) {
+        await loadStoredNotifications(employeeSystemId);
+      }
     } finally {
       setLoadingNotifications(false);
       isFetchingNotifications.current = false;
@@ -451,21 +520,21 @@ const DashboardScreen = () => {
 
       let decryptedId;
       try {
-        decryptedId = decrypt(encryptedId);
+        decryptedId = safeDecrypt(encryptedId);
+        
         if (!decryptedId || decryptedId.trim() === '') {
-          throw new Error('Decryption returned empty value');
+          decryptedId = decrypt(encryptedId);
+        }
+        
+        if (!decryptedId || decryptedId.trim() === '') {
+          decryptedId = encryptedId;
         }
       } catch (decryptError) {
-        console.error("Decryption error:", decryptError);
-        Toast.show('Invalid idea ID - Unable to decrypt', {
-          duration: Toast.durations.LONG,
-          position: Toast.positions.BOTTOM,
-        });
-        setLoadingDetail(false);
-        return;
+        decryptedId = encryptedId;
       }
 
       const apiUrl = `${IDEA_DETAIL_URL}/${decryptedId}`;
+      
       const { data: response } = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 15000
@@ -493,7 +562,6 @@ const DashboardScreen = () => {
           setShowImplementationDetails(true);
         }
 
-        // Check if idea is closed and show popup with confetti
         const status = (detail.ideaStatus || detail.status || '').toLowerCase();
         if (status === 'closed') {
           setShowClosedPopup(true);
@@ -508,7 +576,6 @@ const DashboardScreen = () => {
         });
       }
     } catch (error) {
-      console.error("Fetch idea detail error:", error);
 
       let errorMsg = 'Failed to fetch idea details';
 
@@ -537,6 +604,7 @@ const DashboardScreen = () => {
 
   const markAsRead = async (notificationId) => {
     try {
+      
       const url = MARK_READ_URL(notificationId);
       const response = await fetch(url, {
         method: 'POST',
@@ -547,20 +615,27 @@ const DashboardScreen = () => {
       });
 
       if (response.ok) {
+        const currentTime = Date.now();
         const updatedNotifications = notifications.map(notif =>
           notif.id === notificationId
-            ? { ...notif, isRead: true }
+            ? { 
+                ...notif, 
+                isRead: true, 
+                storedAt: notif.storedAt || currentTime 
+              }
             : notif
         );
 
         setNotifications(updatedNotifications);
+        
         await saveNotificationsToStorage(employeeSystemId, updatedNotifications);
 
         const unread = updatedNotifications.filter(n => !n.isRead).length;
         setUnreadCount(unread);
+        
+      } else {
       }
     } catch (error) {
-      console.error("Mark as read error:", error);
     }
   };
 
@@ -582,6 +657,7 @@ const DashboardScreen = () => {
         const key = `${NOTIFICATIONS_STORAGE_KEY}_${employeeSystemId}`;
         await AsyncStorage.removeItem(key);
 
+
         Toast.show('All notifications cleared!', {
           duration: Toast.durations.SHORT,
           position: Toast.positions.BOTTOM,
@@ -600,8 +676,13 @@ const DashboardScreen = () => {
     }
   };
 
-  const openNotificationModal = () => {
+  const openNotificationModal = async () => {
     setShowNotificationModal(true);
+    
+    if (employeeSystemId) {
+      await loadStoredNotifications(employeeSystemId);
+    }
+    
     fetchNotifications();
   };
 
@@ -708,20 +789,33 @@ const DashboardScreen = () => {
 
   const NotificationItem = ({ item }) => {
     const handleNotificationClick = async () => {
-      await markAsRead(item.id);
+      try {
+        
+        
+        await markAsRead(item.id);
 
-      let encryptedId = null;
-      if (item.redirectUrl) {
-        const urlParts = item.redirectUrl.split('/');
-        encryptedId = urlParts[urlParts.length - 1];
-      }
+        let encryptedId = null;
+        if (item.redirectUrl) {
+          const urlParts = item.redirectUrl.split('/');
+          encryptedId = urlParts[urlParts.length - 1];
+        }
 
-      if (encryptedId && encryptedId.trim() !== '') {
-        setShowNotificationModal(false);
-        await fetchIdeaDetail(encryptedId);
-      } else {
-        Toast.show('Invalid notification - redirect URL missing', {
-          duration: Toast.durations.LONG,
+
+        if (encryptedId && encryptedId.trim() !== '') {
+          setShowNotificationModal(false);
+          
+          setTimeout(async () => {
+            await fetchIdeaDetail(encryptedId);
+          }, 300);
+        } else {
+          Toast.show('Invalid notification - redirect URL missing', {
+            duration: Toast.durations.LONG,
+            position: Toast.positions.BOTTOM,
+          });
+        }
+      } catch (error) {
+        Toast.show('Failed to open notification details', {
+          duration: Toast.durations.SHORT,
           position: Toast.positions.BOTTOM,
         });
       }
@@ -1523,7 +1617,6 @@ const styles = StyleSheet.create({
   createButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   scrollContent: { paddingBottom: 36, paddingTop: 8 },
 
-  // Modal dropdown styles
   dropdownOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.2)',
@@ -1874,7 +1967,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 2
   },
-  // Confetti and Closed Popup Styles
   confettiContainer: {
     position: 'absolute',
     top: 0,

@@ -20,6 +20,7 @@ import { Feather } from '@expo/vector-icons';
 import { UserContext } from '../src/context/UserContext';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LOGIN_URL } from '../src/context/api';
 
 const { height, width } = Dimensions.get('window');
 
@@ -45,7 +46,7 @@ export default function LoginScreen({ navigation }) {
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const { setUser } = useContext(UserContext);
-  const LOGIN_URL = 'https://ideabank-api-dev.abisaio.com/login';
+ // const LOGIN_URL = 'https://ideabank-api-dev.abisaio.com/login';
 
   const playSuccessNotification = () => {
     const pattern = [0, 100, 50, 100];
