@@ -277,13 +277,11 @@ const DashboardScreen = () => {
       const key = `${NOTIFICATIONS_STORAGE_KEY}_${systemId}`;
       const currentTime = Date.now();
 
-      // Ensure all notifications have timestamp
       const notificationsWithTimestamp = notificationsList.map(notif => ({
         ...notif,
         storedAt: notif.storedAt || currentTime
       }));
 
-      // Filter: Keep unread always, keep read within 7 days only
       const validNotifications = notificationsWithTimestamp.filter(notif => {
         if (!notif.isRead) return true; 
         const notifTime = new Date(notif.storedAt).getTime();
@@ -459,7 +457,6 @@ const DashboardScreen = () => {
 
         const mergedNotifications = Array.from(mergedMap.values());
 
-        // Sort by date (newest first)
         mergedNotifications.sort((a, b) => {
           const dateA = new Date(a.createdOn || a.storedAt).getTime();
           const dateB = new Date(b.createdOn || b.storedAt).getTime();
