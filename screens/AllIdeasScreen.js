@@ -398,13 +398,12 @@ export default function AllTeamIdeasScreen() {
           setShowImplementationDetails(true);
         }
 
-        // Check if status is Closed and show popup
         const status = (detail.ideaStatus || detail.status || '').toLowerCase();
         if (status === 'closed') {
           setShowClosedPopup(true);
           setTimeout(() => {
             setShowClosedPopup(false);
-          }, 3000); // Hide after 3 seconds
+          }, 3000); 
         }
       } else {
         Alert.alert("Error", response?.message || "Idea details not found.");

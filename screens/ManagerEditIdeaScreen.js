@@ -519,9 +519,6 @@ export default function ManagerEditIdeaScreen() {
 
       const apiUrl = MANAGER_EDIT_IDEA_URL(ideaId);
       
-      console.log('Submitting to:', apiUrl);
-      console.log('Mobile Number being sent:', mobileNumber.trim());
-      
       const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
@@ -531,8 +528,7 @@ export default function ManagerEditIdeaScreen() {
       });
 
       const responseText = await response.text();
-      console.log('Response status:', response.status);
-      console.log('Response text:', responseText);
+     
 
       if (response.status === 413) {
         setIsSubmitting(false);

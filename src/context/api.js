@@ -42,6 +42,3 @@ export const NOTIFICATION_COUNT_URL = (userId, scope) => {
 export const MARK_READ_URL = (notificationId) => `${BASE_URL}/markread/${notificationId}`; 
 export const CLEAR_ALL_URL = (userId) => `${BASE_URL}/clearall/${userId}`; 
 export const REDIRECT_NOTIFICATION_URL = (notificationId) => `${BASE_URL}/redirect/${notificationId}`; 
-
-
-
