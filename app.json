@@ -38,7 +38,7 @@
     },
 
     "android": {
-      "package": "com.kr1701.ideabank",
+      "package": "abis.ideabank",
       "versionCode": 1,
       "splash": {
         "image": "./assets/ideabank_logo.png",

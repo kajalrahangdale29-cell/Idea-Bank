@@ -63,7 +63,7 @@ export default function ManagerEditIdeaScreen() {
   const [ideaTheme, setIdeaTheme] = useState(ideaData.ideaTheme || '');
   const [benefit, setBenefit] = useState(ideaData.tentativeBenefit || '');
   const [teamMembers, setTeamMembers] = useState(ideaData.teamMembers || '');
-  
+
   const [mobileNumber, setMobileNumber] = useState(() => {
     const existingMobile = ideaData.mobileNumber || '';
     if (!existingMobile || existingMobile.trim() === '') {
@@ -71,14 +71,14 @@ export default function ManagerEditIdeaScreen() {
     }
     return existingMobile;
   });
-  
+
   const [date, setDate] = useState(
     ideaData.plannedImplementationDuration
       ? new Date(ideaData.plannedImplementationDuration)
       : null
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
-  
+
   const existingFile = normalizeImagePath(ideaData.beforeImplementationImagePath || ideaData.beforeImplementationImage || ideaData.imagePath || null);
   const [file, setFile] = useState(existingFile);
   const [fileName, setFileName] = useState(() => {
@@ -96,9 +96,9 @@ export default function ManagerEditIdeaScreen() {
     if (!existingFile) return 'image';
     return existingFile.toLowerCase().includes('.pdf') ? 'pdf' : 'image';
   });
-  
+
   const [isNewFile, setIsNewFile] = useState(false);
-  
+
   const [fullScreen, setFullScreen] = useState(false);
   const [imageScale, setImageScale] = useState(1);
   const [beSupportNeeded, setBeSupportNeeded] = useState(() => {
@@ -174,13 +174,13 @@ export default function ManagerEditIdeaScreen() {
   const validateTeamMembers = (text) => {
     const t = String(text || '').trim();
     if (!t) {
-        setTeamMembersError('Team Members is required.');
-        return false;
+      setTeamMembersError('Team Members is required.');
+      return false;
     }
     const regex = /^[a-zA-Z\s,.]*$/;
     if (!regex.test(t)) {
-        setTeamMembersError('Numbers or special characters are not allowed');
-        return false;
+      setTeamMembersError('Numbers or special characters are not allowed');
+      return false;
     }
     setTeamMembersError('');
     return true;
@@ -268,7 +268,7 @@ export default function ManagerEditIdeaScreen() {
       });
       if (!response.ok) throw new Error('Failed to fetch employee details');
       const data = await response.json();
-      
+
       setUserDetails({
         employeeNo: data.data.ideaOwnerEmployeeNo || '',
         name: data.data.ideaOwnerName || '',
@@ -279,7 +279,7 @@ export default function ManagerEditIdeaScreen() {
         reportingManagerName: data.data.reportingManagerName || '',
         reportingManagerEmail: data.data.managerEmail || '',
       });
-      
+
       if (!mobileNumber || mobileNumber.trim() === '') {
         const employeeMobile = data.data.mobileNumber || '';
         if (employeeMobile && /^\d{10}$/.test(employeeMobile)) {
@@ -316,7 +316,7 @@ export default function ManagerEditIdeaScreen() {
       const asset = result.assets[0];
       setFile(asset.uri);
       setFileType('image');
-      setIsNewFile(true); 
+      setIsNewFile(true);
       setFileName(asset.fileName || `gallery_${Date.now()}.jpg`);
       setShowFileOptions(false);
     }
@@ -338,7 +338,7 @@ export default function ManagerEditIdeaScreen() {
       const asset = result.assets[0];
       setFile(asset.uri);
       setFileType('image');
-      setIsNewFile(true); 
+      setIsNewFile(true);
       setFileName(asset.fileName || `camera_${Date.now()}.jpg`);
       setShowFileOptions(false);
     }
@@ -350,12 +350,12 @@ export default function ManagerEditIdeaScreen() {
         type: 'application/pdf',
         copyToCacheDirectory: true,
       });
-      
+
       if (!result.canceled) {
         const selectedFile = result.assets[0];
         setFile(selectedFile.uri);
         setFileType('pdf');
-        setIsNewFile(true); 
+        setIsNewFile(true);
         setFileName(selectedFile.name);
         setShowFileOptions(false);
       }
@@ -429,16 +429,20 @@ export default function ManagerEditIdeaScreen() {
       Alert.alert('Validation Error', 'Please correct the highlighted fields before submitting.');
       return;
     }
-    
+
     setShowConfirm(true);
   }, [ideaDescription, proposedSolution, benefit, teamMembers, solutionCategory, ideaTheme, file, date, mobileNumber, beSupportNeeded, canImplementOtherLocation]);
 
+
+
+  // Replace your handleFinalSubmit function with this version:
+
   const handleFinalSubmit = async () => {
     setShowConfirm(false);
-    
+
     try {
       setIsSubmitting(true);
-      
+
       const netInfo = await NetInfo.fetch();
       if (!netInfo.isConnected) {
         Alert.alert('No Internet', 'Please check your internet connection.');
@@ -458,14 +462,21 @@ export default function ManagerEditIdeaScreen() {
       formData.append('ProposedSolution', proposedSolution.trim());
       formData.append('TentativeBenefit', benefit.trim());
       formData.append('TeamMembers', teamMembers.trim());
-      
       formData.append('MobileNumber', mobileNumber.trim());
-      
       formData.append('SolutionCategory', solutionCategory);
       formData.append('IdeaTheme', ideaTheme);
-      formData.append('PlannedImplementationDuration', date ? date.toISOString().split('T')[0] : '');
       formData.append('IsBETeamSupportNeeded', beSupportNeeded === 'Yes' ? 'true' : 'false');
       formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation === 'Yes' ? 'true' : 'false');
+
+      // Only send duration if date was actually changed
+      const originalDate = ideaData.plannedImplementationDuration
+        ? new Date(ideaData.plannedImplementationDuration).toISOString().split('T')[0]
+        : null;
+      const currentDate = date ? date.toISOString().split('T')[0] : null;
+
+      if (originalDate !== currentDate) {
+        formData.append('PlannedImplementationDuration', currentDate || '');
+      }
 
       if (file && isNewFile) {
         try {
@@ -481,14 +492,14 @@ export default function ManagerEditIdeaScreen() {
             }
 
             const fileInfo = await FileSystem.getInfoAsync(fileUri);
-            
+
             if (!fileInfo.exists) {
               throw new Error('File not found on device');
             }
 
             let mimeType = 'application/octet-stream';
             const extension = fileName.split('.').pop()?.toLowerCase();
-            
+
             if (fileType === 'pdf' || extension === 'pdf') {
               mimeType = 'application/pdf';
             } else if (extension === 'png') {
@@ -518,7 +529,7 @@ export default function ManagerEditIdeaScreen() {
       }
 
       const apiUrl = MANAGER_EDIT_IDEA_URL(ideaId);
-      
+
       const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
@@ -528,7 +539,6 @@ export default function ManagerEditIdeaScreen() {
       });
 
       const responseText = await response.text();
-     
 
       if (response.status === 413) {
         setIsSubmitting(false);
@@ -590,7 +600,7 @@ export default function ManagerEditIdeaScreen() {
                 text: 'OK',
                 onPress: () => {
                   if (onSuccess) onSuccess();
-                  navigation.goBack(); 
+                  navigation.goBack();
                 },
               },
             ]
@@ -600,7 +610,7 @@ export default function ManagerEditIdeaScreen() {
           throw new Error('Invalid server response format');
         }
       }
-      
+
       setIsSubmitting(false);
       if (response.ok && (data.success === true || data.success === 'true')) {
         Alert.alert(
@@ -611,7 +621,7 @@ export default function ManagerEditIdeaScreen() {
               text: 'OK',
               onPress: () => {
                 if (onSuccess) onSuccess();
-                navigation.goBack(); 
+                navigation.goBack();
               },
             },
           ]
@@ -626,7 +636,7 @@ export default function ManagerEditIdeaScreen() {
     } catch (error) {
       console.error('Submit error:', error);
       let errorMessage = 'Network error. Please try again.';
-      
+
       if (error.message) {
         if (error.message.includes('Network request failed')) {
           errorMessage = 'Cannot connect to server. Check your internet connection.';
@@ -636,11 +646,222 @@ export default function ManagerEditIdeaScreen() {
           errorMessage = error.message;
         }
       }
-      
+
       Alert.alert('Error', errorMessage);
       setIsSubmitting(false);
     }
   };
+
+
+
+  // const handleFinalSubmit = async () => {
+  //   setShowConfirm(false);
+
+  //   try {
+  //     setIsSubmitting(true);
+
+  //     const netInfo = await NetInfo.fetch();
+  //     if (!netInfo.isConnected) {
+  //       Alert.alert('No Internet', 'Please check your internet connection.');
+  //       setIsSubmitting(false);
+  //       return;
+  //     }
+
+  //     const token = await AsyncStorage.getItem('token');
+  //     if (!token) {
+  //       Alert.alert('Error', 'Session expired. Please login again.');
+  //       setIsSubmitting(false);
+  //       return;
+  //     }
+
+  //     const formData = new FormData();
+  //     formData.append('IdeaDescription', ideaDescription.trim());
+  //     formData.append('ProposedSolution', proposedSolution.trim());
+  //     formData.append('TentativeBenefit', benefit.trim());
+  //     formData.append('TeamMembers', teamMembers.trim());
+
+  //     formData.append('MobileNumber', mobileNumber.trim());
+
+  //     formData.append('SolutionCategory', solutionCategory);
+  //     formData.append('IdeaTheme', ideaTheme);
+  //     formData.append('PlannedImplementationDuration', date ? date.toISOString().split('T')[0] : '');
+  //     formData.append('IsBETeamSupportNeeded', beSupportNeeded === 'Yes' ? 'true' : 'false');
+  //     formData.append('CanBeImplementedToOtherLocations', canImplementOtherLocation === 'Yes' ? 'true' : 'false');
+
+  //     if (file && isNewFile) {
+  //       try {
+  //         if (Platform.OS === 'web') {
+  //           const response = await fetch(file);
+  //           const blob = await response.blob();
+  //           const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  //           formData.append('BeforeImplementationImage', blob, cleanFileName);
+  //         } else {
+  //           let fileUri = file;
+  //           if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+  //             fileUri = `file://${fileUri}`;
+  //           }
+
+  //           const fileInfo = await FileSystem.getInfoAsync(fileUri);
+
+  //           if (!fileInfo.exists) {
+  //             throw new Error('File not found on device');
+  //           }
+
+  //           let mimeType = 'application/octet-stream';
+  //           const extension = fileName.split('.').pop()?.toLowerCase();
+
+  //           if (fileType === 'pdf' || extension === 'pdf') {
+  //             mimeType = 'application/pdf';
+  //           } else if (extension === 'png') {
+  //             mimeType = 'image/png';
+  //           } else if (extension === 'jpg' || extension === 'jpeg') {
+  //             mimeType = 'image/jpeg';
+  //           } else if (extension === 'gif') {
+  //             mimeType = 'image/gif';
+  //           } else if (extension === 'webp') {
+  //             mimeType = 'image/webp';
+  //           }
+
+  //           const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+  //           formData.append('BeforeImplementationImage', {
+  //             uri: fileUri,
+  //             type: mimeType,
+  //             name: cleanFileName,
+  //           });
+  //         }
+  //       } catch (fileError) {
+  //         console.error('File processing error:', fileError);
+  //         Alert.alert('File Error', 'Unable to process selected file. Please try again.');
+  //         setIsSubmitting(false);
+  //         return;
+  //       }
+  //     }
+
+  //     const apiUrl = MANAGER_EDIT_IDEA_URL(ideaId);
+
+  //     const response = await fetch(apiUrl, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Authorization': `Bearer ${token}`,
+  //       },
+  //       body: formData,
+  //     });
+
+  //     const responseText = await response.text();
+
+
+  //     if (response.status === 413) {
+  //       setIsSubmitting(false);
+  //       Alert.alert(
+  //         'File Too Large',
+  //         'The selected file is too large. Please select a smaller file (recommended under 5MB).',
+  //         [{ text: 'OK' }]
+  //       );
+  //       return;
+  //     }
+
+  //     if (response.status === 404) {
+  //       setIsSubmitting(false);
+  //       Alert.alert(
+  //         'API Error',
+  //         'Manager edit endpoint not configured on server.',
+  //         [{ text: 'OK' }]
+  //       );
+  //       return;
+  //     }
+
+  //     if (response.status === 403 || responseText.includes("don't have permission")) {
+  //       setIsSubmitting(false);
+  //       Alert.alert(
+  //         'Permission Denied',
+  //         'You do not have permission to edit this idea.',
+  //         [{ text: 'OK', onPress: () => navigation.goBack() }]
+  //       );
+  //       return;
+  //     }
+
+  //     if (response.status === 401) {
+  //       setIsSubmitting(false);
+  //       Alert.alert(
+  //         'Session Expired',
+  //         'Your session has expired. Please login again.',
+  //         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+  //       );
+  //       return;
+  //     }
+
+  //     if (response.status >= 500) {
+  //       setIsSubmitting(false);
+  //       Alert.alert('Server Error', 'Server is experiencing issues. Please try again later.');
+  //       return;
+  //     }
+
+  //     let data;
+  //     try {
+  //       data = JSON.parse(responseText);
+  //     } catch (parseError) {
+  //       if (response.ok || response.status === 200) {
+  //         setIsSubmitting(false);
+  //         Alert.alert(
+  //           'Success',
+  //           'Idea updated successfully!',
+  //           [
+  //             {
+  //               text: 'OK',
+  //               onPress: () => {
+  //                 if (onSuccess) onSuccess();
+  //                 navigation.goBack(); 
+  //               },
+  //             },
+  //           ]
+  //         );
+  //         return;
+  //       } else {
+  //         throw new Error('Invalid server response format');
+  //       }
+  //     }
+
+  //     setIsSubmitting(false);
+  //     if (response.ok && (data.success === true || data.success === 'true')) {
+  //       Alert.alert(
+  //         'Success',
+  //         data.message || 'Idea updated successfully!',
+  //         [
+  //           {
+  //             text: 'OK',
+  //             onPress: () => {
+  //               if (onSuccess) onSuccess();
+  //               navigation.goBack(); 
+  //             },
+  //           },
+  //         ]
+  //       );
+  //     } else {
+  //       Alert.alert(
+  //         'Error',
+  //         data?.message || data?.error || 'Failed to update idea.'
+  //       );
+  //     }
+
+  //   } catch (error) {
+  //     console.error('Submit error:', error);
+  //     let errorMessage = 'Network error. Please try again.';
+
+  //     if (error.message) {
+  //       if (error.message.includes('Network request failed')) {
+  //         errorMessage = 'Cannot connect to server. Check your internet connection.';
+  //       } else if (error.message.includes('timeout')) {
+  //         errorMessage = 'Request timeout. Please try again.';
+  //       } else if (!error.message.includes('Invalid server response')) {
+  //         errorMessage = error.message;
+  //       }
+  //     }
+
+  //     Alert.alert('Error', errorMessage);
+  //     setIsSubmitting(false);
+  //   }
+  // };
 
   const handleZoomIn = useCallback(() => {
     setImageScale(prev => Math.min(prev + 0.5, 3));
@@ -799,9 +1020,9 @@ export default function ManagerEditIdeaScreen() {
                 Before Implementation Image/PDF <Text style={styles.required}>*</Text>
               </Text>
               <View style={[styles.fileInputRow, fileError && styles.inputError]}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   activeOpacity={0.7}
-                  style={styles.chooseFileButton} 
+                  style={styles.chooseFileButton}
                   onPress={() => setShowFileOptions(true)}
                 >
                   <Text style={styles.chooseFileText}>Choose File</Text>
@@ -813,9 +1034,9 @@ export default function ManagerEditIdeaScreen() {
               {fileError ? <Text style={styles.errorText}>{fileError}</Text> : null}
 
               {file && fileType === 'image' && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => setFullScreen(true)} 
+                  onPress={() => setFullScreen(true)}
                   style={styles.imagePreviewButton}
                 >
                   <Feather name="image" size={18} color="#2196F3" />
@@ -824,7 +1045,7 @@ export default function ManagerEditIdeaScreen() {
               )}
 
               {file && fileType === 'pdf' && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={openPDF}
                   style={styles.pdfInfoContainer}
@@ -845,9 +1066,9 @@ export default function ManagerEditIdeaScreen() {
                         <MaterialIcons name="crop-free" size={24} color="#fff" />
                       </TouchableOpacity>
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       activeOpacity={0.7}
-                      style={styles.headerButton} 
+                      style={styles.headerButton}
                       onPress={() => {
                         setFullScreen(false);
                         setImageScale(1);
@@ -857,7 +1078,7 @@ export default function ManagerEditIdeaScreen() {
                       <Feather name="x" size={30} color="#fff" />
                     </TouchableOpacity>
                   </View>
-                  
+
                   <ScrollView
                     contentContainerStyle={styles.scrollContent}
                     style={{ flex: 1 }}
@@ -904,37 +1125,37 @@ export default function ManagerEditIdeaScreen() {
                 <View style={styles.imageOptionsContainer}>
                   <View style={styles.imageOptionsContent}>
                     <Text style={styles.imageOptionsTitle}>Choose File Source</Text>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                       activeOpacity={0.7}
-                      style={styles.imageOptionButton} 
+                      style={styles.imageOptionButton}
                       onPress={pickImageFromCamera}
                     >
                       <Feather name="camera" size={24} color="#2196F3" />
                       <Text style={styles.imageOptionText}>Take Photo</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       activeOpacity={0.7}
-                      style={styles.imageOptionButton} 
+                      style={styles.imageOptionButton}
                       onPress={pickImageFromGallery}
                     >
                       <Feather name="image" size={24} color="#4CAF50" />
                       <Text style={styles.imageOptionText}>Choose from Gallery</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       activeOpacity={0.7}
-                      style={styles.imageOptionButton} 
+                      style={styles.imageOptionButton}
                       onPress={pickPDF}
                     >
                       <Feather name="file-text" size={24} color="#FF5722" />
                       <Text style={styles.imageOptionText}>Choose PDF</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       activeOpacity={0.7}
-                      style={[styles.imageOptionButton, styles.cancelButton]} 
+                      style={[styles.imageOptionButton, styles.cancelButton]}
                       onPress={() => setShowFileOptions(false)}
                     >
                       <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -948,9 +1169,9 @@ export default function ManagerEditIdeaScreen() {
               <Text style={styles.label}>
                 Planned Completion Date <Text style={styles.required}>*</Text>
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 activeOpacity={0.7}
-                style={[styles.dateInputWeb, dateError && styles.inputError]} 
+                style={[styles.dateInputWeb, dateError && styles.inputError]}
                 onPress={() => setShowDatePicker(true)}
               >
                 <Text style={styles.dateDisplayText}>
@@ -1000,21 +1221,21 @@ export default function ManagerEditIdeaScreen() {
               error={mobileNumberError}
             />
 
-            <RadioField 
-              label="Is BE Team Support Needed?" 
+            <RadioField
+              label="Is BE Team Support Needed?"
               required
-              value={beSupportNeeded} 
+              value={beSupportNeeded}
               setValue={(value) => {
                 setBeSupportNeeded(value);
                 validateBeSupportNeeded(value);
               }}
               error={beSupportNeededError}
             />
-            
-            <RadioField 
-              label="Can Be Implemented To Other Location?" 
+
+            <RadioField
+              label="Can Be Implemented To Other Location?"
               required
-              value={canImplementOtherLocation} 
+              value={canImplementOtherLocation}
               setValue={(value) => {
                 setCanImplementOtherLocation(value);
                 validateCanImplementOtherLocation(value);
@@ -1109,10 +1330,10 @@ const PickerField = ({ label, icon, selectedValue, onValueChange, options, requi
     </Text>
     <View style={[styles.inputWrapper, error && styles.inputError]}>
       {icon}
-      <Picker 
-        selectedValue={selectedValue} 
-        onValueChange={onValueChange} 
-        style={styles.picker} 
+      <Picker
+        selectedValue={selectedValue}
+        onValueChange={onValueChange}
+        style={styles.picker}
         dropdownIconColor="#666"
       >
         <Picker.Item label="Select" value="" />
@@ -1129,17 +1350,17 @@ const RadioField = ({ label, value, setValue, required, error }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>{label} {required && <Text style={styles.required}>*</Text>}</Text>
     <View style={[styles.radioRow, error && styles.inputError]}>
-      <TouchableOpacity 
+      <TouchableOpacity
         activeOpacity={0.7}
-        style={styles.radioOption} 
+        style={styles.radioOption}
         onPress={() => setValue('Yes')}
       >
         <View style={[styles.radioCircle, value === 'Yes' && styles.radioSelected]} />
         <Text style={styles.radioText}>Yes</Text>
       </TouchableOpacity>
-      <TouchableOpacity 
+      <TouchableOpacity
         activeOpacity={0.7}
-        style={styles.radioOption} 
+        style={styles.radioOption}
         onPress={() => setValue('No')}
       >
         <View style={[styles.radioCircle, value === 'No' && styles.radioSelected]} />
@@ -1196,17 +1417,17 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5
   },
-  inputBlock: { 
-    marginBottom: 16 
+  inputBlock: {
+    marginBottom: 16
   },
-  label: { 
-    fontSize: 14, 
-    fontWeight: '600', 
-    marginBottom: 6, 
-    color: '#333' 
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 6,
+    color: '#333'
   },
-  required: { 
-    color: 'red' 
+  required: {
+    color: 'red'
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -1216,23 +1437,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10
   },
-  inputWrapperMultiline: { 
-    alignItems: 'flex-start' 
+  inputWrapperMultiline: {
+    alignItems: 'flex-start'
   },
-  input: { 
-    flex: 1, 
-    fontSize: 14, 
-    marginLeft: 10, 
-    color: '#333' 
+  input: {
+    flex: 1,
+    fontSize: 14,
+    marginLeft: 10,
+    color: '#333'
   },
-  picker: { 
-    flex: 1, 
-    marginLeft: 10, 
-    color: '#333' 
+  picker: {
+    flex: 1,
+    marginLeft: 10,
+    color: '#333'
   },
-  textArea: { 
-    height: 100, 
-    textAlignVertical: 'top' 
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top'
   },
   inputError: { borderColor: 'red', borderWidth: 1 },
   errorText: { color: 'red', fontSize: 12, marginTop: 4, fontWeight: '500' },
