@@ -17,7 +17,7 @@ const normalizeImagePath = (path) => {
   if (!path) return null;
 
   let cleanPath = path;
-  const basePattern = 'https://ideabank-api-dev.abisaio.com';
+  const basePattern = 'https://ideabank-api.abisaio.com';
 
   const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
 
@@ -30,14 +30,14 @@ const normalizeImagePath = (path) => {
     return cleanPath;
   }
 
-  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  const BASE_URL = 'https://ideabank-api.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
   return fullUrl;
 };
 
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
-  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
+  return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
 };
 
 const formatDate = (dateString) => {
@@ -1183,7 +1183,7 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
         setIsSubmitting(true);
         try {
           const token = await AsyncStorage.getItem('token');
-          const url = `https://ideabank-api-dev.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}`;
+          const url = `https://ideabank-api.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}`;
           const response = await axios.get(url, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -1326,7 +1326,7 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
         });
       }
 
-      const url = isEditing ? `https://ideabank-api-dev.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}` : SUBMIT_URL;
+      const url = isEditing ? `https://ideabank-api.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}` : SUBMIT_URL;
 
       const axiosConfig = {
         headers: {

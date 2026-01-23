@@ -46,7 +46,7 @@ export default function LoginScreen({ navigation }) {
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const { setUser } = useContext(UserContext);
- // const LOGIN_URL = 'https://ideabank-api-dev.abisaio.com/login';
+  //const LOGIN_URL = 'https://ideabank-api-dev.abisaio.com/login';
 
   const playSuccessNotification = () => {
     const pattern = [0, 100, 50, 100];

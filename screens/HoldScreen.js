@@ -13,7 +13,7 @@ const normalizeImagePath = (path) => {
 
   let cleanPath = path;
 
-  const basePattern = 'https://ideabank-api-dev.abisaio.com';
+  const basePattern = 'https://ideabank-api.abisaio.com';
 
   const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\\]/g, '\\$&'), 'g')) || []).length;
 
@@ -26,14 +26,14 @@ const normalizeImagePath = (path) => {
     return cleanPath;
   }
 
-  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  const BASE_URL = 'https://ideabank-api.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
   return fullUrl;
 };
 
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
-  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
+  return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
 };
 
 const formatDate = (dateString) => {

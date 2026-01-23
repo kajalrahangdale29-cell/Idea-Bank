@@ -1,4 +1,4 @@
-const BASE_URL = "https://ideabank-api-dev.abisaio.com";
+const BASE_URL = "https://ideabank-api.abisaio.com";
 
 export const LOGIN_URL = BASE_URL + "/login";
 

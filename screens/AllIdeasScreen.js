@@ -22,7 +22,7 @@ import { ALL_TEAM_IDEAS_URL, IDEA_DETAIL_URL } from "../src/context/api";
 const normalizeImagePath = (path) => {
   if (!path) return null;
   let cleanPath = path;
-  const basePattern = 'https://ideabank-api-dev.abisaio.com';
+  const basePattern = 'https://ideabank-api.abisaio.com';
   const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
   if (occurrences > 1) {
     const lastIndex = cleanPath.lastIndexOf(basePattern);
@@ -31,14 +31,14 @@ const normalizeImagePath = (path) => {
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
   }
-  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  const BASE_URL = 'https://ideabank-api.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
   return fullUrl;
 };
 
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
-  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
+  return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
 };
 
 // Confetti Component

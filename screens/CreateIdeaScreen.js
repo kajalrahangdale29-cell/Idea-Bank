@@ -14,7 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
-const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+const BASE_URL = 'https://ideabank-api.abisaio.com';
 
 export default function CreateIdeaScreen() {
   const navigation = useNavigation();

@@ -17,7 +17,7 @@ import { DASHBOARD_URL, NOTIFICATION_USER_URL, NOTIFICATION_COUNT_URL, MARK_READ
 const normalizeImagePath = (path) => {
   if (!path) return null;
   let cleanPath = path;
-  const basePattern = 'https://ideabank-api-dev.abisaio.com';
+  const basePattern = 'https://ideabank-api.abisaio.com';
   const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
   if (occurrences > 1) {
     const lastIndex = cleanPath.lastIndexOf(basePattern);
@@ -26,14 +26,14 @@ const normalizeImagePath = (path) => {
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
   }
-  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  const BASE_URL = 'https://ideabank-api.abisaio.com';
   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
   return fullUrl;
 };
 
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
-  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
+  return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
 };
 
 const formatDateTime = (dateString) => {
@@ -183,7 +183,7 @@ const DashboardScreen = () => {
         if (storedData) {
           const parsed = JSON.parse(storedData);
           const userId = parsed.employee.id;
-          
+
           setEmployeeName(parsed.employee.name);
           setEmployeeUsername(parsed.employee.username);
           setEmployeeSystemId(userId);
@@ -195,8 +195,8 @@ const DashboardScreen = () => {
           await fetchDashboard(parsed.token, 'self');
 
           await fetchUnreadCount(userId, parsed.token);
-          
-          
+
+
           setTimeout(() => {
             fetchNotifications();
           }, 500);
@@ -216,10 +216,10 @@ const DashboardScreen = () => {
 
       if (employeeSystemId && token) {
         loadStoredNotifications(employeeSystemId);
-        
+
         fetchDashboard(token, scope);
         fetchUnreadCount(employeeSystemId, token);
-        
+
         setTimeout(() => {
           fetchNotifications();
         }, 300);
@@ -238,14 +238,14 @@ const DashboardScreen = () => {
 
         const validNotifications = parsedData.filter(notif => {
           if (!notif.isRead) {
-            return true; 
+            return true;
           }
           const notifTime = new Date(notif.storedAt || notif.createdOn).getTime();
           const isWithin7Days = (currentTime - notifTime) < SEVEN_DAYS_MS;
-          
+
           if (!isWithin7Days) {
           }
-          
+
           return isWithin7Days;
         });
 
@@ -263,7 +263,7 @@ const DashboardScreen = () => {
 
         const unread = validNotifications.filter(n => !n.isRead).length;
         setUnreadCount(unread);
-        
+
       } else {
         setNotifications([]);
         setUnreadCount(0);
@@ -283,7 +283,7 @@ const DashboardScreen = () => {
       }));
 
       const validNotifications = notificationsWithTimestamp.filter(notif => {
-        if (!notif.isRead) return true; 
+        if (!notif.isRead) return true;
         const notifTime = new Date(notif.storedAt).getTime();
         return (currentTime - notifTime) < SEVEN_DAYS_MS;
       });
@@ -388,7 +388,7 @@ const DashboardScreen = () => {
     setLoadingNotifications(true);
 
     try {
-      
+
       const url = NOTIFICATION_USER_URL(employeeSystemId, 'self');
       const response = await fetch(url, {
         method: 'GET',
@@ -423,10 +423,10 @@ const DashboardScreen = () => {
         const storedNotifications = JSON.parse(storedData);
 
         const mergedMap = new Map();
-        
+
         storedNotifications.forEach(storedNotif => {
           if (!storedNotif.isRead) {
-          
+
             mergedMap.set(storedNotif.id, storedNotif);
           } else {
             // Keep read ones if within 7 days
@@ -437,17 +437,17 @@ const DashboardScreen = () => {
             }
           }
         });
-        
+
         newNotifications.forEach(newNotif => {
           const existing = mergedMap.get(newNotif.id);
           if (existing) {
             mergedMap.set(newNotif.id, {
               ...newNotif,
-              isRead: existing.isRead, 
-              storedAt: existing.storedAt 
+              isRead: existing.isRead,
+              storedAt: existing.storedAt
             });
           } else {
-            
+
             mergedMap.set(newNotif.id, {
               ...newNotif,
               storedAt: currentTime
@@ -465,23 +465,24 @@ const DashboardScreen = () => {
 
         setNotifications(mergedNotifications);
         await saveNotificationsToStorage(employeeSystemId, mergedNotifications);
-        
+
         const unreadCount = mergedNotifications.filter(n => !n.isRead).length;
         setUnreadCount(unreadCount);
-        
-      } else {;
-        
+
+      } else {
+        ;
+
         const notificationsWithTimestamp = newNotifications.map(notif => ({
           ...notif,
           storedAt: currentTime
         }));
-        
+
         setNotifications(notificationsWithTimestamp);
         await saveNotificationsToStorage(employeeSystemId, notificationsWithTimestamp);
-        
+
         const unreadCount = notificationsWithTimestamp.filter(n => !n.isRead).length;
         setUnreadCount(unreadCount);
-        
+
       }
 
     } catch (error) {
@@ -518,11 +519,11 @@ const DashboardScreen = () => {
       let decryptedId;
       try {
         decryptedId = safeDecrypt(encryptedId);
-        
+
         if (!decryptedId || decryptedId.trim() === '') {
           decryptedId = decrypt(encryptedId);
         }
-        
+
         if (!decryptedId || decryptedId.trim() === '') {
           decryptedId = encryptedId;
         }
@@ -531,7 +532,7 @@ const DashboardScreen = () => {
       }
 
       const apiUrl = `${IDEA_DETAIL_URL}/${decryptedId}`;
-      
+
       const { data: response } = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 15000
@@ -601,7 +602,7 @@ const DashboardScreen = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      
+
       const url = MARK_READ_URL(notificationId);
       const response = await fetch(url, {
         method: 'POST',
@@ -615,21 +616,21 @@ const DashboardScreen = () => {
         const currentTime = Date.now();
         const updatedNotifications = notifications.map(notif =>
           notif.id === notificationId
-            ? { 
-                ...notif, 
-                isRead: true, 
-                storedAt: notif.storedAt || currentTime 
-              }
+            ? {
+              ...notif,
+              isRead: true,
+              storedAt: notif.storedAt || currentTime
+            }
             : notif
         );
 
         setNotifications(updatedNotifications);
-        
+
         await saveNotificationsToStorage(employeeSystemId, updatedNotifications);
 
         const unread = updatedNotifications.filter(n => !n.isRead).length;
         setUnreadCount(unread);
-        
+
       } else {
       }
     } catch (error) {
@@ -675,11 +676,11 @@ const DashboardScreen = () => {
 
   const openNotificationModal = async () => {
     setShowNotificationModal(true);
-    
+
     if (employeeSystemId) {
       await loadStoredNotifications(employeeSystemId);
     }
-    
+
     fetchNotifications();
   };
 
@@ -787,8 +788,8 @@ const DashboardScreen = () => {
   const NotificationItem = ({ item }) => {
     const handleNotificationClick = async () => {
       try {
-        
-        
+
+
         await markAsRead(item.id);
 
         let encryptedId = null;
@@ -800,7 +801,7 @@ const DashboardScreen = () => {
 
         if (encryptedId && encryptedId.trim() !== '') {
           setShowNotificationModal(false);
-          
+
           setTimeout(async () => {
             await fetchIdeaDetail(encryptedId);
           }, 300);
@@ -937,9 +938,7 @@ const DashboardScreen = () => {
             <Ionicons name="notifications-outline" size={24} color="#fff" />
             {unreadCount > 0 && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </Text>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -1513,7 +1512,7 @@ const styles = StyleSheet.create({
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   badgeText: {
     color: '#fff',

@@ -28,7 +28,7 @@ const normalizeImagePath = (path) => {
   if (!path) return null;
   try {
     let cleanPath = path;
-    const basePattern = 'https://ideabank-api-dev.abisaio.com';
+    const basePattern = 'https://ideabank-api.abisaio.com';
     const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
     if (occurrences > 1) {
       const lastIndex = cleanPath.lastIndexOf(basePattern);
@@ -37,7 +37,7 @@ const normalizeImagePath = (path) => {
     if (typeof cleanPath === 'string' && (cleanPath.startsWith('http://') || cleanPath.startsWith('https://'))) {
       return cleanPath;
     }
-    const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+    const BASE_URL = 'https://ideabank-api.abisaio.com';
     const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
     return fullUrl;
   } catch (e) {
@@ -47,7 +47,7 @@ const normalizeImagePath = (path) => {
 
 const getAlternateImageUrl = (url) => {
   if (!url || typeof url !== 'string') return null;
-  return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
+  return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
 };
 
 const parseInitialDate = (value) => {
