@@ -5,7 +5,7 @@ import {
   Alert, Modal, ActivityIndicator, Platform, Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { CREATE_IDEA_POST_URL, EMPLOYEE_GET_URL } from '../src/context/api';
+import { CREATE_IDEA_POST_URL, EMPLOYEE_GET_URL, BASE_URL } from '../src/context/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
@@ -14,7 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
-const BASE_URL = 'https://ideabank-api.abisaio.com';
+
 
 export default function CreateIdeaScreen() {
   const navigation = useNavigation();

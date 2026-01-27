@@ -22,25 +22,33 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
-
-const MANAGER_EDIT_IDEA_URL = (id) => `https://ideabank-api.abisaio.com/api/Approval/edit/${id}`;
-const EMPLOYEE_GET_URL = "https://ideabank-api.abisaio.com/EmployeeInfo";
+import {
+  BASE_URL,
+  MANAGER_EDIT_IDEA_URL,
+  EMPLOYEE_GET_URL,
+} from '../src/context/api';
 
 const normalizeImagePath = (path) => {
   if (!path) return null;
+
   let cleanPath = path;
-  const basePattern = 'https://ideabank-api.abisaio.com';
-  const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
+  const basePattern = BASE_URL;
+
+  const occurrences =
+    (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
+
   if (occurrences > 1) {
     const lastIndex = cleanPath.lastIndexOf(basePattern);
-    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+    cleanPath =
+      basePattern +
+      cleanPath.substring(lastIndex + basePattern.length);
   }
+
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
   }
-  const BASE_URL = 'https://ideabank-api.abisaio.com';
-  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
-  return fullUrl;
+
+  return `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
 };
 
 const getAlternateImageUrl = (url) => {

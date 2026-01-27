@@ -1,4 +1,4 @@
-const BASE_URL = "https://ideabank-api.abisaio.com";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export const LOGIN_URL = BASE_URL + "/login";
 

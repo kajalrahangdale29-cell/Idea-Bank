@@ -21,27 +21,22 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TEAM_IDEAS_URL, IDEA_DETAIL_URL, UPDATE_STATUS_URL } from "../src/context/api";
+import { TEAM_IDEAS_URL, IDEA_DETAIL_URL, UPDATE_STATUS_URL, BASE_URL } from "../src/context/api";
 
 const normalizeImagePath = (path) => {
   if (!path) return null;
-
-  let cleanPath = path;
-  const basePattern = 'https://ideabank-api.abisaio.com';
-
-  const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-
-  if (occurrences > 1) {
-    const lastIndex = cleanPath.lastIndexOf(basePattern);
-    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+  
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
   }
 
-  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
-    return cleanPath;
-  }
-  const BASE_URL = 'https://ideabank-api.abisaio.com';
-  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
-  return fullUrl;
+  let cleanPath = path.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
+
+  const baseUrl = BASE_URL.endsWith('/')
+    ? BASE_URL.slice(0, -1)
+    : BASE_URL;
+
+  return `${baseUrl}/${cleanPath}`;
 };
 
 const getAlternateImageUrl = (url) => {
@@ -339,7 +334,7 @@ export default function MyTeamIdeasScreen() {
       setLoading(false);
     }
   };
-  
+
   const applyFiltersRealTime = () => {
     let filteredIdeas = [...allIdeasOriginal];
 
@@ -421,10 +416,10 @@ export default function MyTeamIdeasScreen() {
 
       let response;
       try {
-        response = await axios.get(`${IDEA_DETAIL_URL}?ideaId=${encodeURIComponent(ideaId)}`, { headers });
+        response = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
       } catch (err1) {
         try {
-          response = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
+          response = await axios.get(`${IDEA_DETAIL_URL}?ideaId=${encodeURIComponent(ideaId)}`, { headers });
         } catch (err2) {
           response = await axios.get(`${IDEA_DETAIL_URL}?id=${encodeURIComponent(ideaId)}`, { headers });
         }
@@ -457,7 +452,7 @@ export default function MyTeamIdeasScreen() {
           setShowClosedPopup(true);
           setTimeout(() => {
             setShowClosedPopup(false);
-          }, 3000); 
+          }, 3000);
         }
       } else if (response?.data) {
         const detail = response.data;
@@ -626,7 +621,7 @@ export default function MyTeamIdeasScreen() {
 
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
-    
+
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
         'PDF Document',
@@ -792,7 +787,14 @@ export default function MyTeamIdeasScreen() {
                   key={index}
                   activeOpacity={0.8}
                   style={styles.cardContainer}
-                  onPress={() => fetchIdeaDetail(idea.ideaId || idea.id || idea.ideaNumber)}
+                  onPress={() => {
+                    const ideaId = idea?.id ?? idea?.ideaId;
+                    if (!ideaId) {
+                      Alert.alert("Error", "Idea ID not found");
+                      return;
+                    }
+                    fetchIdeaDetail(ideaId);
+                  }}
                 >
                   <View style={styles.cardHeader}>
                     <Text style={styles.ideaNumber} numberOfLines={2}>{idea.ideaNumber || "N/A"}</Text>
@@ -845,7 +847,7 @@ export default function MyTeamIdeasScreen() {
 
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
-        
+
           {showClosedPopup && <ConfettiEffect />}
 
           {showClosedPopup && (
@@ -1440,21 +1442,21 @@ const styles = StyleSheet.create({
   remarkCancelText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   remarkSubmitButton: { flex: 1, backgroundColor: '#2c5aa0', paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   remarkSubmitText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  pdfThumbnailContainer: { 
-    width: 60, 
-    height: 60, 
-    borderRadius: 6, 
-    borderWidth: 1, 
-    borderColor: '#FF5722', 
-    backgroundColor: '#FFF3E0', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  pdfThumbnailContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FF5722',
+    backgroundColor: '#FFF3E0',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  pdfThumbnailText: { 
-    fontSize: 10, 
-    color: '#FF5722', 
-    fontWeight: 'bold', 
-    marginTop: 2 
+  pdfThumbnailText: {
+    fontSize: 10,
+    color: '#FF5722',
+    fontWeight: 'bold',
+    marginTop: 2
   },
   confettiContainer: {
     position: 'absolute',
@@ -1471,35 +1473,35 @@ const styles = StyleSheet.create({
     height: 10,
     top: -50,
   },
-  closedPopupContainer: { 
-    position: 'absolute', 
-    top: 80, 
-    left: 20, 
-    right: 20, 
-    alignItems: 'center', 
-    zIndex: 10000 
+  closedPopupContainer: {
+    position: 'absolute',
+    top: 80,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+    zIndex: 10000
   },
-  closedPopup: { 
-    backgroundColor: '#4CAF50', 
-    paddingHorizontal: 24, 
-    paddingVertical: 14, 
-    borderRadius: 12, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 3 }, 
-    shadowOpacity: 0.3, 
-    shadowRadius: 6, 
-    elevation: 6 
+  closedPopup: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6
   },
-  closedPopupEmoji: { 
-    fontSize: 24, 
-    marginHorizontal: 6 
+  closedPopupEmoji: {
+    fontSize: 24,
+    marginHorizontal: 6
   },
-  closedPopupText: { 
-    fontSize: 16, 
-    fontWeight: 'bold', 
-    color: '#fff', 
-    textAlign: 'center' 
+  closedPopupText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center'
   },
 });

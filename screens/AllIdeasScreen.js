@@ -17,23 +17,26 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ALL_TEAM_IDEAS_URL, IDEA_DETAIL_URL } from "../src/context/api";
+import { ALL_TEAM_IDEAS_URL, IDEA_DETAIL_URL, BASE_URL } from "../src/context/api";
 
 const normalizeImagePath = (path) => {
   if (!path) return null;
-  let cleanPath = path;
-  const basePattern = 'https://ideabank-api.abisaio.com';
-  const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
-  if (occurrences > 1) {
-    const lastIndex = cleanPath.lastIndexOf(basePattern);
-    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+  
+  // If already a complete URL, return as is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
   }
-  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
-    return cleanPath;
-  }
-  const BASE_URL = 'https://ideabank-api.abisaio.com';
-  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
-  return fullUrl;
+
+  // Clean the path - remove leading slashes and backslashes
+  let cleanPath = path.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
+
+  // Get base URL without trailing slash
+  const baseUrl = BASE_URL.endsWith('/')
+    ? BASE_URL.slice(0, -1)
+    : BASE_URL;
+
+  // Construct the full URL
+  return `${baseUrl}/${cleanPath}`;
 };
 
 const getAlternateImageUrl = (url) => {
@@ -403,7 +406,7 @@ export default function AllTeamIdeasScreen() {
           setShowClosedPopup(true);
           setTimeout(() => {
             setShowClosedPopup(false);
-          }, 3000); 
+          }, 3000);
         }
       } else {
         Alert.alert("Error", response?.message || "Idea details not found.");
@@ -475,6 +478,7 @@ export default function AllTeamIdeasScreen() {
       Alert.alert('Error', 'Failed to load image');
     }
   };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -652,7 +656,7 @@ export default function AllTeamIdeasScreen() {
         <View style={styles.fullModal}>
           {/* Confetti Effect */}
           {showClosedPopup && <ConfettiEffect />}
-          
+
           {/* Closed Status Popup - Inside Detail Modal */}
           {showClosedPopup && (
             <View style={styles.closedPopupContainer}>
@@ -663,7 +667,7 @@ export default function AllTeamIdeasScreen() {
               </View>
             </View>
           )}
-          
+
           <View style={styles.modalHeaderDetail}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
@@ -1060,6 +1064,7 @@ export default function AllTeamIdeasScreen() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
   header: { backgroundColor: '#fff', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', elevation: 2 },

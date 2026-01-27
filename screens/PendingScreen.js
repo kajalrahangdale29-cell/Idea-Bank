@@ -24,31 +24,25 @@ import {
   PENDING_APPROVALS_URL,
   IDEA_DETAIL_URL,
   UPDATE_STATUS_URL,
-  SUBMIT_URL
+  SUBMIT_URL,
+  BASE_URL
 } from "../src/context/api";
 
 const normalizeImagePath = (path) => {
   if (!path) return null;
-
-  let cleanPath = path;
-  const basePattern = 'https://ideabank-api.abisaio.com';
-
-  const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-
-  if (occurrences > 1) {
-    const lastIndex = cleanPath.lastIndexOf(basePattern);
-    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+  
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
   }
 
-  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
-    return cleanPath;
-  }
+  let cleanPath = path.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
 
-  const BASE_URL = 'https://ideabank-api.abisaio.com';
-  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
-  return fullUrl;
+  const baseUrl = BASE_URL.endsWith('/')
+    ? BASE_URL.slice(0, -1)
+    : BASE_URL;
+
+  return `${baseUrl}/${cleanPath}`;
 };
-
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
   return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
@@ -1205,7 +1199,7 @@ export default function PendingScreen() {
                               const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath;
                               const fullUrl = imagePath.startsWith('http')
                                 ? imagePath
-                                : `https://ideabank-api.abisaio.com${imagePath}`;
+                                : `${BASE_URL}${imagePath}`;
 
                               return imagePath.toLowerCase().includes('.pdf') ? (
                                 <TouchableOpacity onPress={() => openImagePreview(fullUrl)}>
@@ -1536,7 +1530,7 @@ const styles = StyleSheet.create({
   pdfThumbnailText: { fontSize: 10, color: '#FF5722', fontWeight: 'bold', marginTop: 2 },
   imageErrorContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   imageErrorText: { fontSize: 12, color: '#999' },
-  
+
 
   rowDetailVertical: {
     flexDirection: "column",

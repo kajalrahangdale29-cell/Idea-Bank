@@ -14,7 +14,7 @@ import {
   Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { EDIT_IDEA_URL, EMPLOYEE_GET_URL } from '../src/context/api';
+import { EDIT_IDEA_URL, EMPLOYEE_GET_URL, BASE_URL } from '../src/context/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
@@ -25,24 +25,19 @@ import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
 
 const normalizeImagePath = (path) => {
-  if (!path) return null;
-  try {
-    let cleanPath = path;
-    const basePattern = 'https://ideabank-api.abisaio.com';
-    const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
-    if (occurrences > 1) {
-      const lastIndex = cleanPath.lastIndexOf(basePattern);
-      cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
-    }
-    if (typeof cleanPath === 'string' && (cleanPath.startsWith('http://') || cleanPath.startsWith('https://'))) {
-      return cleanPath;
-    }
-    const BASE_URL = 'https://ideabank-api.abisaio.com';
-    const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
-    return fullUrl;
-  } catch (e) {
-    return null;
+  if (!path || typeof path !== 'string') return null;
+
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
   }
+
+  const cleanPath = path.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
+
+  const baseUrl = BASE_URL.endsWith('/')
+    ? BASE_URL.slice(0, -1)
+    : BASE_URL;
+
+  return `${baseUrl}/${cleanPath}`;
 };
 
 const getAlternateImageUrl = (url) => {
@@ -64,7 +59,7 @@ const parseInitialDate = (value) => {
 export default function EditIdeaScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const params = route?.params || {}; 
+  const params = route?.params || {};
   const ideaData = typeof params.ideaData === 'object' && params.ideaData !== null ? params.ideaData : {};
   const ideaId = params.ideaId;
   const isManagerEditing = params.isManagerEditing || false;
@@ -270,7 +265,7 @@ export default function EditIdeaScreen() {
         setFile(selectedFile.uri);
         setFileType('pdf');
         setIsNewFile(true);
-        const timestamp = Date.now();  
+        const timestamp = Date.now();
         const cleanName = `document_${timestamp}.pdf`;
         setFileName(cleanName);
         setShowFileOptions(false);
@@ -1036,7 +1031,7 @@ export default function EditIdeaScreen() {
 }
 
 
-const InputField = ({ label, icon, placeholder, value = '', onChangeText = () => {}, multiline = false, maxLength, required, keyboardType, error }) => (
+const InputField = ({ label, icon, placeholder, value = '', onChangeText = () => { }, multiline = false, maxLength, required, keyboardType, error }) => (
   <View style={styles.inputBlock}>
     <Text style={styles.label}>{label} {required && <Text style={styles.required}>*</Text>}</Text>
     <View style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline, error && styles.inputError]}>
@@ -1164,9 +1159,9 @@ const styles = StyleSheet.create({
   inputWrapperMultiline: { alignItems: 'flex-start' },
   input: { flex: 1, fontSize: 14, marginLeft: 10, color: '#333' },
   picker: { flex: 1, marginLeft: 10, color: '#333' },
-  textArea: { 
-    height: 100, 
-    textAlignVertical: 'top' 
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top'
   },
   inputError: { borderColor: 'red', borderWidth: 1 },
   charCount: { alignSelf: 'flex-end', fontSize: 12, color: '#888', marginTop: 4 },

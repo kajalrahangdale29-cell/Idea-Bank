@@ -6,29 +6,31 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import axios from "axios";
-import { HOLD_BY_ME_URL, IDEA_DETAIL_URL, UPDATE_STATUS_URL } from "../src/context/api";
+import { HOLD_BY_ME_URL, IDEA_DETAIL_URL, UPDATE_STATUS_URL, BASE_URL } from "../src/context/api";
 
 const normalizeImagePath = (path) => {
-  if (!path) return null;
+  if (!path || typeof path !== 'string') return null;
 
-  let cleanPath = path;
+  try {
+    let cleanPath = path.trim();
+    const basePattern = BASE_URL;
 
-  const basePattern = 'https://ideabank-api.abisaio.com';
+    const escapedBase = basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const occurrences = (cleanPath.match(new RegExp(escapedBase, 'g')) || []).length;
 
-  const occurrences = (cleanPath.match(new RegExp(basePattern.replace(/[.*+?^${}()|[\\]/g, '\\$&'), 'g')) || []).length;
+    if (occurrences > 1) {
+      const lastIndex = cleanPath.lastIndexOf(basePattern);
+      cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+    }
 
-  if (occurrences > 1) {
-    const lastIndex = cleanPath.lastIndexOf(basePattern);
-    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+    if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+      return cleanPath;
+    }
+
+    return `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+  } catch (e) {
+    return null;
   }
-
-  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
-    return cleanPath;
-  }
-
-  const BASE_URL = 'https://ideabank-api.abisaio.com';
-  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
-  return fullUrl;
 };
 
 const getAlternateImageUrl = (url) => {
@@ -389,7 +391,7 @@ const HoldScreen = () => {
 
         Alert.alert("Success", successMessage, [{
           text: "OK",
-          onPress: () => fetchHoldIdeas() 
+          onPress: () => fetchHoldIdeas()
         }]);
 
         fetchHoldIdeas();
@@ -398,7 +400,7 @@ const HoldScreen = () => {
       }
     } catch (error) {
       console.error("Submit error:", error.response?.data || error.message);
-      
+
       let errorMessage = "Failed to update.";
       if (error.response?.status === 404) {
         errorMessage = "API endpoint not found.";
@@ -1243,20 +1245,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  pdfThumbnailContainer: { 
-    width: 60, 
-    height: 60, 
-    borderRadius: 6, 
-    borderWidth: 1, 
-    borderColor: '#FF5722', 
-    backgroundColor: '#FFF3E0', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  pdfThumbnailContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FF5722',
+    backgroundColor: '#FFF3E0',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  pdfThumbnailText: { 
-    fontSize: 10, 
-    color: '#FF5722', 
-    fontWeight: 'bold', 
-    marginTop: 2 
+  pdfThumbnailText: {
+    fontSize: 10,
+    color: '#FF5722',
+    fontWeight: 'bold',
+    marginTop: 2
   },
 });

@@ -5,7 +5,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MY_IDEAS_URL, IDEA_DETAIL_URL, DELETE_IDEA_URL, SUBMIT_URL, EDIT_IMPLEMENTATION_URL } from '../src/context/api';
+import { MY_IDEAS_URL, IDEA_DETAIL_URL, DELETE_IDEA_URL, SUBMIT_URL, EDIT_IMPLEMENTATION_URL, BASE_URL } from '../src/context/api';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,28 +16,33 @@ const Tab = createMaterialTopTabNavigator();
 const normalizeImagePath = (path) => {
   if (!path) return null;
 
-  let cleanPath = path;
-  const basePattern = 'https://ideabank-api.abisaio.com';
-
-  const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
-
-  if (occurrences > 1) {
-    const lastIndex = cleanPath.lastIndexOf(basePattern);
-    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
+  // already full https url → return as is
+  if (path.startsWith('https://')) {
+    return path;
   }
 
-  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
-    return cleanPath;
-  }
-
-  const BASE_URL = 'https://ideabank-api.abisaio.com';
-  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
-  return fullUrl;
+  return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 };
 
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
-  return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
+
+ 
+  if (url.includes('ideabank-api-dev.abisaio.com')) {
+    return url.replace(
+      'ideabank-api-dev.abisaio.com',
+      'ideabank-api.abisaio.com'
+    );
+  }
+
+  if (url.includes('ideabank-api.abisaio.com')) {
+    return url.replace(
+      'ideabank-api.abisaio.com',
+      'ideabank.abisaio.com'
+    );
+  }
+
+  return url;
 };
 
 const formatDate = (dateString) => {
@@ -1183,7 +1188,7 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
         setIsSubmitting(true);
         try {
           const token = await AsyncStorage.getItem('token');
-          const url = `https://ideabank-api.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}`;
+          const url = `${EDIT_IMPLEMENTATION_URL}/${ideaDetail.id}`;
           const response = await axios.get(url, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -1325,8 +1330,10 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
           name: cleanName
         });
       }
+      const url = isEditing
+        ? `${EDIT_IMPLEMENTATION_URL}/${ideaDetail.id}`
+        : SUBMIT_URL;
 
-      const url = isEditing ? `https://ideabank-api.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}` : SUBMIT_URL;
 
       const axiosConfig = {
         headers: {
