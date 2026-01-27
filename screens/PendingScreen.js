@@ -689,7 +689,7 @@ export default function PendingScreen() {
     const hasImplementationCycle = !!ideaDetail.implementationCycle;
 
     closeModal();
-    
+
     if (hasImplementationCycle) {
       setTimeout(() => {
         navigation.navigate('ImplementationDetails', {
@@ -1051,9 +1051,22 @@ export default function PendingScreen() {
                         {ideaDetail.ideaStatus || "N/A"}
                       </Text>
                     </View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Idea Description:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaDescription || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Proposed Solution:</Text><Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text><Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text></View>
+                    <View style={styles.rowDetailVertical}>
+                      <Text style={styles.labelDetailVertical}>Idea Description:</Text>
+                      <Text style={styles.valueDetailVertical}>{ideaDetail.ideaDescription || "N/A"}</Text>
+                    </View>
+                    {/* <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Idea Description:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaDescription || "N/A"}</Text></View> */}
+                    {/* <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Proposed Solution:</Text><Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text></View> */}
+                    <View style={styles.rowDetailVertical}>
+                      <Text style={styles.labelDetailVertical}>Proposed Solution:</Text>
+                      <Text style={styles.valueDetailVertical}>{ideaDetail.proposedSolution || "N/A"}</Text>
+                    </View>
+
+                    <View style={styles.rowDetailVertical}>
+                      <Text style={styles.labelDetailVertical}>Process Improvement/Cost Benefit:</Text>
+                      <Text style={styles.valueDetailVertical}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
+                    </View>
+                    {/* <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text><Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text></View> */}
                     <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Team Members:</Text><Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text></View>
                     <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Idea Theme:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text></View>
                     <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Type:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaType || ideaDetail.type || "N/A"}</Text></View>
@@ -1085,7 +1098,7 @@ export default function PendingScreen() {
                             {ideaDetail.implementationCycle?.status || "N/A"}
                           </Text>
                         </View>
-                        <View style={styles.rowDetailWithBorder}>
+                        {/* <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Implementation Details:</Text>
                           <Text style={styles.valueDetail}>
                             {ideaDetail.implementationCycle?.implementation ||
@@ -1093,8 +1106,19 @@ export default function PendingScreen() {
                               ideaDetail.implementation ||
                               "Not provided"}
                           </Text>
+                        </View> */}
+
+                        <View style={styles.rowDetailVertical}>
+                          <Text style={styles.labelDetailVertical}>Implementation Details:</Text>
+                          <Text style={styles.valueDetailVertical}>
+                            {ideaDetail.implementationCycle?.implementation ||
+                              ideaDetail.implementationDetail ||
+                              ideaDetail.implementation ||
+                              "Not provided"}
+                          </Text>
                         </View>
-                        <View style={styles.rowDetailWithBorder}>
+
+                        {/* <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
                           <Text style={styles.valueDetail}>
                             {ideaDetail.implementationCycle?.outcome ||
@@ -1102,7 +1126,17 @@ export default function PendingScreen() {
                               ideaDetail.outcome ||
                               "Not provided"}
                           </Text>
+                        </View> */}
+                        <View style={styles.rowDetailVertical}>
+                          <Text style={styles.labelDetailVertical}>Outcome/Benefits:</Text>
+                          <Text style={styles.valueDetailVertical}>
+                            {ideaDetail.implementationCycle?.outcome ||
+                              ideaDetail.implementationOutcome ||
+                              ideaDetail.outcome ||
+                              "Not provided"}
+                          </Text>
                         </View>
+
                         {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>Completed On:</Text>
@@ -1502,4 +1536,25 @@ const styles = StyleSheet.create({
   pdfThumbnailText: { fontSize: 10, color: '#FF5722', fontWeight: 'bold', marginTop: 2 },
   imageErrorContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   imageErrorText: { fontSize: 12, color: '#999' },
+  
+
+  rowDetailVertical: {
+    flexDirection: "column",
+    paddingBottom: 10,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  labelDetailVertical: {
+    fontWeight: "600",
+    color: "#555",
+    fontSize: 14,
+    marginBottom: 6,
+  },
+  valueDetailVertical: {
+    color: "#222",
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "left",
+  },
 });
