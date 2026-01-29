@@ -23,70 +23,35 @@ import { APPROVED_BY_ME_URL, IDEA_DETAIL_URL, BASE_URL } from '../src/context/ap
 const normalizeImagePath = (path) => {
   if (!path) return null;
 
-  console.log('🖼️ Original image path:', path);
+  const trimmedPath = String(path).trim();
 
-  let cleanPath = path;
+  const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
+  const match = trimmedPath.match(doubledPattern);
 
-  // If already a complete URL
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    console.log('✅ Already complete URL (encoding spaces):', path);
-    
-    // Split URL into base and filename
-    const lastSlashIndex = cleanPath.lastIndexOf('/');
-    if (lastSlashIndex !== -1) {
-      const basePart = cleanPath.substring(0, lastSlashIndex + 1);
-      const filename = cleanPath.substring(lastSlashIndex + 1);
-      
-      // Encode only the filename part to preserve special characters
-      const encodedFilename = encodeURIComponent(filename)
-        .replace(/%2F/g, '/') // Don't encode forward slashes
-        .replace(/%3A/g, ':') // Don't encode colons
-        .replace(/%2E/g, '.'); // Don't encode dots
-      
-      cleanPath = basePart + encodedFilename;
-      console.log('✅ Encoded URL:', cleanPath);
-    }
-    
-    return cleanPath;
+  if (match) {
+    const correctUrl = match[2];
+    return correctUrl;
   }
 
-  // Clean the path
-  const basePattern = BASE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-  // Remove duplicate BASE_URL if present
-  const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
-  if (occurrences > 1) {
-    const lastIndex = cleanPath.lastIndexOf(BASE_URL);
-    cleanPath = BASE_URL + cleanPath.substring(lastIndex + BASE_URL.length);
+  if (trimmedPath.match(/^https?:\/\//)) {
+    return trimmedPath;
   }
 
-  // Ensure proper URL format
-  const baseUrl = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
-  const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-  
-  // Encode the filename part
-  const lastSlashIndex = finalPath.lastIndexOf('/');
-  if (lastSlashIndex !== -1) {
-    const pathPart = finalPath.substring(0, lastSlashIndex + 1);
-    const filename = finalPath.substring(lastSlashIndex + 1);
-    const encodedFilename = encodeURIComponent(filename)
-      .replace(/%2F/g, '/')
-      .replace(/%2E/g, '.');
-    
-    const finalUrl = `${baseUrl}${pathPart}${encodedFilename}`;
-    console.log('✅ Normalized and Encoded URL:', finalUrl);
-    return finalUrl;
+  if (!BASE_URL) {
+    return trimmedPath;
   }
 
-  const finalUrl = `${baseUrl}${finalPath}`;
-  console.log('✅ Normalized URL:', finalUrl);
-  return finalUrl;
+  let cleanPath = trimmedPath.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
+  const baseUrl = BASE_URL.endsWith('/')
+    ? BASE_URL.slice(0, -1)
+    : BASE_URL;
+
+  return `${baseUrl}/${cleanPath}`;
 };
 
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
   const altUrl = url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
-  console.log('🔄 Alternate URL:', altUrl);
   return altUrl;
 };
 
@@ -181,20 +146,16 @@ function ImageWithFallback({ uri, style, onPress }) {
   }, [uri]);
 
   const handleError = (error) => {
-    console.log('❌ Image load error for:', imageUri);
 
     if (!retryAttempted) {
-      // Try alternate URL
       const altUrl = getAlternateImageUrl(imageUri);
       if (altUrl && altUrl !== imageUri) {
-        console.log('🔄 Retrying with alternate URL:', altUrl);
         setImageUri(altUrl);
         setRetryAttempted(true);
         return;
       }
     }
 
-    console.log('❌ No alternate URL available, showing error state');
     setHasError(true);
   };
 
@@ -453,7 +414,7 @@ const ApprovedScreen = () => {
 
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
-        
+
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }

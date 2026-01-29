@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, ScrollView, SafeAreaView, Linking } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, ScrollView, SafeAreaView, Linking, BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from 'expo-image';
 import { Ionicons } from "@expo/vector-icons";
@@ -9,28 +9,27 @@ import axios from "axios";
 import { HOLD_BY_ME_URL, IDEA_DETAIL_URL, UPDATE_STATUS_URL, BASE_URL } from "../src/context/api";
 
 const normalizeImagePath = (path) => {
-  if (!path || typeof path !== 'string') return null;
+  if (!path) return null;
 
-  try {
-    let cleanPath = path.trim();
-    const basePattern = BASE_URL;
+  const trimmedPath = String(path).trim();
+  const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
+  const match = trimmedPath.match(doubledPattern);
 
-    const escapedBase = basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const occurrences = (cleanPath.match(new RegExp(escapedBase, 'g')) || []).length;
-
-    if (occurrences > 1) {
-      const lastIndex = cleanPath.lastIndexOf(basePattern);
-      cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
-    }
-
-    if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
-      return cleanPath;
-    }
-
-    return `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
-  } catch (e) {
-    return null;
+  if (match) {
+    const correctUrl = match[2];
+    return correctUrl;
   }
+
+  if (trimmedPath.match(/^https?:\/\//)) {
+    return trimmedPath;
+  }
+
+  if (!BASE_URL) {
+    return trimmedPath;
+  }
+
+  const formattedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
+  return `${BASE_URL}${formattedPath}`;
 };
 
 const getAlternateImageUrl = (url) => {
@@ -165,6 +164,31 @@ const HoldScreen = () => {
   const [ideaInfoExpanded, setIdeaInfoExpanded] = useState(true);
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
 
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (showImage) {
+        setShowImage(false);
+        setCurrentImageUrl(null);
+        return true;
+      }
+      if (showRemarkModal) {
+        closeRemarkModal();
+        return true;
+      }
+      if (showTimelineModal) {
+        setShowTimelineModal(false);
+        return true;
+      }
+      if (selectedIdea) {
+        closeModal();
+        return true;
+      }
+      return false;
+    });
+
+    return () => backHandler.remove();
+  }, [selectedIdea, showTimelineModal, showRemarkModal, showImage]);
+
   const handleImageError = (error) => {
     if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
       setCurrentImageUrl(imageRetryUrl);
@@ -210,6 +234,7 @@ const HoldScreen = () => {
       setIdeas(filteredByDate);
       setTotalItems(filteredByDate.length);
     } catch (error) {
+      console.error("Error fetching hold ideas:", error);
       Alert.alert("Error", "Failed to load hold ideas.");
     } finally {
       setLoading(false);
@@ -228,7 +253,10 @@ const HoldScreen = () => {
   }) : [];
 
   const fetchIdeaDetail = async (ideaId) => {
-    if (!ideaId) return;
+    if (!ideaId) {
+      Alert.alert("Error", "Invalid idea ID");
+      return;
+    }
     try {
       setLoadingDetail(true);
       const token = await AsyncStorage.getItem('token');
@@ -236,10 +264,10 @@ const HoldScreen = () => {
 
       let response;
       try {
-        response = await axios.get(`${IDEA_DETAIL_URL}?ideaId=${encodeURIComponent(ideaId)}`, { headers });
+        response = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
       } catch (err1) {
         try {
-          response = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
+          response = await axios.get(`${IDEA_DETAIL_URL}?ideaId=${encodeURIComponent(ideaId)}`, { headers });
         } catch (err2) {
           response = await axios.get(`${IDEA_DETAIL_URL}?id=${encodeURIComponent(ideaId)}`, { headers });
         }
@@ -268,6 +296,7 @@ const HoldScreen = () => {
         }
       } else if (response?.data) {
         const detail = response.data;
+
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
@@ -290,7 +319,8 @@ const HoldScreen = () => {
         Alert.alert("Error", "Idea details not found.");
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch idea details.");
+      console.error("Error fetching idea details:", error);
+      Alert.alert("Error", `Failed to fetch idea details. ${error.response?.status === 404 ? 'Idea not found.' : 'Please try again.'}`);
     } finally {
       setLoadingDetail(false);
     }
@@ -334,13 +364,8 @@ const HoldScreen = () => {
       return;
     }
 
-    if (remarkText.trim().length > 100) {
-      Alert.alert("Character Limit", "Remark cannot exceed 100 characters.");
-      return;
-    }
-
-    if (!ideaDetail) {
-      Alert.alert("Error", "Unable to find idea details.");
+    if (!ideaDetail?.id) {
+      Alert.alert("Error", "Unable to find idea record. Please refresh and try again.");
       return;
     }
 
@@ -355,23 +380,15 @@ const HoldScreen = () => {
         hold: "Hold"
       };
 
-      const recordId = ideaDetail.id || ideaDetail.pendingApprovalId;
-      const ideaIdValue = ideaDetail.ideaId || ideaDetail.id;
-      const approvalStageValue = ideaDetail.approvalStage || ideaDetail.approvalstage || "Manager";
-
-      console.log("Submitting with:", {
-        id: recordId,
-        ideaId: ideaIdValue,
-        status: statusMap[remarkType],
-        approvalstage: approvalStageValue,
-        comments: remarkText.trim()
-      });
+      const originalIdea = ideas.find(i =>
+        i.ideaId === (ideaDetail?.ideaId || ideaDetail?.id) ||
+        i.id === (ideaDetail?.ideaId || ideaDetail?.id)
+      );
 
       const formData = new FormData();
-      formData.append('id', recordId.toString());
-      formData.append('ideaId', ideaIdValue.toString());
+      formData.append('id', ideaDetail.id.toString());
       formData.append('status', statusMap[remarkType]);
-      formData.append('approvalstage', approvalStageValue);
+      formData.append('approvalstage', originalIdea?.approvalStage || 'Manager');
       formData.append('comments', remarkText.trim());
 
       const response = await axios.post(UPDATE_STATUS_URL, formData, {
@@ -381,30 +398,28 @@ const HoldScreen = () => {
         }
       });
 
-      console.log("API Response:", response.data);
-
       if (response.data && (response.data.success === true || response.status === 200)) {
-        const successMessage = response.data.message || `Idea ${remarkType === 'approve' ? 'approved' : remarkType === 'reject' ? 'rejected' : 'updated'} successfully!`;
-
-        closeRemarkModal();
-        closeModal();
-
-        Alert.alert("Success", successMessage, [{
-          text: "OK",
-          onPress: () => fetchHoldIdeas()
-        }]);
-
-        fetchHoldIdeas();
+        Alert.alert(
+          "Success",
+          response.data.message || `Idea ${remarkType}d successfully!`,
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                closeRemarkModal();
+                closeModal();
+                fetchHoldIdeas();
+              }
+            }
+          ]
+        );
       } else {
-        Alert.alert("Error", response.data?.message || "Failed to update status.");
+        throw new Error(response.data?.message || "Failed to update status");
       }
     } catch (error) {
-      console.error("Submit error:", error.response?.data || error.message);
+      let errorMessage = "Failed to update idea status.";
 
-      let errorMessage = "Failed to update.";
-      if (error.response?.status === 404) {
-        errorMessage = "API endpoint not found.";
-      } else if (error.response?.data?.message) {
+      if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
@@ -415,13 +430,16 @@ const HoldScreen = () => {
       setSubmittingStatus(false);
     }
   };
+
   const closeModal = () => {
     setSelectedIdea(null);
     setIdeaDetail(null);
     setEmployeeInfoExpanded(false);
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
+    setImageLoadError({});
   };
+
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
 
@@ -448,11 +466,19 @@ const HoldScreen = () => {
     setImageRetryUrl(getAlternateImageUrl(finalUrl));
     setShowImage(true);
   };
+
   const renderIdeaCard = ({ item }) => (
     <TouchableOpacity
       activeOpacity={0.8}
       style={styles.cardContainer}
-      onPress={() => fetchIdeaDetail(item.ideaId || item.id || item.ideaNumber)}
+      onPress={() => {
+        const ideaId = item?.id ?? item?.ideaId;
+        if (!ideaId) {
+          Alert.alert("Error", "Idea ID not found");
+          return;
+        }
+        fetchIdeaDetail(ideaId);
+      }}
     >
       <View style={styles.cardHeader}>
         <Text style={styles.ideaNumber} numberOfLines={2}>
@@ -1001,9 +1027,7 @@ const HoldScreen = () => {
               </TouchableOpacity>
             </View>
             <View style={styles.remarkModalBody}>
-              <Text style={styles.remarkLabel}>
-                Remark * (Max 100 characters)
-              </Text>
+              <Text style={styles.remarkLabel}>Remark *</Text>
               <TextInput
                 style={styles.remarkTextArea}
                 placeholder="Enter your remark here..."
@@ -1013,11 +1037,7 @@ const HoldScreen = () => {
                 textAlignVertical="top"
                 value={remarkText}
                 onChangeText={setRemarkText}
-                maxLength={100}
               />
-              <Text style={styles.characterCount}>
-                {remarkText.length}/100
-              </Text>
             </View>
             <View style={styles.remarkModalFooter}>
               <TouchableOpacity
@@ -1156,9 +1176,24 @@ const styles = StyleSheet.create({
   statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 170, textAlign: 'center' },
   imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
-  implementationImageSection: { marginTop: 12, marginBottom: 12 },
-  imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
-  implementationImage: { width: '100%', height: 200, borderRadius: 8, resizeMode: 'cover', borderWidth: 1, borderColor: '#ddd' },
+  imageErrorContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' },
+  imageErrorText: { fontSize: 9, color: '#999', marginTop: 2, textAlign: 'center' },
+  pdfThumbnailContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FF5722',
+    backgroundColor: '#FFF3E0',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  pdfThumbnailText: {
+    fontSize: 10,
+    color: '#FF5722',
+    fontWeight: 'bold',
+    marginTop: 2
+  },
   remarkCard: { backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
   remarkTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c5aa0', marginBottom: 6 },
   remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
@@ -1237,28 +1272,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#2c5aa0'
-  },
-  characterCount: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "right",
-    marginTop: 4,
-  },
-
-  pdfThumbnailContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#FF5722',
-    backgroundColor: '#FFF3E0',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  pdfThumbnailText: {
-    fontSize: 10,
-    color: '#FF5722',
-    fontWeight: 'bold',
-    marginTop: 2
   },
 });

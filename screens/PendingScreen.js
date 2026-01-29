@@ -30,19 +30,29 @@ import {
 
 const normalizeImagePath = (path) => {
   if (!path) return null;
-  
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
+
+  const trimmedPath = String(path).trim();
+
+  const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
+  const match = trimmedPath.match(doubledPattern);
+
+  if (match) {
+    const correctUrl = match[2];
+    return correctUrl;
   }
 
-  let cleanPath = path.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
+  if (trimmedPath.match(/^https?:\/\//)) {
+    return trimmedPath;
+  }
 
-  const baseUrl = BASE_URL.endsWith('/')
-    ? BASE_URL.slice(0, -1)
-    : BASE_URL;
+  if (!BASE_URL) {
+    return trimmedPath;
+  }
 
-  return `${baseUrl}/${cleanPath}`;
+  const formattedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
+  return `${BASE_URL}${formattedPath}`;
 };
+
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
   return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
@@ -472,13 +482,10 @@ export default function PendingScreen() {
     fetchAllIdeas();
   }, [fetchAllIdeas]);
 
-  // Auto-refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchAllIdeas();
-      return () => {
-        // Cleanup if needed
-      };
+      return () => {};
     }, [fetchAllIdeas])
   );
 
@@ -956,15 +963,42 @@ export default function PendingScreen() {
 
                 {employeeInfoExpanded && (
                   <View style={styles.cardDetail}>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Employee Name:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Employee Number:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmployeeNo || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Employee Email:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmail || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Department:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Mobile:</Text><Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Reporting Manager:</Text><Text style={styles.valueDetail}>{ideaDetail.reportingManagerName || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Manager Email:</Text><Text style={styles.valueDetail}>{ideaDetail.managerEmail || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Employee Location:</Text><Text style={styles.valueDetail}>{ideaDetail.location || "N/A"}</Text></View>
-                    <View style={styles.rowDetail}><Text style={styles.labelDetail}>Sub Department:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaOwnerSubDepartment || "N/A"}</Text></View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Employee Name:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Employee Number:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmployeeNo || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Employee Email:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmail || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Department:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Mobile:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Reporting Manager:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.reportingManagerName || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Manager Email:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.managerEmail || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Employee Location:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.location || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Sub Department:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerSubDepartment || "N/A"}</Text>
+                    </View>
                   </View>
                 )}
 
@@ -981,15 +1015,25 @@ export default function PendingScreen() {
                   />
                 </TouchableOpacity>
 
-
                 {ideaInfoExpanded && (
                   <View style={styles.cardDetail}>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Idea No:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaNumber || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Solution Category:</Text><Text style={styles.valueDetail}>{ideaDetail.solutionCategory || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Creation Date:</Text><Text style={styles.valueDetail}>{formatDate(ideaDetail.ideaCreationDate)}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Planned Completion:</Text><Text style={styles.valueDetail}>{formatDate(ideaDetail.plannedImplementationDuration)}</Text></View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Idea No:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaNumber || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Solution Category:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.solutionCategory || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Creation Date:</Text>
+                      <Text style={styles.valueDetail}>{formatDate(ideaDetail.ideaCreationDate)}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Planned Completion:</Text>
+                      <Text style={styles.valueDetail}>{formatDate(ideaDetail.plannedImplementationDuration)}</Text>
+                    </View>
 
-                    {/* Before Implementation with PDF Support */}
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
                       {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
@@ -1045,12 +1089,12 @@ export default function PendingScreen() {
                         {ideaDetail.ideaStatus || "N/A"}
                       </Text>
                     </View>
+
                     <View style={styles.rowDetailVertical}>
                       <Text style={styles.labelDetailVertical}>Idea Description:</Text>
                       <Text style={styles.valueDetailVertical}>{ideaDetail.ideaDescription || "N/A"}</Text>
                     </View>
-                    {/* <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Idea Description:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaDescription || "N/A"}</Text></View> */}
-                    {/* <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Proposed Solution:</Text><Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text></View> */}
+
                     <View style={styles.rowDetailVertical}>
                       <Text style={styles.labelDetailVertical}>Proposed Solution:</Text>
                       <Text style={styles.valueDetailVertical}>{ideaDetail.proposedSolution || "N/A"}</Text>
@@ -1060,12 +1104,27 @@ export default function PendingScreen() {
                       <Text style={styles.labelDetailVertical}>Process Improvement/Cost Benefit:</Text>
                       <Text style={styles.valueDetailVertical}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
                     </View>
-                    {/* <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text><Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text></View> */}
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Team Members:</Text><Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Idea Theme:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>Type:</Text><Text style={styles.valueDetail}>{ideaDetail.ideaType || ideaDetail.type || "N/A"}</Text></View>
-                    <View style={styles.rowDetailWithBorder}><Text style={styles.labelDetail}>BE Team Support Needed:</Text><Text style={styles.valueDetail}>{ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}</Text></View>
-                    <View style={styles.rowDetail}><Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text><Text style={styles.valueDetail}>{ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}</Text></View>
+
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Team Members:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Idea Theme:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Type:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaType || ideaDetail.type || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>BE Team Support Needed:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}</Text>
+                    </View>
+                    <View style={styles.rowDetail}>
+                      <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}</Text>
+                    </View>
                   </View>
                 )}
 
@@ -1092,15 +1151,6 @@ export default function PendingScreen() {
                             {ideaDetail.implementationCycle?.status || "N/A"}
                           </Text>
                         </View>
-                        {/* <View style={styles.rowDetailWithBorder}>
-                          <Text style={styles.labelDetail}>Implementation Details:</Text>
-                          <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.implementation ||
-                              ideaDetail.implementationDetail ||
-                              ideaDetail.implementation ||
-                              "Not provided"}
-                          </Text>
-                        </View> */}
 
                         <View style={styles.rowDetailVertical}>
                           <Text style={styles.labelDetailVertical}>Implementation Details:</Text>
@@ -1112,15 +1162,6 @@ export default function PendingScreen() {
                           </Text>
                         </View>
 
-                        {/* <View style={styles.rowDetailWithBorder}>
-                          <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
-                          <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.outcome ||
-                              ideaDetail.implementationOutcome ||
-                              ideaDetail.outcome ||
-                              "Not provided"}
-                          </Text>
-                        </View> */}
                         <View style={styles.rowDetailVertical}>
                           <Text style={styles.labelDetailVertical}>Outcome/Benefits:</Text>
                           <Text style={styles.valueDetailVertical}>
@@ -1140,7 +1181,6 @@ export default function PendingScreen() {
                           </View>
                         )}
 
-                        {/* Before Implementation with PDF Support */}
                         {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>Before Implementation:</Text>
@@ -1191,7 +1231,6 @@ export default function PendingScreen() {
                           </View>
                         )}
 
-                        {/* After Implementation with PDF Support */}
                         {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>After Implementation:</Text>
@@ -1243,6 +1282,7 @@ export default function PendingScreen() {
                     )}
                   </>
                 )}
+
                 <View style={styles.cardDetail}>
                   <Text style={styles.cardHeading}>Remarks</Text>
                   {(() => {
@@ -1436,7 +1476,7 @@ const styles = StyleSheet.create({
   cardContent: { padding: 12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' },
   rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, alignItems: 'flex-start' },
-  rowDetailWithBorder: { flexDirection: "row", justifyContent: "space-between", paddingBottom: 10, marginBottom: 10, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  rowDetailWithBorder: { flexDirection: "row", justifyContent: "space-between", paddingBottom: 12, marginBottom: 12, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   label: { color: '#555', fontWeight: '500', fontSize: 14 },
   value: { color: '#333', fontSize: 14, maxWidth: '65%', textAlign: 'right' },
   statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
@@ -1453,17 +1493,12 @@ const styles = StyleSheet.create({
   timelineButtonText: { color: '#2c5aa0', fontSize: 14, fontWeight: '600', marginLeft: 6 },
   modalScrollContent: { padding: 16, paddingBottom: 30 },
   cardDetail: { backgroundColor: "#fff", padding: 16, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
-  cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
-  labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
-  valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 14 },
-  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 170, textAlign: 'center' },
-  imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 16, color: "#2c5aa0" },
+  labelDetail: { fontWeight: "600", color: "#444", width: "48%", fontSize: 15, lineHeight: 22 },
+  valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 15, lineHeight: 22 },
+  statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 12, fontWeight: '600', maxWidth: 170, textAlign: 'center' },
   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
-  tapToEnlargeText: { color: '#2196F3', fontSize: 12, fontWeight: '500' },
-  implementationImageSection: { marginTop: 12, marginBottom: 12 },
-  imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
-  implementationImage: { width: '100%', height: 200, borderRadius: 8, resizeMode: 'cover', borderWidth: 1, borderColor: '#ddd' },
-  remarkCard: { backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
+  remarkCard: { backgroundColor: '#f8f9fa', padding: 14, borderRadius: 8, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
   remarkTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c5aa0', marginBottom: 6 },
   remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
   remarkDate: { fontSize: 12, color: '#999', fontStyle: 'italic' },
@@ -1530,25 +1565,24 @@ const styles = StyleSheet.create({
   pdfThumbnailText: { fontSize: 10, color: '#FF5722', fontWeight: 'bold', marginTop: 2 },
   imageErrorContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   imageErrorText: { fontSize: 12, color: '#999' },
-
-
   rowDetailVertical: {
     flexDirection: "column",
-    paddingBottom: 10,
-    marginBottom: 10,
+    paddingBottom: 12,
+    marginBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
   labelDetailVertical: {
     fontWeight: "600",
-    color: "#555",
-    fontSize: 14,
-    marginBottom: 6,
+    color: "#444",
+    fontSize: 15,
+    marginBottom: 8,
+    lineHeight: 22,
   },
   valueDetailVertical: {
     color: "#222",
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 24,
     textAlign: "left",
   },
 });

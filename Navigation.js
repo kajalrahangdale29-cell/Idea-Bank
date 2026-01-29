@@ -75,7 +75,6 @@ export default function Navigation() {
     const checkLogin = async () => {
       const loginStatus = await AsyncStorage.getItem("isLoggedIn");
 
-      // If logged in → go directly to MainApp
       if (loginStatus === "true") {
         setInitialRoute("MainApp");
       } else {

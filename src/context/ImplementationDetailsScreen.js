@@ -49,7 +49,7 @@ const normalizeImagePath = (path) => {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
   }
-  const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+  const BASE_URL = 'https://ideabank-api.abisaio.com';
   return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 };
 

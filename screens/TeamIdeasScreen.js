@@ -25,18 +25,26 @@ import { TEAM_IDEAS_URL, IDEA_DETAIL_URL, UPDATE_STATUS_URL, BASE_URL } from "..
 
 const normalizeImagePath = (path) => {
   if (!path) return null;
-  
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
+
+  const trimmedPath = String(path).trim();
+  const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
+  const match = trimmedPath.match(doubledPattern);
+
+  if (match) {
+    const correctUrl = match[2];
+    return correctUrl;
   }
 
-  let cleanPath = path.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
+  if (trimmedPath.match(/^https?:\/\//)) {
+    return trimmedPath;
+  }
 
-  const baseUrl = BASE_URL.endsWith('/')
-    ? BASE_URL.slice(0, -1)
-    : BASE_URL;
+  if (!BASE_URL) {
+    return trimmedPath;
+  }
 
-  return `${baseUrl}/${cleanPath}`;
+  const formattedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
+  return `${BASE_URL}${formattedPath}`;
 };
 
 const getAlternateImageUrl = (url) => {

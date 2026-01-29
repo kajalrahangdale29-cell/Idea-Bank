@@ -11,6 +11,7 @@ import {
   Modal,
   Linking,
   Animated,
+  BackHandler,
 } from "react-native";
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,22 +22,27 @@ import { ALL_TEAM_IDEAS_URL, IDEA_DETAIL_URL, BASE_URL } from "../src/context/ap
 
 const normalizeImagePath = (path) => {
   if (!path) return null;
-  
-  // If already a complete URL, return as is
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
+
+  const trimmedPath = String(path).trim();
+
+  const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
+  const match = trimmedPath.match(doubledPattern);
+
+  if (match) {
+    const correctUrl = match[2];
+    return correctUrl;
   }
 
-  // Clean the path - remove leading slashes and backslashes
-  let cleanPath = path.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
+  if (trimmedPath.match(/^https?:\/\//)) {
+    return trimmedPath;
+  }
 
-  // Get base URL without trailing slash
-  const baseUrl = BASE_URL.endsWith('/')
-    ? BASE_URL.slice(0, -1)
-    : BASE_URL;
+  if (!BASE_URL) {
+    return trimmedPath;
+  }
 
-  // Construct the full URL
-  return `${baseUrl}/${cleanPath}`;
+  const formattedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
+  return `${BASE_URL}${formattedPath}`;
 };
 
 const getAlternateImageUrl = (url) => {
@@ -169,22 +175,20 @@ const formatDateTime = (dateString) => {
 const getStatusColor = (status) => {
   if (!status) return "gray";
   const s = status.toLowerCase();
-  if (s === "draft") return "blue";
-  if (s === "published") return "green";
-  if (s === "pending") return "orange";
+  if (s === "draft") return "#2196F3";
+  if (s === "published") return "#4CAF50";
+  if (s === "pending" || s.includes("pending")) return "#FF9800";
   if (s === "approved" || s === "closed") return "#00ACC1";
-  if (s === "rejected") return "red";
-  if (s === "hold" || s === "on hold") return "#191970";
-  return "gray";
+  if (s === "rejected") return "#F44336";
+  if (s === "hold" || s === "on hold") return "#FFC107";
+  return "#9E9E9E";
 };
 
 const shouldShowImplementationDetails = (ideaDetail) => {
   if (!ideaDetail) return false;
-
   if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
     return true;
   }
-
   const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
   return type === "implementation" || type === "implement";
 };
@@ -213,6 +217,7 @@ export default function AllTeamIdeasScreen() {
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   const [selectedIdea, setSelectedIdea] = useState(null);
   const [showImage, setShowImage] = useState(false);
@@ -232,6 +237,35 @@ export default function AllTeamIdeasScreen() {
   useEffect(() => {
     fetchAllIdeas();
   }, []);
+
+  useEffect(() => {
+    applyFiltersRealTime();
+  }, [searchIdeaNumber]);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (showStatusDropdown) {
+        setShowStatusDropdown(false);
+        return true;
+      }
+      if (showImage) {
+        setShowImage(false);
+        setCurrentImageUrl(null);
+        return true;
+      }
+      if (showTimelineModal) {
+        setShowTimelineModal(false);
+        return true;
+      }
+      if (selectedIdea) {
+        closeModal();
+        return true;
+      }
+      return false;
+    });
+
+    return () => backHandler.remove();
+  }, [selectedIdea, showTimelineModal, showImage, showStatusDropdown]);
 
   const fetchAllIdeas = async () => {
     setLoading(true);
@@ -280,6 +314,7 @@ export default function AllTeamIdeasScreen() {
       setTotalItems(apiTotalItems || allIdeas.length);
 
     } catch (error) {
+      console.error("Error fetching all team ideas:", error);
       setIdeas([]);
       setAllIdeasOriginal([]);
       setTotalItems(0);
@@ -288,20 +323,27 @@ export default function AllTeamIdeasScreen() {
     }
   };
 
-  useEffect(() => {
-    applyFiltersRealTime();
-  }, [searchIdeaNumber]);
-
   const applyFiltersRealTime = () => {
     let filteredIdeas = [...allIdeasOriginal];
 
     if (searchIdeaNumber.trim()) {
       const searchTerm = searchIdeaNumber.trim().toLowerCase();
-      filteredIdeas = filteredIdeas.filter(idea =>
-        (idea.ideaNumber && idea.ideaNumber.toLowerCase().includes(searchTerm)) ||
-        (idea.ownerName && idea.ownerName.toLowerCase().includes(searchTerm)) ||
-        (idea.description && idea.description.toLowerCase().includes(searchTerm))
-      );
+      filteredIdeas = filteredIdeas.filter(idea => {
+        const ideaNum = (idea.ideaNumber || '').toLowerCase();
+        const ownerName = (idea.ownerName || '').toLowerCase();
+        const description = (idea.description || '').toLowerCase();
+
+        return ideaNum.includes(searchTerm) ||
+          ownerName.includes(searchTerm) ||
+          description.includes(searchTerm);
+      });
+    }
+
+    if (selectedStatus && selectedStatus !== "") {
+      filteredIdeas = filteredIdeas.filter(idea => {
+        if (!idea.status) return false;
+        return idea.status.toLowerCase() === selectedStatus.toLowerCase();
+      });
     }
 
     if (fromDate || toDate) {
@@ -330,28 +372,13 @@ export default function AllTeamIdeasScreen() {
       });
     }
 
-    if (selectedStatus && selectedStatus !== "") {
-      filteredIdeas = filteredIdeas.filter(idea => {
-        if (!idea.status) return false;
-        return idea.status.toLowerCase() === selectedStatus.toLowerCase();
-      });
-    }
-
     setIdeas(filteredIdeas);
     setTotalItems(filteredIdeas.length);
-  }
+  };
 
   const applyFilters = () => {
-    setLoading(true);
-
-    try {
-      applyFiltersRealTime();
-      setShowFilters(false);
-
-    } catch (error) {
-    } finally {
-      setLoading(false);
-    }
+    applyFiltersRealTime();
+    setShowFilters(false);
   };
 
   const clearFilters = () => {
@@ -359,38 +386,74 @@ export default function AllTeamIdeasScreen() {
     setFromDate(null);
     setToDate(null);
     setSelectedStatus("");
+    setShowStatusDropdown(false);
 
     setIdeas(allIdeasOriginal);
     setTotalItems(allIdeasOriginal.length);
   };
 
   const fetchIdeaDetail = async (ideaId) => {
-    if (!ideaId) return;
+    if (!ideaId) {
+      Alert.alert("Error", "Invalid idea ID");
+      return;
+    }
     try {
       setLoadingDetail(true);
       const token = await AsyncStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const { data: response } = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
+      let response;
+      try {
+        response = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
+      } catch (err1) {
+        try {
+          response = await axios.get(`${IDEA_DETAIL_URL}?ideaId=${encodeURIComponent(ideaId)}`, { headers });
+        } catch (err2) {
+          response = await axios.get(`${IDEA_DETAIL_URL}?id=${encodeURIComponent(ideaId)}`, { headers });
+        }
+      }
 
-      if (response?.success && response?.data) {
-        const detail = response.data;
-
-        const beforeImagePath = detail.beforeImplementationImagePath || detail.imagePath || detail.beforeImplementationImage;
-        const normalizedBeforeImagePath = normalizeImagePath(beforeImagePath);
-
-        const afterImagePath = detail.afterImplementationImagePath || detail.implementationCycle?.afterImplementationImagePath;
-        const normalizedAfterImagePath = normalizeImagePath(afterImagePath);
+      if (response?.data?.success && response?.data?.data) {
+        const detail = response.data.data;
 
         const normalizedDetail = {
           ...detail,
-          beforeImplementationImagePath: normalizedBeforeImagePath,
-          imagePath: normalizedBeforeImagePath,
-          afterImplementationImagePath: normalizedAfterImagePath,
+          beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          imagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          afterImplementationImagePath: normalizeImagePath(detail.afterImplementationImagePath),
           implementationCycle: detail.implementationCycle ? {
             ...detail.implementationCycle,
             beforeImplementationImagePath: normalizeImagePath(detail.implementationCycle.beforeImplementationImagePath),
-            afterImplementationImagePath: normalizedAfterImagePath
+            afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
+          } : null
+        };
+
+        setIdeaDetail(normalizedDetail);
+        setSelectedIdea(normalizedDetail);
+
+        if (shouldShowImplementationDetails(normalizedDetail)) {
+          setShowImplementationDetails(true);
+        }
+
+        const status = (detail.ideaStatus || detail.status || '').toLowerCase();
+        if (status === 'closed') {
+          setShowClosedPopup(true);
+          setTimeout(() => {
+            setShowClosedPopup(false);
+          }, 3000);
+        }
+      } else if (response?.data) {
+        const detail = response.data;
+
+        const normalizedDetail = {
+          ...detail,
+          beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          imagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          afterImplementationImagePath: normalizeImagePath(detail.afterImplementationImagePath),
+          implementationCycle: detail.implementationCycle ? {
+            ...detail.implementationCycle,
+            beforeImplementationImagePath: normalizeImagePath(detail.implementationCycle.beforeImplementationImagePath),
+            afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
           } : null
         };
 
@@ -409,10 +472,11 @@ export default function AllTeamIdeasScreen() {
           }, 3000);
         }
       } else {
-        Alert.alert("Error", response?.message || "Idea details not found.");
+        Alert.alert("Error", "Idea details not found.");
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch idea details.");
+      console.error("Error fetching idea details:", error);
+      Alert.alert("Error", `Failed to fetch idea details. ${error.response?.status === 404 ? 'Idea not found.' : 'Please try again.'}`);
     } finally {
       setLoadingDetail(false);
     }
@@ -550,30 +614,47 @@ export default function AllTeamIdeasScreen() {
           )}
 
           <Text style={[styles.filterLabel, { marginTop: 16, marginBottom: 10 }]}>Status</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statusScrollContainer}>
-            {statusOptions.map((status, index) => {
-              const isAllStatus = status === "All Status";
-              const isSelected = isAllStatus ? selectedStatus === "" : selectedStatus === status;
+          <TouchableOpacity
+            style={styles.statusDropdown}
+            onPress={() => setShowStatusDropdown(!showStatusDropdown)}
+          >
+            <Text style={styles.statusDropdownText}>
+              {selectedStatus || "All Status"}
+            </Text>
+            <Ionicons name={showStatusDropdown ? "chevron-up" : "chevron-down"} size={20} color="#666" />
+          </TouchableOpacity>
 
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.statusChip,
-                    isSelected && styles.statusChipActive
-                  ]}
-                  onPress={() => setSelectedStatus(isAllStatus ? "" : status)}
-                >
-                  <Text style={[
-                    styles.statusChipText,
-                    isSelected && styles.statusChipTextActive
-                  ]}>
-                    {status}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          {showStatusDropdown && (
+            <View style={styles.statusDropdownList}>
+              <ScrollView style={styles.statusDropdownScroll} nestedScrollEnabled>
+                {statusOptions.map((status, index) => {
+                  const isAllStatus = status === "All Status";
+                  const isSelected = isAllStatus ? selectedStatus === "" : selectedStatus === status;
+
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.statusDropdownItem,
+                        isSelected && styles.statusDropdownItemActive
+                      ]}
+                      onPress={() => {
+                        setSelectedStatus(isAllStatus ? "" : status);
+                        setShowStatusDropdown(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.statusDropdownItemText,
+                        isSelected && styles.statusDropdownItemTextActive
+                      ]}>
+                        {status}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
           <View style={styles.filterButtons}>
             <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
@@ -600,7 +681,14 @@ export default function AllTeamIdeasScreen() {
                   key={index}
                   activeOpacity={0.8}
                   style={styles.cardContainer}
-                  onPress={() => fetchIdeaDetail(idea.id || idea.ideaNumber)}
+                  onPress={() => {
+                    const ideaId = idea?.id ?? idea?.ideaId;
+                    if (!ideaId) {
+                      Alert.alert("Error", "Idea ID not found");
+                      return;
+                    }
+                    fetchIdeaDetail(ideaId);
+                  }}
                 >
                   <View style={styles.cardHeader}>
                     <Text style={styles.ideaNumber} numberOfLines={2}>{idea.ideaNumber || "N/A"}</Text>
@@ -647,8 +735,7 @@ export default function AllTeamIdeasScreen() {
 
       {loadingDetail && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#004d61" />
-          <Text style={styles.loadingText}>Loading idea details...</Text>
+          <ActivityIndicator size="large" color="#2c5aa0" />
         </View>
       )}
 
@@ -657,7 +744,7 @@ export default function AllTeamIdeasScreen() {
           {/* Confetti Effect */}
           {showClosedPopup && <ConfettiEffect />}
 
-          {/* Closed Status Popup - Inside Detail Modal */}
+          {/* Closed Status Popup */}
           {showClosedPopup && (
             <View style={styles.closedPopupContainer}>
               <View style={styles.closedPopup}>
@@ -668,7 +755,7 @@ export default function AllTeamIdeasScreen() {
             </View>
           )}
 
-          <View style={styles.modalHeaderDetail}>
+          <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
               <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
@@ -685,9 +772,17 @@ export default function AllTeamIdeasScreen() {
             {selectedIdea && ideaDetail && (
               <>
                 {/* Employee Information - Collapsible */}
-                <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} activeOpacity={0.7}>
+                <TouchableOpacity
+                  style={styles.collapsibleHeader}
+                  onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
-                  <Ionicons name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
+                  <Ionicons
+                    name={employeeInfoExpanded ? "chevron-up" : "chevron-down"}
+                    size={24}
+                    color="#2c5aa0"
+                  />
                 </TouchableOpacity>
 
                 {employeeInfoExpanded && (
@@ -732,9 +827,17 @@ export default function AllTeamIdeasScreen() {
                 )}
 
                 {/* Idea Information - Collapsible */}
-                <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} activeOpacity={0.7}>
+                <TouchableOpacity
+                  style={styles.collapsibleHeader}
+                  onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
-                  <Ionicons name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
+                  <Ionicons
+                    name={ideaInfoExpanded ? "chevron-up" : "chevron-down"}
+                    size={24}
+                    color="#2c5aa0"
+                  />
                 </TouchableOpacity>
 
                 {ideaInfoExpanded && (
@@ -756,53 +859,61 @@ export default function AllTeamIdeasScreen() {
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Planned Completion:</Text>
-                      <Text style={styles.valueDetail}>
-                        {ideaDetail.plannedImplementationDuration ? formatDate(ideaDetail.plannedImplementationDuration) : "N/A"}
-                      </Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.plannedImplementationDuration
+                        ? formatDate(ideaDetail.plannedImplementationDuration)
+                        : "N/A"}</Text>
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
-                      {ideaDetail.beforeImplementationImagePath ? (
-                        <TouchableOpacity
-                          style={styles.imagePreviewContainer}
-                          onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath)}
-                        >
-                          {ideaDetail.beforeImplementationImagePath.toLowerCase().includes('.pdf') ? (
-                            <View style={styles.pdfThumbnailContainer}>
-                              <Ionicons name="document-text" size={30} color="#FF5722" />
-                              <Text style={styles.pdfThumbnailText}>PDF</Text>
-                            </View>
+                      <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                        {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
+                          ideaDetail.beforeImplementationImagePath?.toLowerCase().includes('.pdf') || ideaDetail.imagePath?.toLowerCase().includes('.pdf') ? (
+                            <TouchableOpacity
+                              onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                            >
+                              <View style={styles.pdfThumbnailContainer}>
+                                <Ionicons name="document-text" size={30} color="#FF5722" />
+                                <Text style={styles.pdfThumbnailText}>PDF</Text>
+                              </View>
+                            </TouchableOpacity>
                           ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
-                            <Image
-                              source={{ uri: ideaDetail.beforeImplementationImagePath }}
-                              style={styles.thumbnailSmall}
-                              contentFit="cover"
-                              cachePolicy="none"
-                              placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
-                              transition={1000}
-                              onError={(e) => {
-                                const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
-                                if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
-                                  setIdeaDetail(prev => ({
-                                    ...prev,
-                                    beforeImplementationImagePath: altUrl
-                                  }));
-                                } else {
-                                  setImageLoadError(prev => ({
-                                    ...prev,
-                                    [`before_${ideaDetail.id}`]: true
-                                  }));
-                                }
-                              }}
-                            />
+                            <TouchableOpacity
+                              style={styles.imagePreviewContainer}
+                              onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                            >
+                              <Image
+                                source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }}
+                                style={styles.thumbnailSmall}
+                                contentFit="cover"
+                                cachePolicy="none"
+                                placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                                transition={1000}
+                                onError={(e) => {
+                                  const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
+                                  if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+                                    setIdeaDetail(prev => ({
+                                      ...prev,
+                                      beforeImplementationImagePath: altUrl
+                                    }));
+                                  } else {
+                                    setImageLoadError(prev => ({
+                                      ...prev,
+                                      [`before_${ideaDetail.id}`]: true
+                                    }));
+                                  }
+                                }}
+                              />
+                            </TouchableOpacity>
                           ) : (
                             <View style={styles.imageErrorContainer}>
                               <Ionicons name="image-outline" size={24} color="#999" />
                               <Text style={styles.imageErrorText}>Image unavailable</Text>
                             </View>
-                          )}
-                        </TouchableOpacity>
-                      ) : (<Text style={styles.valueDetail}>N/A</Text>)}
+                          )
+                        ) : (
+                          <Text style={styles.valueDetail}>N/A</Text>
+                        )}
+                      </View>
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Status:</Text>
@@ -827,20 +938,28 @@ export default function AllTeamIdeasScreen() {
                       <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
                     </View>
                     <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Mobile Number:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
+                    </View>
+                    <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Idea Theme:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Type:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaType || ideaDetail.type || "N/A"}</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.type || ideaDetail.ideaType || "N/A"}</Text>
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>BE Team Support Needed:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}</Text>
+                      <Text style={styles.valueDetail}>
+                        {ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}
+                      </Text>
                     </View>
                     <View style={styles.rowDetail}>
                       <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}</Text>
+                      <Text style={styles.valueDetail}>
+                        {ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}
+                      </Text>
                     </View>
                   </View>
                 )}
@@ -848,9 +967,17 @@ export default function AllTeamIdeasScreen() {
                 {/* Implementation Details - Show if available */}
                 {shouldShowImplementationDetails(ideaDetail) && (
                   <>
-                    <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setShowImplementationDetails(!showImplementationDetails)} activeOpacity={0.7}>
+                    <TouchableOpacity
+                      style={styles.collapsibleHeader}
+                      onPress={() => setShowImplementationDetails(!showImplementationDetails)}
+                      activeOpacity={0.7}
+                    >
                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
-                      <Ionicons name={showImplementationDetails ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
+                      <Ionicons
+                        name={showImplementationDetails ? "chevron-up" : "chevron-down"}
+                        size={24}
+                        color="#2c5aa0"
+                      />
                     </TouchableOpacity>
 
                     {showImplementationDetails && (
@@ -864,18 +991,24 @@ export default function AllTeamIdeasScreen() {
                         <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Implementation Details:</Text>
                           <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.implementation || ideaDetail.implementationDetail || ideaDetail.implementation || "Not provided"}
+                            {ideaDetail.implementationCycle?.implementation ||
+                              ideaDetail.implementationDetail ||
+                              ideaDetail.implementation ||
+                              "Not provided"}
                           </Text>
                         </View>
                         <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
                           <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.outcome || ideaDetail.implementationOutcome || ideaDetail.outcome || "Not provided"}
+                            {ideaDetail.implementationCycle?.outcome ||
+                              ideaDetail.implementationOutcome ||
+                              ideaDetail.outcome ||
+                              "Not provided"}
                           </Text>
                         </View>
                         {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
                           <View style={styles.rowDetailWithBorder}>
-                            <Text style={styles.labelDetail}>Submitted On:</Text>
+                            <Text style={styles.labelDetail}>Completed On:</Text>
                             <Text style={styles.valueDetail}>
                               {formatDate(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate)}
                             </Text>
@@ -886,43 +1019,39 @@ export default function AllTeamIdeasScreen() {
                         {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>Before Implementation:</Text>
-                            {(() => {
-                              const imagePath = ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath;
-                              return imagePath.toLowerCase().includes('.pdf') ? (
-                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                            {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
+                              ideaDetail.beforeImplementationImagePath?.toLowerCase().includes('.pdf') || ideaDetail.imagePath?.toLowerCase().includes('.pdf') ? (
+                                <TouchableOpacity
+                                  onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                                >
                                   <View style={styles.pdfThumbnailContainer}>
                                     <Ionicons name="document-text" size={30} color="#FF5722" />
                                     <Text style={styles.pdfThumbnailText}>PDF</Text>
                                   </View>
                                 </TouchableOpacity>
-                              ) : !imageLoadError[`impl_before_${ideaDetail.id}`] ? (
-                                <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                              ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
+                                <TouchableOpacity
+                                  style={styles.imagePreviewContainer}
+                                  onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                                >
                                   <Image
-                                    source={{ uri: imagePath }}
+                                    source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }}
                                     style={styles.thumbnailSmall}
                                     contentFit="cover"
                                     cachePolicy="none"
-                                    onError={() => {
-                                      const altUrl = getAlternateImageUrl(imagePath);
-                                      if (altUrl && imagePath !== altUrl) {
-                                        if (ideaDetail.implementationCycle?.beforeImplementationImagePath) {
-                                          setIdeaDetail(prev => ({
-                                            ...prev,
-                                            implementationCycle: {
-                                              ...prev.implementationCycle,
-                                              beforeImplementationImagePath: altUrl
-                                            }
-                                          }));
-                                        } else {
-                                          setIdeaDetail(prev => ({
-                                            ...prev,
-                                            beforeImplementationImagePath: altUrl
-                                          }));
-                                        }
+                                    placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                                    transition={1000}
+                                    onError={(e) => {
+                                      const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
+                                      if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+                                        setIdeaDetail(prev => ({
+                                          ...prev,
+                                          beforeImplementationImagePath: altUrl
+                                        }));
                                       } else {
                                         setImageLoadError(prev => ({
                                           ...prev,
-                                          [`impl_before_${ideaDetail.id}`]: true
+                                          [`before_${ideaDetail.id}`]: true
                                         }));
                                       }
                                     }}
@@ -933,8 +1062,10 @@ export default function AllTeamIdeasScreen() {
                                   <Ionicons name="image-outline" size={24} color="#999" />
                                   <Text style={styles.imageErrorText}>Image unavailable</Text>
                                 </View>
-                              );
-                            })()}
+                              )
+                            ) : (
+                              <Text style={styles.valueDetail}>N/A</Text>
+                            )}
                           </View>
                         )}
 
@@ -951,7 +1082,7 @@ export default function AllTeamIdeasScreen() {
                                     <Text style={styles.pdfThumbnailText}>PDF</Text>
                                   </View>
                                 </TouchableOpacity>
-                              ) : !imageLoadError[`impl_after_${ideaDetail.id}`] ? (
+                              ) : !imageLoadError[`after_${ideaDetail.id}`] ? (
                                 <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
                                   <Image
                                     source={{ uri: imagePath }}
@@ -966,10 +1097,7 @@ export default function AllTeamIdeasScreen() {
                                           afterImplementationImagePath: altUrl
                                         }));
                                       } else {
-                                        setImageLoadError(prev => ({
-                                          ...prev,
-                                          [`impl_after_${ideaDetail.id}`]: true
-                                        }));
+                                        setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
                                       }
                                     }}
                                   />
@@ -1055,7 +1183,13 @@ export default function AllTeamIdeasScreen() {
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" onError={handleImageError} />
+            <Image
+              source={{ uri: currentImageUrl }}
+              style={styles.fullImage}
+              contentFit="contain"
+              cachePolicy="none"
+              onError={handleImageError}
+            />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
           )}
@@ -1080,11 +1214,14 @@ const styles = StyleSheet.create({
   filterLabel: { fontSize: 16, fontWeight: '500', marginBottom: 8, color: '#333' },
   dateInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 12, backgroundColor: '#f9f9f9', marginBottom: 10 },
   dateInputText: { fontSize: 14, color: '#333' },
-  statusScrollContainer: { marginBottom: 12, maxHeight: 50 },
-  statusChip: { backgroundColor: '#f0f0f0', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: '#ddd' },
-  statusChipActive: { backgroundColor: '#2c5aa0', borderColor: '#2c5aa0' },
-  statusChipText: { fontSize: 13, color: '#555', fontWeight: '500' },
-  statusChipTextActive: { color: '#fff', fontWeight: '600' },
+  statusDropdown: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 12, backgroundColor: '#fff', marginBottom: 10 },
+  statusDropdownText: { fontSize: 14, color: '#333', flex: 1 },
+  statusDropdownList: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, backgroundColor: '#fff', marginBottom: 10, maxHeight: 250, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+  statusDropdownScroll: { maxHeight: 250 },
+  statusDropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  statusDropdownItemActive: { backgroundColor: '#2c5aa0' },
+  statusDropdownItemText: { fontSize: 14, color: '#333' },
+  statusDropdownItemTextActive: { color: '#fff', fontWeight: '600' },
   filterButtons: { flexDirection: 'row', marginTop: 12 },
   applyBtn: { flex: 1, backgroundColor: '#0A5064', padding: 12, borderRadius: 6, alignItems: 'center', marginRight: 8 },
   resetBtn: { flex: 1, backgroundColor: '#6c757d', padding: 12, borderRadius: 6, alignItems: 'center' },
@@ -1098,39 +1235,47 @@ const styles = StyleSheet.create({
   cardContent: { padding: 12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' },
   rowDetail: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8, alignItems: 'flex-start' },
+  rowDetailWithBorder: { flexDirection: "row", justifyContent: "space-between", paddingBottom: 10, marginBottom: 10, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   label: { color: '#555', fontWeight: '500', fontSize: 14 },
   value: { color: '#333', fontSize: 14, maxWidth: '65%', textAlign: 'right' },
   statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
   totalContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
   totalText: { fontSize: 16, fontWeight: 'bold', color: '#2c5aa0' },
   noDataText: { textAlign: "center", marginTop: 20, color: "#777", fontSize: 16 },
-  loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.8)', zIndex: 9999 },
-  loadingText: { marginTop: 10, fontSize: 14, color: '#666' },
+  loadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(255,255,255,0.6)" },
   fullModal: { flex: 1, backgroundColor: "#f5f5f5" },
-  modalHeaderDetail: { backgroundColor: '#fff', paddingTop: 24, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', elevation: 4 },
+  modalHeader: { backgroundColor: '#fff', paddingTop: 24, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', elevation: 4 },
   modalHeaderContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   modalHeaderTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c5aa0' },
   closeButton: { backgroundColor: '#f0f0f0', borderRadius: 18, width: 32, height: 32, justifyContent: "center", alignItems: "center" },
   timelineButtonHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e3f2fd', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#2c5aa0' },
   timelineButtonText: { color: '#2c5aa0', fontSize: 14, fontWeight: '600', marginLeft: 6 },
   modalScrollContent: { padding: 16, paddingBottom: 30 },
-  collapsibleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#e0e0e0', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
-  collapsibleHeaderText: { fontSize: 16, fontWeight: '600', color: '#2c5aa0' },
   cardDetail: { backgroundColor: "#fff", padding: 16, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2 },
   cardHeading: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#2c5aa0" },
-  rowDetailWithBorder: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 10, marginBottom: 10, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   labelDetail: { fontWeight: "600", color: "#555", width: "45%", fontSize: 14 },
   valueDetail: { color: "#222", width: "50%", textAlign: "right", fontSize: 14 },
   statusBadgeDetail: { color: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 170, textAlign: 'center' },
   imagePreviewContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
-  pdfThumbnailContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#FF5722', backgroundColor: '#FFF3E0', justifyContent: 'center', alignItems: 'center' },
-  pdfThumbnailText: { fontSize: 10, color: '#FF5722', fontWeight: 'bold', marginTop: 2 },
   imageErrorContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' },
   imageErrorText: { fontSize: 9, color: '#999', marginTop: 2, textAlign: 'center' },
-  implementationImageSection: { marginTop: 12, marginBottom: 12 },
-  imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
-  implementationImage: { width: '100%', height: 200, borderRadius: 8, resizeMode: 'cover', borderWidth: 1, borderColor: '#ddd' },
+  pdfThumbnailContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FF5722',
+    backgroundColor: '#FFF3E0',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  pdfThumbnailText: {
+    fontSize: 10,
+    color: '#FF5722',
+    fontWeight: 'bold',
+    marginTop: 2
+  },
   remarkCard: { backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
   remarkTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c5aa0', marginBottom: 6 },
   remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
@@ -1153,11 +1298,53 @@ const styles = StyleSheet.create({
   noTimelineText: { color: "#999", textAlign: "center", marginTop: 10, fontSize: 15, fontStyle: 'italic' },
   imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
   closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
-  fullImage: { width: "90%", height: "70%" },
-  confettiContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, pointerEvents: 'none' },
-  confettiPiece: { position: 'absolute', width: 10, height: 10, top: -50 },
-  closedPopupContainer: { position: 'absolute', top: 80, left: 20, right: 20, alignItems: 'center', zIndex: 10000 },
-  closedPopup: { backgroundColor: '#4CAF50', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 6 },
-  closedPopupEmoji: { fontSize: 24, marginHorizontal: 6 },
-  closedPopupText: { fontSize: 16, fontWeight: 'bold', color: '#fff', textAlign: 'center' },
+  fullImage: { width: "80%", height: "60%" },
+  collapsibleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#e0e0e0', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+  collapsibleHeaderText: { fontSize: 16, fontWeight: '600', color: '#2c5aa0' },
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+    pointerEvents: 'none',
+  },
+  confettiPiece: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    top: -50,
+  },
+  closedPopupContainer: {
+    position: 'absolute',
+    top: 80,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+    zIndex: 10000
+  },
+  closedPopup: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6
+  },
+  closedPopupEmoji: {
+    fontSize: 24,
+    marginHorizontal: 6
+  },
+  closedPopupText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center'
+  },
 });

@@ -16,18 +16,30 @@ const Tab = createMaterialTopTabNavigator();
 const normalizeImagePath = (path) => {
   if (!path) return null;
 
-  // already full https url → return as is
-  if (path.startsWith('https://')) {
-    return path;
+  const trimmedPath = String(path).trim();
+
+  const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
+  const match = trimmedPath.match(doubledPattern);
+
+  if (match) {
+    const correctUrl = match[2];
+    return correctUrl;
   }
 
-  return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
-};
+  if (trimmedPath.match(/^https?:\/\//)) {
+    return trimmedPath;
+  }
 
+  if (!BASE_URL) {
+    return trimmedPath;
+  }
+
+  const formattedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
+  return `${BASE_URL}${formattedPath}`;
+};
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
 
- 
   if (url.includes('ideabank-api-dev.abisaio.com')) {
     return url.replace(
       'ideabank-api-dev.abisaio.com',
@@ -232,6 +244,11 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const { data: response } = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
 
+
+
+      if (response?.data) {
+      }
+
       if (response?.success && response?.data) {
         const detail = response.data;
 
@@ -240,6 +257,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
 
         const afterImagePath = detail.afterImplementationImagePath || detail.implementationCycle?.afterImplementationImagePath;
         const normalizedAfterImagePath = normalizeImagePath(afterImagePath);
+
 
         const normalizedDetail = {
           ...detail,
@@ -291,6 +309,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
 
+
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
         'PDF Document',
@@ -316,6 +335,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   };
 
   const handleImageError = (error) => {
+
     if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
       setCurrentImageUrl(imageRetryUrl);
       setImageRetryUrl(null);
@@ -336,7 +356,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
           {
             text: 'Copy URL for Backend Team',
             onPress: () => {
-              Alert.alert('URL Copied to Console', 'Check your development console for the URL');
+              Alert.alert('URL Logged', 'Check your development console for the failed URL');
             }
           },
           { text: 'Close' }
@@ -991,10 +1011,12 @@ export default function MyIdeasScreen() {
       if (response.data && response.data.data && Array.isArray(response.data.data.ideas)) {
         const normalizedIdeas = response.data.data.ideas.map(idea => {
           const imagePath = idea.beforeImplementationImagePath || idea.imagePath || idea.beforeImplementationImage;
+          const normalized = normalizeImagePath(imagePath);
+
           return {
             ...idea,
-            beforeImplementationImagePath: normalizeImagePath(imagePath),
-            imagePath: normalizeImagePath(imagePath),
+            beforeImplementationImagePath: normalized,
+            imagePath: normalized,
           };
         });
         setIdeas(normalizedIdeas);
@@ -1002,6 +1024,7 @@ export default function MyIdeasScreen() {
         setIdeas([]);
       }
     } catch (error) {
+      console.error('❌ Error fetching ideas:', error);
       Alert.alert("Error", "Failed to load ideas from server.");
     }
   };
@@ -1333,7 +1356,6 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
       const url = isEditing
         ? `${EDIT_IMPLEMENTATION_URL}/${ideaDetail.id}`
         : SUBMIT_URL;
-
 
       const axiosConfig = {
         headers: {
@@ -2342,6 +2364,7 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 15
   },
+
   zoomControls: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2417,3 +2440,5 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
 });
+
+

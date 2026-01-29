@@ -279,7 +279,6 @@ export default function CreateIdeaScreen() {
           reportingManagerEmail: data.data.managerEmail || '',
         });
       } catch (error) {
-        console.error('Error fetching employee details:', error);
       }
     };
     fetchEmployeeDetails();
@@ -477,21 +476,17 @@ export default function CreateIdeaScreen() {
       });
 
       const text = await response.text();
-      console.log('API Response:', text);
 
       let data = {};
       try {
         data = JSON.parse(text);
       } catch (e) {
-        console.error('Parse error:', e);
       }
 
       if (response.ok && data.success) {
         const rawPath = extractFilePath(data.data);
         const fullImageUrl = normalizeFilePath(rawPath);
 
-        console.log('Raw Path:', rawPath);
-        console.log('Full URL:', fullImageUrl);
 
         const ideaData = {
           ...data.data,
@@ -513,7 +508,6 @@ export default function CreateIdeaScreen() {
         Alert.alert('Error', data?.message || 'Failed to save draft.');
       }
     } catch (error) {
-      console.error('Network error:', error);
       Alert.alert('Error', 'Network error, please try again.');
     } finally {
       setIsSubmitting(false);
@@ -575,21 +569,17 @@ export default function CreateIdeaScreen() {
       });
 
       const text = await response.text();
-      console.log('API Response:', text);
 
       let data = {};
       try {
         data = JSON.parse(text);
       } catch (e) {
-        console.error('Parse error:', e);
       }
 
       if (response.ok && data.success) {
         const rawPath = extractFilePath(data.data);
         const fullImageUrl = normalizeFilePath(rawPath);
 
-        console.log('Raw Path:', rawPath);
-        console.log('Full URL:', fullImageUrl);
 
         const ideaData = {
           ...data.data,
@@ -609,7 +599,6 @@ export default function CreateIdeaScreen() {
         Alert.alert('Error', data?.message || 'Failed to create idea.');
       }
     } catch (error) {
-      console.error('Network error:', error);
       Alert.alert('Error', 'Network error, please try again.');
     } finally {
       setIsSubmitting(false);

@@ -16,20 +16,31 @@ import { DASHBOARD_URL, NOTIFICATION_USER_URL, NOTIFICATION_COUNT_URL, MARK_READ
 
 const normalizeImagePath = (path) => {
   if (!path) return null;
-  
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
+
+  const trimmedPath = String(path).trim();
+
+  const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
+  const match = trimmedPath.match(doubledPattern);
+
+  if (match) {
+    const correctUrl = match[2];
+    return correctUrl;
+  }
+  if (trimmedPath.match(/^https?:\/\//)) {
+    return trimmedPath;
   }
 
-  let cleanPath = path.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
+  if (!BASE_URL) {
+    return trimmedPath;
+  }
 
+  let cleanPath = trimmedPath.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
   const baseUrl = BASE_URL.endsWith('/')
     ? BASE_URL.slice(0, -1)
     : BASE_URL;
 
   return `${baseUrl}/${cleanPath}`;
 };
-
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
   return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
@@ -63,7 +74,6 @@ const isVeryNarrow = width < 330;
 function SimpleBarChart({ data }) {
   const maxValue = Math.max(...data.map(d => d.count), 1);
 
-
   const getYAxisMax = () => {
     if (maxValue <= 10) return 10;
     if (maxValue <= 50) return 50;
@@ -78,59 +88,63 @@ function SimpleBarChart({ data }) {
   const stepValue = yAxisMax / yAxisSteps;
 
   return (
-    <View style={styles.chartContainer}>
-      <View style={styles.yAxisContainer}>
-        {Array.from({ length: yAxisSteps + 1 }).map((_, index) => (
-          <Text key={index} style={styles.yAxisLabel}>
-            {Math.round(stepValue * (yAxisSteps - index))}
-          </Text>
-        ))}
-      </View>
+    <View style={styles.chartMainContainer}>
+      <View style={styles.chartContainer}>
+        <View style={styles.yAxisContainer}>
+          {Array.from({ length: yAxisSteps + 1 }).map((_, index) => (
+            <Text key={index} style={styles.yAxisLabel}>
+              {Math.round(stepValue * (yAxisSteps - index))}
+            </Text>
+          ))}
+        </View>
 
-      <View style={styles.barsWrapper}>
-        <View style={styles.barsContainer}>
-          {data.map((item, index) => {
-            const barHeight = item.count === 0 ? 1 : (item.count / yAxisMax) * 100;
+        <View style={styles.barsWrapper}>
+          <View style={styles.barsContainer}>
+            {data.map((item, index) => {
+              const barHeight = item.count === 0 ? 0.5 : (item.count / yAxisMax) * 100;
 
-            return (
-              <View key={index} style={styles.barWrapper}>
-                <View style={styles.barColumn}>
-                  <Text style={[
-                    styles.countLabel,
-                    item.count === 0 && styles.countLabelZero
-                  ]}>
-                    {item.count}
-                  </Text>
+              return (
+                <View key={index} style={styles.barWrapper}>
+                  <View style={styles.barColumn}>
+                    <Text style={[
+                      styles.countLabel,
+                      item.count === 0 && styles.countLabelZero
+                    ]}>
+                      {item.count}
+                    </Text>
 
-                  {/* Bar */}
-                  <View
-                    style={[
-                      styles.bar,
-                      {
-                        height: `${barHeight}%`,
-                        backgroundColor: item.count === 0 ? 'transparent' : item.color,
-                        borderColor: item.color,
-                        borderWidth: 2,
-                        minHeight: item.count === 0 ? 2 : 4,
-                      }
-                    ]}
-                  />
+                    <View
+                      style={[
+                        styles.bar,
+                        {
+                          height: `${barHeight}%`,
+                          backgroundColor: item.count === 0 ? 'transparent' : item.color,
+                          borderColor: item.color,
+                          borderWidth: 2,
+                          minHeight: item.count === 0 ? 3 : 8,
+                        }
+                      ]}
+                    />
+                  </View>
                 </View>
+              );
+            })}
+          </View>
+        </View>
 
-                {/* Label Text */}
-                <Text style={styles.barLabel} numberOfLines={1}>
-                  {item.label}
-                </Text>
-              </View>
-            );
-          })}
+        <View style={styles.legendContainerRight}>
+          {data.map((item, index) => (
+            <View key={index} style={styles.legendItemRight}>
+              <View style={[styles.legendCircle, { backgroundColor: item.color }]} />
+              <Text style={styles.legendTextRight}>{item.label}</Text>
+            </View>
+          ))}
         </View>
       </View>
     </View>
   );
 }
 
-// Confetti Component
 function ConfettiPiece({ delay, duration, color }) {
   const translateY = useRef(new Animated.Value(-50)).current;
   const translateX = useRef(new Animated.Value(Math.random() * 400 - 200)).current;
@@ -535,7 +549,6 @@ const DashboardScreen = () => {
 
             mergedMap.set(storedNotif.id, storedNotif);
           } else {
-            // Keep read ones if within 7 days
             const notifTime = new Date(storedNotif.storedAt || storedNotif.createdOn).getTime();
             if ((currentTime - notifTime) < SEVEN_DAYS_MS) {
               mergedMap.set(storedNotif.id, storedNotif);
@@ -1090,15 +1103,12 @@ const DashboardScreen = () => {
           </View>
         </View>
 
-        {/* CONDITIONAL RENDERING: Graph OR Empty State */}
         {shouldShowGraph() ? (
-          // SHOW GRAPH when Total Ideas >= 1
           <View style={styles.graphCard}>
             <Text style={styles.graphTitle}>Ideas Statistics</Text>
             <SimpleBarChart data={getGraphData()} />
           </View>
         ) : (
-          // SHOW EMPTY STATE when Total Ideas = 0
           <View style={styles.overviewCard}>
             <Text style={styles.sectionTitle}>Ideas Overview</Text>
             <Ionicons name="bulb-outline" size={40} color="#fbc02d" style={{ marginVertical: 10 }} />
@@ -1113,7 +1123,6 @@ const DashboardScreen = () => {
         )}
       </ScrollView>
 
-      {/* Scope Dropdown Modal */}
       <Modal visible={showScopeDropdown} transparent animationType="fade" onRequestClose={() => setShowScopeDropdown(false)}>
         <TouchableOpacity style={styles.dropdownOverlay} activeOpacity={1} onPress={() => setShowScopeDropdown(false)}>
           <View style={styles.dropdownContent}>
@@ -1187,10 +1196,8 @@ const DashboardScreen = () => {
 
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
-          {/* Confetti Effect when idea is closed */}
           {showClosedPopup && <ConfettiEffect />}
 
-          {/* Closed Popup */}
           {showClosedPopup && (
             <View style={styles.closedPopupContainer}>
               <View style={styles.closedPopup}>
@@ -1420,7 +1427,6 @@ const DashboardScreen = () => {
                           </View>
                         )}
 
-                        {/* Before Implementation with PDF Support */}
                         {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>Before Implementation:</Text>
@@ -1443,7 +1449,6 @@ const DashboardScreen = () => {
                           </View>
                         )}
 
-                        {/* After Implementation with PDF Support */}
                         {ideaDetail.afterImplementationImagePath && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>After Implementation:</Text>
@@ -1683,42 +1688,43 @@ const styles = StyleSheet.create({
   },
   cardCount: { fontSize: 22, fontWeight: 'bold', color: '#004d61', marginTop: 6 },
 
-  // Graph Card Styles
   graphCard: {
     backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: 20,
-    padding: 16,
-    borderRadius: 20,
+    marginHorizontal: 10,
+    marginTop: 25,
+    padding: 17,
+    borderRadius: 10,
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-    marginBottom: 28,
-    borderWidth: 0.3,
+    elevation: 5,
+    marginBottom: 30,
+    borderWidth: 0.4,
     borderColor: 'rgba(0,0,0,0.05)',
   },
   graphTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#004d61',
-    marginBottom: 12,
+    marginBottom: 18,
     textAlign: 'center',
   },
 
-  // Bar Chart Styles
+  chartMainContainer: {
+    paddingVertical: 12,
+  },
   chartContainer: {
     flexDirection: 'row',
-    paddingVertical: 20,
+    paddingVertical: 25,
     paddingHorizontal: 8,
     paddingLeft: 6,
   },
   yAxisContainer: {
     justifyContent: 'space-between',
-    height: 260,
+    height: 240,
     marginRight: 8,
-    paddingBottom: 40,
+    paddingBottom: 20,
     minWidth: 28,
   },
   yAxisLabel: {
@@ -1733,10 +1739,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-evenly',
     alignItems: 'flex-end',
-    height: 260,
-    paddingBottom: 40,
-    borderBottomWidth: 2,
-    borderBottomColor: '#333',
+    height: 230,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
   },
   barWrapper: {
     alignItems: 'center',
@@ -1754,25 +1760,38 @@ const styles = StyleSheet.create({
     width: '85%',
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
-    borderWidth: 2,
+    borderWidth: 10,
   },
   countLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
   },
   countLabelZero: {
-    marginBottom: 2,
+    marginBottom: 5,
   },
-  barLabel: {
-    fontSize: 10,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 10,
+  legendContainerRight: {
+    justifyContent: 'flex-start',
+    paddingLeft: 10,
+    marginLeft: 5,
+    paddingTop: 0.25,
+  },
+  legendItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  legendCircle: {
+    width: 11,
+    height: 11,
+    borderRadius: 5,
+    marginRight: 5,
+  },
+  legendTextRight: {
+    fontSize: 11,
+    color: '#555',
     fontWeight: '500',
-    lineHeight: 13,
-    paddingHorizontal: 2,
   },
 
   sectionTitle: {

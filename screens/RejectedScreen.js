@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Modal,
   Alert,
   Linking,
+  BackHandler,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,71 +23,30 @@ import { REJECTED_BY_ME_URL, IDEA_DETAIL_URL, BASE_URL } from '../src/context/ap
 const normalizeImagePath = (path) => {
   if (!path) return null;
 
-  console.log('🖼️ Original image path:', path);
+  const trimmedPath = String(path).trim();
+  const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
+  const match = trimmedPath.match(doubledPattern);
 
-  let cleanPath = path;
-
-  // If already a complete URL
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    console.log('✅ Already complete URL (encoding spaces):', path);
-    
-    // Split URL into base and filename
-    const lastSlashIndex = cleanPath.lastIndexOf('/');
-    if (lastSlashIndex !== -1) {
-      const basePart = cleanPath.substring(0, lastSlashIndex + 1);
-      const filename = cleanPath.substring(lastSlashIndex + 1);
-      
-      // Encode only the filename part to preserve special characters
-      const encodedFilename = encodeURIComponent(filename)
-        .replace(/%2F/g, '/') // Don't encode forward slashes
-        .replace(/%3A/g, ':') // Don't encode colons
-        .replace(/%2E/g, '.'); // Don't encode dots
-      
-      cleanPath = basePart + encodedFilename;
-      console.log('✅ Encoded URL:', cleanPath);
-    }
-    
-    return cleanPath;
+  if (match) {
+    const correctUrl = match[2];
+    return correctUrl;
   }
 
-  // Clean the path
-  const basePattern = BASE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-  // Remove duplicate BASE_URL if present
-  const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
-  if (occurrences > 1) {
-    const lastIndex = cleanPath.lastIndexOf(BASE_URL);
-    cleanPath = BASE_URL + cleanPath.substring(lastIndex + BASE_URL.length);
+  if (trimmedPath.match(/^https?:\/\//)) {
+    return trimmedPath;
   }
 
-  // Ensure proper URL format
-  const baseUrl = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
-  const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-  
-  // Encode the filename part
-  const lastSlashIndex = finalPath.lastIndexOf('/');
-  if (lastSlashIndex !== -1) {
-    const pathPart = finalPath.substring(0, lastSlashIndex + 1);
-    const filename = finalPath.substring(lastSlashIndex + 1);
-    const encodedFilename = encodeURIComponent(filename)
-      .replace(/%2F/g, '/')
-      .replace(/%2E/g, '.');
-    
-    const finalUrl = `${baseUrl}${pathPart}${encodedFilename}`;
-    console.log('✅ Normalized and Encoded URL:', finalUrl);
-    return finalUrl;
+  if (!BASE_URL) {
+    return trimmedPath;
   }
 
-  const finalUrl = `${baseUrl}${finalPath}`;
-  console.log('✅ Normalized URL:', finalUrl);
-  return finalUrl;
+  const formattedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
+  return `${BASE_URL}${formattedPath}`;
 };
 
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
-  const altUrl = url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
-  console.log('🔄 Alternate URL:', altUrl);
-  return altUrl;
+  return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
 };
 
 const formatDate = (dateString) => {
@@ -108,60 +68,6 @@ const formatDateTime = (dateString) => {
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
-
-// Image Component with Fallback
-function ImageWithFallback({ uri, style, onPress }) {
-  const [imageUri, setImageUri] = useState(uri);
-  const [hasError, setHasError] = useState(false);
-  const [retryAttempted, setRetryAttempted] = useState(false);
-
-  useEffect(() => {
-    setImageUri(uri);
-    setHasError(false);
-    setRetryAttempted(false);
-  }, [uri]);
-
-  const handleError = (error) => {
-    console.log('❌ Image load error for:', imageUri);
-
-    if (!retryAttempted) {
-      // Try alternate URL
-      const altUrl = getAlternateImageUrl(imageUri);
-      if (altUrl && altUrl !== imageUri) {
-        console.log('🔄 Retrying with alternate URL:', altUrl);
-        setImageUri(altUrl);
-        setRetryAttempted(true);
-        return;
-      }
-    }
-
-    console.log('❌ No alternate URL available, showing error state');
-    setHasError(true);
-  };
-
-  if (hasError) {
-    return (
-      <View style={styles.imageErrorContainer}>
-        <Ionicons name="image-outline" size={24} color="#999" />
-        <Text style={styles.imageErrorText}>Image unavailable</Text>
-      </View>
-    );
-  }
-
-  return (
-    <TouchableOpacity onPress={onPress} disabled={!onPress}>
-      <Image
-        source={{ uri: imageUri }}
-        style={style}
-        contentFit="cover"
-        cachePolicy="none"
-        placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
-        transition={1000}
-        onError={handleError}
-      />
-    </TouchableOpacity>
-  );
-}
 
 function TimelineItem({ status, date, description, isLast, isFirst }) {
   const getCircleColor = (status) => {
@@ -213,10 +119,9 @@ const getStatusColor = (status) => {
   if (s === "draft") return "#2196F3";
   if (s === "published") return "#4CAF50";
   if (s === "pending" || s.includes("pending")) return "#FF9800";
-  if (s === "closed") return "#00ACC1";
-  if (s.includes("approved by be team") || s.includes("ready for implementation")) return "#4CAF50";
+  if (s === "approved" || s === "closed") return "#00ACC1";
   if (s === "rejected") return "#F44336";
-  if (s === "hold") return "#FFC107";
+  if (s === "hold" || s.includes("hold")) return "#FFC107";
   return "#9E9E9E";
 };
 
@@ -227,6 +132,19 @@ const shouldShowImplementationDetails = (ideaDetail) => {
   }
   const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
   return type === "implementation" || type === "implement";
+};
+
+const parseRemarks = (remarkData) => {
+  if (!remarkData) return [];
+  if (Array.isArray(remarkData)) return remarkData;
+  if (typeof remarkData === "object") {
+    const keys = Object.keys(remarkData);
+    if (keys.length > 0 && keys.every(k => !isNaN(k))) {
+      return Object.values(remarkData);
+    }
+    return [remarkData];
+  }
+  return [];
 };
 
 const RejectedByMeScreen = () => {
@@ -252,22 +170,41 @@ const RejectedByMeScreen = () => {
   const [imageRetryUrl, setImageRetryUrl] = useState(null);
   const [imageLoadError, setImageLoadError] = useState({});
 
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (showImage) {
+        setShowImage(false);
+        setCurrentImageUrl(null);
+        return true;
+      }
+      if (showTimelineModal) {
+        setShowTimelineModal(false);
+        return true;
+      }
+      if (selectedIdea) {
+        closeModal();
+        return true;
+      }
+      return false;
+    });
+
+    return () => backHandler.remove();
+  }, [selectedIdea, showTimelineModal, showImage]);
+
+  const handleImageError = (error) => {
+    if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
+      setCurrentImageUrl(imageRetryUrl);
+      setImageRetryUrl(null);
+    } else {
+      Alert.alert('Error', 'Failed to load image');
+    }
+  };
+
   const fetchRejectedIdeas = async () => {
     setLoading(true);
     try {
-      const storedData = await AsyncStorage.getItem("userData");
-      if (!storedData) {
-        Alert.alert("Error", "User data not found. Please login again.");
-        setLoading(false);
-        return;
-      }
-
-      const parsed = JSON.parse(storedData);
-      const token = parsed.token;
-      const authHeaders = {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
+      const token = await AsyncStorage.getItem("token");
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
       let allIdeas = [];
       let currentPage = 1;
@@ -275,38 +212,32 @@ const RejectedByMeScreen = () => {
       let apiTotalItems = 0;
 
       while (hasMorePages) {
-        try {
-          const baseUrl = REJECTED_BY_ME_URL.split('?')[0];
-          const url = `${baseUrl}?sortOrder=desc&page=${currentPage}&pageSize=10`;
+        const baseUrl = REJECTED_BY_ME_URL.split('?')[0];
+        const url = `${baseUrl}?page=${currentPage}&pageSize=10`;
 
-          const response = await axios.get(url, {
-            headers: authHeaders,
-            timeout: 15000
-          });
+        const response = await axios.get(url, { headers: authHeaders });
 
-          if (response.data && response.data.data) {
-            const { items, totalPages, totalItems, hasNextPage } = response.data.data;
+        if (response.data && response.data.data && Array.isArray(response.data.data.items)) {
+          const { items, totalPages, totalItems, hasNextPage } = response.data.data;
 
-            if (currentPage === 1 && totalItems !== undefined) {
-              apiTotalItems = totalItems;
-            }
-
-            if (items && Array.isArray(items) && items.length > 0) {
-              allIdeas = [...allIdeas, ...items];
-            }
-
-            if (hasNextPage === false || items.length === 0 || (totalPages && currentPage >= totalPages)) {
-              hasMorePages = false;
-            }
-          } else {
-            hasMorePages = false;
+          if (currentPage === 1 && totalItems !== undefined) {
+            apiTotalItems = totalItems;
           }
 
-          currentPage++;
-          if (currentPage > 100) {
+          if (items.length > 0) {
+            allIdeas = [...allIdeas, ...items];
+          }
+
+          if (hasNextPage === false || items.length === 0 || (totalPages && currentPage >= totalPages)) {
             hasMorePages = false;
           }
-        } catch (pageError) {
+        } else {
+          hasMorePages = false;
+        }
+
+        currentPage++;
+
+        if (currentPage > 100) {
           hasMorePages = false;
         }
       }
@@ -316,7 +247,8 @@ const RejectedByMeScreen = () => {
       setTotalItems(apiTotalItems || allIdeas.length);
 
     } catch (error) {
-      Alert.alert("Error", "Failed to load rejected ideas. Please check your connection.");
+      console.error("Error fetching rejected ideas:", error);
+      Alert.alert("Error", "Failed to load rejected ideas.");
       setIdeas([]);
       setAllIdeasOriginal([]);
       setTotalItems(0);
@@ -344,75 +276,73 @@ const RejectedByMeScreen = () => {
 
   const fetchIdeaDetail = async (ideaId) => {
     if (!ideaId) {
-      Alert.alert("Error", "Idea ID is missing");
+      Alert.alert("Error", "Invalid idea ID");
       return;
     }
-
     try {
       setLoadingDetail(true);
+      const token = await AsyncStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const storedData = await AsyncStorage.getItem("userData");
-      if (!storedData) {
-        Alert.alert("Error", "Session expired. Please login again.");
-        return;
+      let response;
+      try {
+        response = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
+      } catch (err1) {
+        try {
+          response = await axios.get(`${IDEA_DETAIL_URL}?ideaId=${encodeURIComponent(ideaId)}`, { headers });
+        } catch (err2) {
+          response = await axios.get(`${IDEA_DETAIL_URL}?id=${encodeURIComponent(ideaId)}`, { headers });
+        }
       }
 
-      const parsed = JSON.parse(storedData);
-      const token = parsed.token;
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      const apiUrl = `${IDEA_DETAIL_URL}/${ideaId}`;
-
-      const response = await axios.get(apiUrl, { headers, timeout: 15000 });
-
-      if (response?.data) {
-        const detail = response.data.success ? response.data.data : response.data;
-
-        const beforeImagePath = detail.beforeImplementationImagePath || detail.imagePath || detail.beforeImplementationImage;
-        const normalizedBeforeImagePath = normalizeImagePath(beforeImagePath);
-
-        const afterImagePath = detail.afterImplementationImagePath || detail.implementationCycle?.afterImplementationImagePath;
-        const normalizedAfterImagePath = normalizeImagePath(afterImagePath);
+      if (response?.data?.success && response?.data?.data) {
+        const detail = response.data.data;
 
         const normalizedDetail = {
           ...detail,
-          beforeImplementationImagePath: normalizedBeforeImagePath,
-          imagePath: normalizedBeforeImagePath,
-          afterImplementationImagePath: normalizedAfterImagePath,
+          beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          imagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          afterImplementationImagePath: normalizeImagePath(detail.afterImplementationImagePath),
           implementationCycle: detail.implementationCycle ? {
             ...detail.implementationCycle,
             beforeImplementationImagePath: normalizeImagePath(detail.implementationCycle.beforeImplementationImagePath),
-            afterImplementationImagePath: normalizedAfterImagePath
+            afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
           } : null
         };
 
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
-        
+
+        if (shouldShowImplementationDetails(normalizedDetail)) {
+          setShowImplementationDetails(true);
+        }
+      } else if (response?.data) {
+        const detail = response.data;
+
+        const normalizedDetail = {
+          ...detail,
+          beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          imagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
+          afterImplementationImagePath: normalizeImagePath(detail.afterImplementationImagePath),
+          implementationCycle: detail.implementationCycle ? {
+            ...detail.implementationCycle,
+            beforeImplementationImagePath: normalizeImagePath(detail.implementationCycle.beforeImplementationImagePath),
+            afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
+          } : null
+        };
+
+        setIdeaDetail(normalizedDetail);
+        setSelectedIdea(normalizedDetail);
+
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
       } else {
-        Alert.alert("Error", "Idea details not found or invalid format.");
+        Alert.alert("Error", "Idea details not found.");
       }
     } catch (error) {
       console.error("Error fetching idea details:", error);
-      console.error("Error details:", error.message);
-      
-      let errorMessage = "Failed to fetch idea details.";
-      if (error.response) {
-        if (error.response.status === 404) {
-          errorMessage = "Idea not found.";
-        } else if (error.response.status === 401) {
-          errorMessage = "Session expired. Please login again.";
-        } else if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        }
-      }
-      Alert.alert("Error", errorMessage);
+      Alert.alert("Error", `Failed to fetch idea details. ${error.response?.status === 404 ? 'Idea not found.' : 'Please try again.'}`);
     } finally {
       setLoadingDetail(false);
     }
@@ -449,6 +379,7 @@ const RejectedByMeScreen = () => {
       setTotalItems(filteredIdeas.length);
       setShowFilters(false);
     } catch (error) {
+      console.error("Filter error:", error);
     } finally {
       setLoading(false);
     }
@@ -459,19 +390,6 @@ const RejectedByMeScreen = () => {
     setToDate(null);
     setIdeas(allIdeasOriginal);
     setTotalItems(allIdeasOriginal.length);
-  };
-
-  const parseRemarks = (remarkData) => {
-    if (!remarkData) return [];
-    if (Array.isArray(remarkData)) return remarkData;
-    if (typeof remarkData === "object") {
-      const keys = Object.keys(remarkData);
-      if (keys.length > 0 && keys.every(k => !isNaN(k))) {
-        return Object.values(remarkData);
-      }
-      return [remarkData];
-    }
-    return [];
   };
 
   const openImagePreview = (imageUrl) => {
@@ -501,15 +419,6 @@ const RejectedByMeScreen = () => {
     setShowImage(true);
   };
 
-  const handleImageError = (error) => {
-    if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
-      setCurrentImageUrl(imageRetryUrl);
-      setImageRetryUrl(null);
-    } else {
-      Alert.alert('Error', 'Failed to load image');
-    }
-  };
-
   const closeModal = () => {
     setSelectedIdea(null);
     setIdeaDetail(null);
@@ -519,53 +428,49 @@ const RejectedByMeScreen = () => {
     setImageLoadError({});
   };
 
-  const renderIdeaCard = ({ item }) => {
-    // Get the correct ID - try multiple possible fields
-    const ideaId = item.ideaId || item.id || item.ideaNumber;
-
-    return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        style={styles.cardContainer}
-        onPress={() => {
-          if (ideaId) {
-            fetchIdeaDetail(ideaId);
-          } else {
-            Alert.alert("Error", "Idea ID not found");
-          }
-        }}
-      >
-        <View style={styles.cardHeader}>
-          <Text style={styles.ideaNumber} numberOfLines={2}>{item.itemNumber || item.ideaNumber || "N/A"}</Text>
-          <View style={styles.typeTag}>
-            <Text style={styles.typeText}>{item.type || "N/A"}</Text>
+  const renderIdeaCard = ({ item }) => (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      style={styles.cardContainer}
+      onPress={() => {
+        const ideaId = item?.id ?? item?.ideaId;
+        if (!ideaId) {
+          Alert.alert("Error", "Idea ID not found");
+          return;
+        }
+        fetchIdeaDetail(ideaId);
+      }}
+    >
+      <View style={styles.cardHeader}>
+        <Text style={styles.ideaNumber} numberOfLines={2}>{item.itemNumber || item.ideaNumber || "N/A"}</Text>
+        <View style={styles.typeTag}>
+          <Text style={styles.typeText}>{item.type || "N/A"}</Text>
+        </View>
+      </View>
+      <View style={styles.cardContent}>
+        <View style={styles.rowDetail}>
+          <Text style={styles.label}>Description:</Text>
+          <Text style={styles.value} numberOfLines={2}>{item.description || "N/A"}</Text>
+        </View>
+        <View style={styles.rowDetail}>
+          <Text style={styles.label}>Owner:</Text>
+          <Text style={styles.value}>{item.ownerName || "N/A"}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Created:</Text>
+          <Text style={styles.value}>{formatDate(item.creationDate)}</Text>
+        </View>
+        <View style={styles.rowDetail}>
+          <Text style={styles.label}>Status:</Text>
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+            <Text style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]} numberOfLines={2}>
+              {item.status || "N/A"}
+            </Text>
           </View>
         </View>
-        <View style={styles.cardContent}>
-          <View style={styles.rowDetail}>
-            <Text style={styles.label}>Description:</Text>
-            <Text style={styles.value} numberOfLines={2}>{item.description || "N/A"}</Text>
-          </View>
-          <View style={styles.rowDetail}>
-            <Text style={styles.label}>Owner:</Text>
-            <Text style={styles.value}>{item.ownerName || "N/A"}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Created:</Text>
-            <Text style={styles.value}>{formatDate(item.creationDate)}</Text>
-          </View>
-          <View style={styles.rowDetail}>
-            <Text style={styles.label}>Status:</Text>
-            <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <Text style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]} numberOfLines={2}>
-                {item.status || "N/A"}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -601,7 +506,15 @@ const RejectedByMeScreen = () => {
               value={fromDate || new Date()}
               mode="date"
               display="default"
-              onChange={(e, date) => { setShowFromPicker(false); if (date) { setFromDate(date); if (toDate && date > toDate) { setToDate(null) } } }}
+              onChange={(e, date) => {
+                setShowFromPicker(false);
+                if (date) {
+                  setFromDate(date);
+                  if (toDate && date > toDate) {
+                    setToDate(null)
+                  }
+                }
+              }}
               maximumDate={toDate || new Date()}
             />
           )}
@@ -613,7 +526,12 @@ const RejectedByMeScreen = () => {
               value={toDate || (fromDate || new Date())}
               mode="date"
               display="default"
-              onChange={(e, date) => { setShowToPicker(false); if (date) { setToDate(date) } }}
+              onChange={(e, date) => {
+                setShowToPicker(false);
+                if (date) {
+                  setToDate(date)
+                }
+              }}
               minimumDate={fromDate || undefined}
               maximumDate={new Date()}
             />
@@ -638,7 +556,7 @@ const RejectedByMeScreen = () => {
           ) : (
             <>
               {filteredIdeas.map((idea, index) => (
-                <View key={`idea-${idea.ideaId || idea.id || index}`}>
+                <View key={index}>
                   {renderIdeaCard({ item: idea })}
                 </View>
               ))}
@@ -653,7 +571,6 @@ const RejectedByMeScreen = () => {
       {loadingDetail && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#2c5aa0" />
-          <Text style={styles.loadingText}>Loading idea details...</Text>
         </View>
       )}
 
@@ -675,9 +592,17 @@ const RejectedByMeScreen = () => {
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             {selectedIdea && ideaDetail && (
               <>
-                <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} activeOpacity={0.7}>
+                <TouchableOpacity
+                  style={styles.collapsibleHeader}
+                  onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
-                  <Ionicons name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
+                  <Ionicons
+                    name={employeeInfoExpanded ? "chevron-up" : "chevron-down"}
+                    size={24}
+                    color="#2c5aa0"
+                  />
                 </TouchableOpacity>
 
                 {employeeInfoExpanded && (
@@ -721,9 +646,17 @@ const RejectedByMeScreen = () => {
                   </View>
                 )}
 
-                <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} activeOpacity={0.7}>
+                <TouchableOpacity
+                  style={styles.collapsibleHeader}
+                  onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
-                  <Ionicons name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
+                  <Ionicons
+                    name={ideaInfoExpanded ? "chevron-up" : "chevron-down"}
+                    size={24}
+                    color="#2c5aa0"
+                  />
                 </TouchableOpacity>
 
                 {ideaInfoExpanded && (
@@ -745,25 +678,57 @@ const RejectedByMeScreen = () => {
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Planned Completion:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.plannedImplementationDuration ? formatDate(ideaDetail.plannedImplementationDuration) : "N/A"}</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.plannedImplementationDuration
+                        ? formatDate(ideaDetail.plannedImplementationDuration)
+                        : "N/A"}</Text>
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
                       <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                        {ideaDetail.beforeImplementationImagePath ? (
-                          ideaDetail.beforeImplementationImagePath.toLowerCase().includes('.pdf') ? (
-                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath)}>
+                        {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
+                          ideaDetail.beforeImplementationImagePath?.toLowerCase().includes('.pdf') ||
+                            ideaDetail.imagePath?.toLowerCase().includes('.pdf') ? (
+                            <TouchableOpacity
+                              onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                            >
                               <View style={styles.pdfThumbnailContainer}>
                                 <Ionicons name="document-text" size={30} color="#FF5722" />
                                 <Text style={styles.pdfThumbnailText}>PDF</Text>
                               </View>
                             </TouchableOpacity>
+                          ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
+                            <TouchableOpacity
+                              style={styles.imagePreviewContainer}
+                              onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
+                            >
+                              <Image
+                                source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }}
+                                style={styles.thumbnailSmall}
+                                contentFit="cover"
+                                cachePolicy="none"
+                                placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                                transition={1000}
+                                onError={(e) => {
+                                  const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
+                                  if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+                                    setIdeaDetail(prev => ({
+                                      ...prev,
+                                      beforeImplementationImagePath: altUrl
+                                    }));
+                                  } else {
+                                    setImageLoadError(prev => ({
+                                      ...prev,
+                                      [`before_${ideaDetail.id}`]: true
+                                    }));
+                                  }
+                                }}
+                              />
+                            </TouchableOpacity>
                           ) : (
-                            <ImageWithFallback
-                              uri={ideaDetail.beforeImplementationImagePath}
-                              style={styles.thumbnailSmall}
-                              onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath)}
-                            />
+                            <View style={styles.imageErrorContainer}>
+                              <Ionicons name="image-outline" size={24} color="#999" />
+                              <Text style={styles.imageErrorText}>Image unavailable</Text>
+                            </View>
                           )
                         ) : (
                           <Text style={styles.valueDetail}>N/A</Text>
@@ -806,20 +771,32 @@ const RejectedByMeScreen = () => {
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>BE Team Support Needed:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}</Text>
+                      <Text style={styles.valueDetail}>
+                        {ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}
+                      </Text>
                     </View>
                     <View style={styles.rowDetail}>
                       <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}</Text>
+                      <Text style={styles.valueDetail}>
+                        {ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}
+                      </Text>
                     </View>
                   </View>
                 )}
 
                 {shouldShowImplementationDetails(ideaDetail) && (
                   <>
-                    <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setShowImplementationDetails(!showImplementationDetails)} activeOpacity={0.7}>
+                    <TouchableOpacity
+                      style={styles.collapsibleHeader}
+                      onPress={() => setShowImplementationDetails(!showImplementationDetails)}
+                      activeOpacity={0.7}
+                    >
                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
-                      <Ionicons name={showImplementationDetails ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
+                      <Ionicons
+                        name={showImplementationDetails ? "chevron-up" : "chevron-down"}
+                        size={24}
+                        color="#2c5aa0"
+                      />
                     </TouchableOpacity>
 
                     {showImplementationDetails && (
@@ -833,13 +810,19 @@ const RejectedByMeScreen = () => {
                         <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Implementation Details:</Text>
                           <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.implementation || ideaDetail.implementationDetail || ideaDetail.implementation || "Not provided"}
+                            {ideaDetail.implementationCycle?.implementation ||
+                              ideaDetail.implementationDetail ||
+                              ideaDetail.implementation ||
+                              "Not provided"}
                           </Text>
                         </View>
                         <View style={styles.rowDetailWithBorder}>
                           <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
                           <Text style={styles.valueDetail}>
-                            {ideaDetail.implementationCycle?.outcome || ideaDetail.implementationOutcome || ideaDetail.outcome || "Not provided"}
+                            {ideaDetail.implementationCycle?.outcome ||
+                              ideaDetail.implementationOutcome ||
+                              ideaDetail.outcome ||
+                              "Not provided"}
                           </Text>
                         </View>
                         {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
@@ -851,45 +834,102 @@ const RejectedByMeScreen = () => {
                           </View>
                         )}
 
-                        {ideaDetail.implementationCycle?.beforeImplementationImagePath && (
-                          <View style={styles.rowDetailWithBorder}>
-                            <Text style={styles.labelDetail}>Before Implementation:</Text>
-                            {ideaDetail.implementationCycle.beforeImplementationImagePath.toLowerCase().includes('.pdf') ? (
-                              <TouchableOpacity onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}>
-                                <View style={styles.pdfThumbnailContainer}>
-                                  <Ionicons name="document-text" size={30} color="#FF5722" />
-                                  <Text style={styles.pdfThumbnailText}>PDF</Text>
-                                </View>
-                              </TouchableOpacity>
-                            ) : (
-                              <ImageWithFallback
-                                uri={ideaDetail.implementationCycle.beforeImplementationImagePath}
-                                style={styles.thumbnailSmall}
-                                onPress={() => openImagePreview(ideaDetail.implementationCycle.beforeImplementationImagePath)}
-                              />
-                            )}
-                          </View>
-                        )}
+                        {/* Before Implementation with PDF Support */}
+                        {(ideaDetail.implementationCycle?.beforeImplementationImagePath ||
+                          ideaDetail.beforeImplementationImagePath ||
+                          ideaDetail.imagePath) && (
+                            <View style={styles.rowDetailWithBorder}>
+                              <Text style={styles.labelDetail}>Before Implementation:</Text>
+                              {(() => {
+                                const imagePath = ideaDetail.implementationCycle?.beforeImplementationImagePath ||
+                                  ideaDetail.beforeImplementationImagePath ||
+                                  ideaDetail.imagePath;
+                                return imagePath.toLowerCase().includes('.pdf') ? (
+                                  <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                    <View style={styles.pdfThumbnailContainer}>
+                                      <Ionicons name="document-text" size={30} color="#FF5722" />
+                                      <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
+                                  <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                    <Image
+                                      source={{ uri: imagePath }}
+                                      style={styles.thumbnailSmall}
+                                      contentFit="cover"
+                                      cachePolicy="none"
+                                      placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
+                                      transition={1000}
+                                      onError={(e) => {
+                                        const altUrl = getAlternateImageUrl(imagePath);
+                                        if (altUrl && imagePath !== altUrl) {
+                                          setIdeaDetail(prev => ({
+                                            ...prev,
+                                            beforeImplementationImagePath: altUrl
+                                          }));
+                                        } else {
+                                          setImageLoadError(prev => ({
+                                            ...prev,
+                                            [`before_${ideaDetail.id}`]: true
+                                          }));
+                                        }
+                                      }}
+                                    />
+                                  </TouchableOpacity>
+                                ) : (
+                                  <View style={styles.imageErrorContainer}>
+                                    <Ionicons name="image-outline" size={24} color="#999" />
+                                    <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                  </View>
+                                );
+                              })()}
+                            </View>
+                          )}
 
-                        {ideaDetail.afterImplementationImagePath && (
-                          <View style={styles.rowDetailWithBorder}>
-                            <Text style={styles.labelDetail}>After Implementation:</Text>
-                            {ideaDetail.afterImplementationImagePath.toLowerCase().includes('.pdf') ? (
-                              <TouchableOpacity onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}>
-                                <View style={styles.pdfThumbnailContainer}>
-                                  <Ionicons name="document-text" size={30} color="#FF5722" />
-                                  <Text style={styles.pdfThumbnailText}>PDF</Text>
-                                </View>
-                              </TouchableOpacity>
-                            ) : (
-                              <ImageWithFallback
-                                uri={ideaDetail.afterImplementationImagePath}
-                                style={styles.thumbnailSmall}
-                                onPress={() => openImagePreview(ideaDetail.afterImplementationImagePath)}
-                              />
-                            )}
-                          </View>
-                        )}
+                        {/* After Implementation with PDF Support */}
+                        {(ideaDetail.implementationCycle?.afterImplementationImagePath ||
+                          ideaDetail.afterImplementationImagePath) && (
+                            <View style={styles.rowDetailWithBorder}>
+                              <Text style={styles.labelDetail}>After Implementation:</Text>
+                              {(() => {
+                                const imagePath = ideaDetail.implementationCycle?.afterImplementationImagePath ||
+                                  ideaDetail.afterImplementationImagePath;
+                                return imagePath.toLowerCase().includes('.pdf') ? (
+                                  <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                    <View style={styles.pdfThumbnailContainer}>
+                                      <Ionicons name="document-text" size={30} color="#FF5722" />
+                                      <Text style={styles.pdfThumbnailText}>PDF</Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                ) : !imageLoadError[`after_${ideaDetail.id}`] ? (
+                                  <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
+                                    <Image
+                                      source={{ uri: imagePath }}
+                                      style={styles.thumbnailSmall}
+                                      contentFit="cover"
+                                      cachePolicy="none"
+                                      onError={() => {
+                                        const altUrl = getAlternateImageUrl(imagePath);
+                                        if (altUrl && imagePath !== altUrl) {
+                                          setIdeaDetail(prev => ({
+                                            ...prev,
+                                            afterImplementationImagePath: altUrl
+                                          }));
+                                        } else {
+                                          setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
+                                        }
+                                      }}
+                                    />
+                                  </TouchableOpacity>
+                                ) : (
+                                  <View style={styles.imageErrorContainer}>
+                                    <Ionicons name="image-outline" size={24} color="#999" />
+                                    <Text style={styles.imageErrorText}>Image unavailable</Text>
+                                  </View>
+                                );
+                              })()}
+                            </View>
+                          )}
                       </View>
                     )}
                   </>
@@ -955,11 +995,20 @@ const RejectedByMeScreen = () => {
 
       <Modal visible={showImage} transparent animationType="fade">
         <View style={styles.imageModal}>
-          <TouchableOpacity style={styles.closeButtonImage} onPress={() => { setShowImage(false); setCurrentImageUrl(null); setImageRetryUrl(null); }}>
+          <TouchableOpacity
+            style={styles.closeButtonImage}
+            onPress={() => { setShowImage(false); setCurrentImageUrl(null); setImageRetryUrl(null); }}
+          >
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" onError={handleImageError} />
+            <Image
+              source={{ uri: currentImageUrl }}
+              style={styles.fullImage}
+              contentFit="contain"
+              cachePolicy="none"
+              onError={handleImageError}
+            />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
           )}
@@ -1004,8 +1053,7 @@ const styles = StyleSheet.create({
   totalContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
   totalText: { fontSize: 16, fontWeight: 'bold', color: '#2c5aa0' },
   noDataText: { textAlign: "center", marginTop: 20, color: "#777", fontSize: 16 },
-  loadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(255,255,255,0.8)" },
-  loadingText: { marginTop: 10, fontSize: 14, color: '#666', fontWeight: '500' },
+  loadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(255,255,255,0.6)" },
   fullModal: { flex: 1, backgroundColor: "#f5f5f5" },
   modalHeader: { backgroundColor: '#fff', paddingTop: 24, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', elevation: 4 },
   modalHeaderContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
@@ -1025,9 +1073,6 @@ const styles = StyleSheet.create({
   pdfThumbnailText: { fontSize: 10, color: '#FF5722', fontWeight: 'bold', marginTop: 2 },
   imageErrorContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' },
   imageErrorText: { fontSize: 9, color: '#999', marginTop: 2, textAlign: 'center' },
-  implementationImageSection: { marginTop: 12, marginBottom: 12 },
-  imageLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
-  implementationImage: { width: '100%', height: 200, borderRadius: 8, resizeMode: 'cover', borderWidth: 1, borderColor: '#ddd' },
   remarkCard: { backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
   remarkTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c5aa0', marginBottom: 6 },
   remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
