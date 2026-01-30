@@ -1356,17 +1356,17 @@ const DashboardScreen = () => {
                         {ideaDetail.ideaStatus || ideaDetail.status || "N/A"}
                       </Text>
                     </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Idea Description:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || ideaDetail.description || "N/A"}</Text>
+                    <View style={styles.rowDetailVertical}>
+                      <Text style={styles.labelDetailVertical}>Idea Description:</Text>
+                      <Text style={styles.valueDetailVertical}>{ideaDetail.ideaDescription || ideaDetail.description || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Proposed Solution:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text>
+                    <View style={styles.rowDetailVertical}>
+                      <Text style={styles.labelDetailVertical}>Proposed Solution:</Text>
+                      <Text style={styles.valueDetailVertical}>{ideaDetail.proposedSolution || "N/A"}</Text>
                     </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
+                    <View style={styles.rowDetailVertical}>
+                      <Text style={styles.labelDetailVertical}>Process Improvement/Cost Benefit:</Text>
+                      <Text style={styles.valueDetailVertical}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Team Members:</Text>
@@ -1406,15 +1406,15 @@ const DashboardScreen = () => {
                             {ideaDetail.implementationCycle?.status || "N/A"}
                           </Text>
                         </View>
-                        <View style={styles.rowDetailWithBorder}>
-                          <Text style={styles.labelDetail}>Implementation Details:</Text>
-                          <Text style={styles.valueDetail}>
+                        <View style={styles.rowDetailVertical}>
+                          <Text style={styles.labelDetailVertical}>Implementation Details:</Text>
+                          <Text style={styles.valueDetailVertical}>
                             {ideaDetail.implementationCycle?.implementation || ideaDetail.implementationDetail || ideaDetail.implementation || "Not provided"}
                           </Text>
                         </View>
-                        <View style={styles.rowDetailWithBorder}>
-                          <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
-                          <Text style={styles.valueDetail}>
+                        <View style={styles.rowDetailVertical}>
+                          <Text style={styles.labelDetailVertical}>Outcome/Benefits:</Text>
+                          <Text style={styles.valueDetailVertical}>
                             {ideaDetail.implementationCycle?.outcome || ideaDetail.implementationOutcome || ideaDetail.outcome || "Not provided"}
                           </Text>
                         </View>
@@ -2031,8 +2031,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  labelDetail: { fontWeight: '600', color: '#555', width: '45%', fontSize: 14 },
-  valueDetail: { color: '#222', width: '50%', textAlign: 'right', fontSize: 14 },
+  labelDetail: { fontWeight: '600', color: '#444', width: '48%', fontSize: 15, lineHeight: 22 },
+  valueDetail: { color: '#222', width: '50%', textAlign: 'right', fontSize: 15, lineHeight: 22 },
   statusBadgeDetail: {
     color: '#fff',
     paddingHorizontal: 10,
@@ -2235,5 +2235,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
+  },
+  rowDetailVertical: {
+    flexDirection: "column",
+    paddingBottom: 12,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  labelDetailVertical: {
+    fontWeight: "600",
+    color: "#444",
+    fontSize: 15,
+    marginBottom: 8,
+    lineHeight: 22,
+  },
+  valueDetailVertical: {
+    color: "#222",
+    fontSize: 15,
+    lineHeight: 24,
+    textAlign: "left",
   },
 });
