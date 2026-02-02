@@ -1,11 +1,11 @@
-// import React, { useEffect, useState, useRef } from 'react';
-// import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, ActivityIndicator, TextInput, Vibration, Platform, Linking, Animated } from 'react-native';
+// import React, { useEffect, useState } from 'react';
+// import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, ActivityIndicator, TextInput, Vibration, Platform, Linking } from 'react-native';
 // import { Image } from 'expo-image';
 // import { useRoute, useNavigation } from '@react-navigation/native';
 // import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 // import axios from 'axios';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { MY_IDEAS_URL, IDEA_DETAIL_URL, DELETE_IDEA_URL, SUBMIT_URL, EDIT_IMPLEMENTATION_URL, BASE_URL } from '../src/context/api';
+// import { MY_IDEAS_URL, IDEA_DETAIL_URL, DELETE_IDEA_URL, SUBMIT_URL, EDIT_IMPLEMENTATION_URL } from '../src/context/api';
 // import { Ionicons, Feather } from '@expo/vector-icons';
 // import * as DocumentPicker from 'expo-document-picker';
 // import * as ImagePicker from 'expo-image-picker';
@@ -16,45 +16,28 @@
 // const normalizeImagePath = (path) => {
 //   if (!path) return null;
 
-//   const trimmedPath = String(path).trim();
+//   let cleanPath = path;
+//   const basePattern = 'https://ideabank-api-dev.abisaio.com';
 
-//   const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
-//   const match = trimmedPath.match(doubledPattern);
+//   const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
 
-//   if (match) {
-//     const correctUrl = match[2];
-//     return correctUrl;
+//   if (occurrences > 1) {
+//     const lastIndex = cleanPath.lastIndexOf(basePattern);
+//     cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
 //   }
 
-//   if (trimmedPath.match(/^https?:\/\//)) {
-//     return trimmedPath;
+//   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+//     return cleanPath;
 //   }
 
-//   if (!BASE_URL) {
-//     return trimmedPath;
-//   }
-
-//   const formattedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
-//   return `${BASE_URL}${formattedPath}`;
+//   const BASE_URL = 'https://ideabank-api-dev.abisaio.com';
+//   const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+//   return fullUrl;
 // };
+
 // const getAlternateImageUrl = (url) => {
 //   if (!url) return null;
-
-//   if (url.includes('ideabank-api-dev.abisaio.com')) {
-//     return url.replace(
-//       'ideabank-api-dev.abisaio.com',
-//       'ideabank-api.abisaio.com'
-//     );
-//   }
-
-//   if (url.includes('ideabank-api.abisaio.com')) {
-//     return url.replace(
-//       'ideabank-api.abisaio.com',
-//       'ideabank.abisaio.com'
-//     );
-//   }
-
-//   return url;
+//   return url.replace('ideabank-api-dev.abisaio.com', 'ideabank-dev.abisaio.com');
 // };
 
 // const formatDate = (dateString) => {
@@ -77,74 +60,16 @@
 //   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 // };
 
-// // Confetti Components
-// function ConfettiPiece({ delay, duration, color }) {
-//   const translateY = useRef(new Animated.Value(-50)).current;
-//   const translateX = useRef(new Animated.Value(Math.random() * 400 - 200)).current;
-//   const rotate = useRef(new Animated.Value(0)).current;
-
-//   useEffect(() => {
-//     Animated.parallel([
-//       Animated.timing(translateY, {
-//         toValue: 800,
-//         duration: duration,
-//         delay: delay,
-//         useNativeDriver: true,
-//       }),
-//       Animated.timing(rotate, {
-//         toValue: Math.random() > 0.5 ? 360 : -360,
-//         duration: duration,
-//         delay: delay,
-//         useNativeDriver: true,
-//       }),
-//     ]).start();
-//   }, []);
-
-//   return (
-//     <Animated.View
-//       style={[
-//         styles.confettiPiece,
-//         {
-//           backgroundColor: color,
-//           transform: [
-//             { translateY },
-//             { translateX },
-//             { rotate: rotate.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) },
-//           ],
-//         },
-//       ]}
-//     />
-//   );
-// }
-
-// function ConfettiEffect() {
-//   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
-//   const confettiCount = 50;
-
-//   return (
-//     <View style={styles.confettiContainer}>
-//       {Array.from({ length: confettiCount }).map((_, index) => (
-//         <ConfettiPiece
-//           key={index}
-//           delay={Math.random() * 200}
-//           duration={2000 + Math.random() * 1000}
-//           color={colors[Math.floor(Math.random() * colors.length)]}
-//         />
-//       ))}
-//     </View>
-//   );
-// }
-
-// function TimelineItem({ status, date, description, isLast, isFirst }) {
+// function TimelineItem({ status, date, description, isLast }) {
 //   const getCircleColor = (status) => {
-//     const s = status?.toLowerCase() || '';
-//     if (s.includes('created')) return "#2196F3";
-//     if (s.includes('edited')) return "#9C27B0";
-//     if (s.includes('approved')) return "#4CAF50";
-//     if (s.includes('pending')) return "#FF9800";
-//     if (s.includes('implementation')) return "#3F51B5";
-//     if (s.includes('rejected')) return "#F44336";
-//     if (s.includes('closed')) return "#FF3B30";
+//     if (!status) return "#9E9E9E";
+//     const s = status.toLowerCase();
+//     if (s.includes("created")) return "#2196F3";
+//     if (s.includes("edited")) return "#9C27B0";
+//     if (s.includes("approved")) return "#4CAF50";
+//     if (s.includes("implementation")) return "#3F51B5";
+//     if (s.includes("rejected")) return "#F44336";
+//     if (s.includes("pending")) return "#FF9800";
 //     return "#9E9E9E";
 //   };
 
@@ -156,14 +81,8 @@
 //       </View>
 //       <View style={styles.timelineContent}>
 //         <Text style={styles.timelineStatus}>{status}</Text>
-//         {description && (
-//           <Text style={styles.timelineDescription}>{description}</Text>
-//         )}
-//         {date && (
-//           <Text style={styles.timelineDate}>
-//             {formatDateTime(date)}
-//           </Text>
-//         )}
+//         {description && <Text style={styles.timelineDescription}>{description}</Text>}
+//         {date && <Text style={styles.timelineDate}>{formatDateTime(date)}</Text>}
 //       </View>
 //     </View>
 //   );
@@ -195,8 +114,8 @@
 // const isImplementationPhase = (status) => {
 //   if (!status) return false;
 //   const s = status.toLowerCase();
-//   return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation") || s.includes("approved") || s.includes("closed") || s.includes("implementation submitted")
-//     || s.includes("rm approval pending");
+//   return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation") || s.includes("approved") ||s.includes("implementation submitted")
+//     || s.includes("rm approval pending"); // <--- ADD THIS LINE
 // };
 
 // const parseRemarks = (remarkData) => {
@@ -233,7 +152,6 @@
 //   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
 //   const [imageRetryUrl, setImageRetryUrl] = useState(null);
 //   const [imageLoadError, setImageLoadError] = useState({});
-//   const [showClosedPopup, setShowClosedPopup] = useState(false);
 //   const navigation = useNavigation();
 
 //   const fetchIdeaDetail = async (ideaId) => {
@@ -243,11 +161,6 @@
 //       const token = await AsyncStorage.getItem('token');
 //       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 //       const { data: response } = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
-
-
-
-//       if (response?.data) {
-//       }
 
 //       if (response?.success && response?.data) {
 //         const detail = response.data;
@@ -277,14 +190,6 @@
 //         if (shouldShowImplementationDetails(normalizedDetail)) {
 //           setShowImplementationDetails(true);
 //         }
-
-//         const status = (detail.ideaStatus || '').toLowerCase();
-//         if (status === 'closed') {
-//           setShowClosedPopup(true);
-//           setTimeout(() => {
-//             setShowClosedPopup(false);
-//           }, 3000);
-//         }
 //       } else {
 //         Alert.alert("Error", response?.message || "Idea details not found.");
 //       }
@@ -303,12 +208,10 @@
 //     setIdeaInfoExpanded(true);
 //     setShowImplementationDetails(false);
 //     setImageLoadError({});
-//     setShowClosedPopup(false);
 //   };
 
 //   const openImagePreview = (imageUrl) => {
 //     const finalUrl = normalizeImagePath(imageUrl);
-
 
 //     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
 //       Alert.alert(
@@ -335,7 +238,6 @@
 //   };
 
 //   const handleImageError = (error) => {
-
 //     if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
 //       setCurrentImageUrl(imageRetryUrl);
 //       setImageRetryUrl(null);
@@ -356,7 +258,7 @@
 //           {
 //             text: 'Copy URL for Backend Team',
 //             onPress: () => {
-//               Alert.alert('URL Logged', 'Check your development console for the failed URL');
+//               Alert.alert('URL Copied to Console', 'Check your development console for the URL');
 //             }
 //           },
 //           { text: 'Close' }
@@ -386,6 +288,7 @@
 //       closeModal();
 //     }
 //   };
+
 
 //   return (
 //     <ScrollView contentContainerStyle={styles.container}>
@@ -477,20 +380,6 @@
 //       {/* Idea Details Modal */}
 //       <Modal visible={!!selectedIdea && !showImplementationForm} animationType="slide">
 //         <View style={styles.fullModal}>
-//           {/* Confetti Effect */}
-//           {showClosedPopup && <ConfettiEffect />}
-
-//           {/* Closed Status Popup */}
-//           {showClosedPopup && (
-//             <View style={styles.closedPopupContainer}>
-//               <View style={styles.closedPopup}>
-//                 <Text style={styles.closedPopupEmoji}>🎉</Text>
-//                 <Text style={styles.closedPopupText}>Idea Closed Successfully!</Text>
-//                 <Text style={styles.closedPopupEmoji}>🎉</Text>
-//               </View>
-//             </View>
-//           )}
-
 //           <View style={styles.modalHeader}>
 //             <View style={styles.modalHeaderContent}>
 //               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
@@ -622,6 +511,7 @@
 //                               onError={(e) => {
 //                                 const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
 //                                 if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+
 //                                   setIdeaDetail(prev => ({
 //                                     ...prev,
 //                                     beforeImplementationImagePath: altUrl
@@ -693,7 +583,7 @@
 //                     <View style={styles.rowDetail}>
 //                       <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
 //                       <Text style={styles.valueDetail}>
-//                         {ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}
+//                         {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
 //                       </Text>
 //                     </View>
 //                   </View>
@@ -1011,12 +901,10 @@
 //       if (response.data && response.data.data && Array.isArray(response.data.data.ideas)) {
 //         const normalizedIdeas = response.data.data.ideas.map(idea => {
 //           const imagePath = idea.beforeImplementationImagePath || idea.imagePath || idea.beforeImplementationImage;
-//           const normalized = normalizeImagePath(imagePath);
-
 //           return {
 //             ...idea,
-//             beforeImplementationImagePath: normalized,
-//             imagePath: normalized,
+//             beforeImplementationImagePath: normalizeImagePath(imagePath),
+//             imagePath: normalizeImagePath(imagePath),
 //           };
 //         });
 //         setIdeas(normalizedIdeas);
@@ -1024,7 +912,6 @@
 //         setIdeas([]);
 //       }
 //     } catch (error) {
-//       console.error('❌ Error fetching ideas:', error);
 //       Alert.alert("Error", "Failed to load ideas from server.");
 //     }
 //   };
@@ -1211,7 +1098,7 @@
 //         setIsSubmitting(true);
 //         try {
 //           const token = await AsyncStorage.getItem('token');
-//           const url = `${EDIT_IMPLEMENTATION_URL}/${ideaDetail.id}`;
+//           const url = `https://ideabank-api-dev.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}`;
 //           const response = await axios.get(url, {
 //             headers: { Authorization: `Bearer ${token}` }
 //           });
@@ -1353,9 +1240,8 @@
 //           name: cleanName
 //         });
 //       }
-//       const url = isEditing
-//         ? `${EDIT_IMPLEMENTATION_URL}/${ideaDetail.id}`
-//         : SUBMIT_URL;
+
+//       const url = isEditing ? `https://ideabank-api-dev.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}` : SUBMIT_URL;
 
 //       const axiosConfig = {
 //         headers: {
@@ -1700,11 +1586,13 @@
 //         <View style={styles.fullModal}>
 //           <View style={styles.timelineModalHeader}>
 //             <Text style={styles.timelineModalTitle}>Progress Timeline</Text>
-//             <TouchableOpacity style={styles.closeButtonTimeline} onPress={() => setShowTimelineModal(false)}>
+//             <TouchableOpacity
+//               style={styles.closeButtonTimeline}
+//               onPress={() => setShowTimelineModal(false)}
+//             >
 //               <Ionicons name="close" size={20} color="#fff" />
 //             </TouchableOpacity>
 //           </View>
-
 //           <ScrollView contentContainerStyle={styles.modalScrollContent}>
 //             <View style={styles.timelineCardContainer}>
 //               <View style={styles.timelineContainer}>
@@ -1712,17 +1600,16 @@
 //                   ideaDetail.timeline.map((item, idx) => (
 //                     <TimelineItem
 //                       key={idx}
-//                       status={item.status || item.approvalStage || item.approvalstage || "N/A"}
+//                       status={item.status || item.approvalStage || "N/A"}
 //                       date={item.date || item.approvalDate}
 //                       description={item.description || item.comments}
 //                       isLast={idx === ideaDetail.timeline.length - 1}
-//                       isFirst={idx === 0}
 //                     />
 //                   ))
 //                 ) : (
-//                   <View style={styles.noTimelineContainer}>
-//                     <Ionicons name="time-outline" size={48} color="#ccc" />
-//                     <Text style={styles.noTimelineText}>No timeline data available</Text>
+//                   <View style={styles.noDataContainer}>
+//                     <Ionicons name="time-outline" size={40} color="#ccc" />
+//                     <Text style={styles.noDataText}>No timeline data available</Text>
 //                   </View>
 //                 )}
 //               </View>
@@ -1967,7 +1854,7 @@
 //     borderRadius: 12,
 //     fontSize: 11,
 //     fontWeight: '600',
-//     maxWidth: 170,
+//     maxWidth: 200,
 //     textAlign: 'center'
 //   },
 //   imagePreviewContainer: {
@@ -2364,7 +2251,6 @@
 //     paddingTop: 50,
 //     paddingBottom: 15
 //   },
-
 //   zoomControls: {
 //     flexDirection: 'row',
 //     alignItems: 'center',
@@ -2393,63 +2279,19 @@
 //     width: 350,
 //     height: 500
 //   },
-//   confettiContainer: {
-//     position: 'absolute',
-//     top: 0,
-//     left: 0,
-//     right: 0,
-//     bottom: 0,
-//     zIndex: 9999,
-//     pointerEvents: 'none',
-//   },
-//   confettiPiece: {
-//     position: 'absolute',
-//     width: 10,
-//     height: 10,
-//     top: -50,
-//   },
-//   closedPopupContainer: {
-//     position: 'absolute',
-//     top: 80,
-//     left: 20,
-//     right: 20,
-//     alignItems: 'center',
-//     zIndex: 10000
-//   },
-//   closedPopup: {
-//     backgroundColor: '#4CAF50',
-//     paddingHorizontal: 24,
-//     paddingVertical: 14,
-//     borderRadius: 12,
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     shadowColor: '#000',
-//     shadowOffset: { width: 0, height: 3 },
-//     shadowOpacity: 0.3,
-//     shadowRadius: 6,
-//     elevation: 6
-//   },
-//   closedPopupEmoji: {
-//     fontSize: 24,
-//     marginHorizontal: 6
-//   },
-//   closedPopupText: {
-//     fontSize: 16,
-//     fontWeight: 'bold',
-//     color: '#fff',
-//     textAlign: 'center'
-//   },
 // });
 
 
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, ActivityIndicator, TextInput, Vibration, Platform, Linking, Animated } from 'react-native';
+
+
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, ActivityIndicator, TextInput, Vibration, Platform, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MY_IDEAS_URL, IDEA_DETAIL_URL, DELETE_IDEA_URL, SUBMIT_URL, EDIT_IMPLEMENTATION_URL, BASE_URL } from '../src/context/api';
+import { MY_IDEAS_URL, IDEA_DETAIL_URL, DELETE_IDEA_URL, SUBMIT_URL, EDIT_IMPLEMENTATION_URL } from '../src/context/api';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -2460,45 +2302,28 @@ const Tab = createMaterialTopTabNavigator();
 const normalizeImagePath = (path) => {
   if (!path) return null;
 
-  const trimmedPath = String(path).trim();
+  let cleanPath = path;
+  const basePattern = 'https://ideabank-api.abisaio.com';
 
-  const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
-  const match = trimmedPath.match(doubledPattern);
+  const occurrences = (cleanPath.match(new RegExp(basePattern, 'g')) || []).length;
 
-  if (match) {
-    const correctUrl = match[2];
-    return correctUrl;
+  if (occurrences > 1) {
+    const lastIndex = cleanPath.lastIndexOf(basePattern);
+    cleanPath = basePattern + cleanPath.substring(lastIndex + basePattern.length);
   }
 
-  if (trimmedPath.match(/^https?:\/\//)) {
-    return trimmedPath;
+  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+    return cleanPath;
   }
 
-  if (!BASE_URL) {
-    return trimmedPath;
-  }
-
-  const formattedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
-  return `${BASE_URL}${formattedPath}`;
+  const BASE_URL = 'https://ideabank-api.abisaio.com';
+  const fullUrl = `${BASE_URL}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+  return fullUrl;
 };
+
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
-
-  if (url.includes('ideabank-api-dev.abisaio.com')) {
-    return url.replace(
-      'ideabank-api-dev.abisaio.com',
-      'ideabank-api.abisaio.com'
-    );
-  }
-
-  if (url.includes('ideabank-api.abisaio.com')) {
-    return url.replace(
-      'ideabank-api.abisaio.com',
-      'ideabank.abisaio.com'
-    );
-  }
-
-  return url;
+  return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
 };
 
 const formatDate = (dateString) => {
@@ -2521,74 +2346,16 @@ const formatDateTime = (dateString) => {
   return `${day} ${month} ${year}, ${hours}:${minutes}`;
 };
 
-// Confetti Components
-function ConfettiPiece({ delay, duration, color }) {
-  const translateY = useRef(new Animated.Value(-50)).current;
-  const translateX = useRef(new Animated.Value(Math.random() * 400 - 200)).current;
-  const rotate = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 800,
-        duration: duration,
-        delay: delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(rotate, {
-        toValue: Math.random() > 0.5 ? 360 : -360,
-        duration: duration,
-        delay: delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View
-      style={[
-        styles.confettiPiece,
-        {
-          backgroundColor: color,
-          transform: [
-            { translateY },
-            { translateX },
-            { rotate: rotate.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) },
-          ],
-        },
-      ]}
-    />
-  );
-}
-
-function ConfettiEffect() {
-  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
-  const confettiCount = 50;
-
-  return (
-    <View style={styles.confettiContainer}>
-      {Array.from({ length: confettiCount }).map((_, index) => (
-        <ConfettiPiece
-          key={index}
-          delay={Math.random() * 200}
-          duration={2000 + Math.random() * 1000}
-          color={colors[Math.floor(Math.random() * colors.length)]}
-        />
-      ))}
-    </View>
-  );
-}
-
-function TimelineItem({ status, date, description, isLast, isFirst }) {
+function TimelineItem({ status, date, description, isLast }) {
   const getCircleColor = (status) => {
-    const s = status?.toLowerCase() || '';
-    if (s.includes('created')) return "#2196F3";
-    if (s.includes('edited')) return "#9C27B0";
-    if (s.includes('approved')) return "#4CAF50";
-    if (s.includes('pending')) return "#FF9800";
-    if (s.includes('implementation')) return "#3F51B5";
-    if (s.includes('rejected')) return "#F44336";
-    if (s.includes('closed')) return "#FF3B30";
+    if (!status) return "#9E9E9E";
+    const s = status.toLowerCase();
+    if (s.includes("created")) return "#2196F3";
+    if (s.includes("edited")) return "#9C27B0";
+    if (s.includes("approved")) return "#4CAF50";
+    if (s.includes("implementation")) return "#3F51B5";
+    if (s.includes("rejected")) return "#F44336";
+    if (s.includes("pending")) return "#FF9800";
     return "#9E9E9E";
   };
 
@@ -2600,14 +2367,8 @@ function TimelineItem({ status, date, description, isLast, isFirst }) {
       </View>
       <View style={styles.timelineContent}>
         <Text style={styles.timelineStatus}>{status}</Text>
-        {description && (
-          <Text style={styles.timelineDescription}>{description}</Text>
-        )}
-        {date && (
-          <Text style={styles.timelineDate}>
-            {formatDateTime(date)}
-          </Text>
-        )}
+        {description && <Text style={styles.timelineDescription}>{description}</Text>}
+        {date && <Text style={styles.timelineDate}>{formatDateTime(date)}</Text>}
       </View>
     </View>
   );
@@ -2639,8 +2400,8 @@ const getStatusColor = (status) => {
 const isImplementationPhase = (status) => {
   if (!status) return false;
   const s = status.toLowerCase();
-  return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation") || s.includes("approved") || s.includes("closed") || s.includes("implementation submitted")
-    || s.includes("rm approval pending");
+  return s.includes("approved by be team") || s.includes("ready for implementation") || s.includes("implementation") || s.includes("approved") || s.includes("implementation submitted")
+    || s.includes("rm approval pending"); // <--- ADD THIS LINE
 };
 
 const parseRemarks = (remarkData) => {
@@ -2677,7 +2438,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
   const [imageRetryUrl, setImageRetryUrl] = useState(null);
   const [imageLoadError, setImageLoadError] = useState({});
-  const [showClosedPopup, setShowClosedPopup] = useState(false);
   const navigation = useNavigation();
 
   const fetchIdeaDetail = async (ideaId) => {
@@ -2687,11 +2447,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       const token = await AsyncStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const { data: response } = await axios.get(`${IDEA_DETAIL_URL}/${encodeURIComponent(ideaId)}`, { headers });
-
-
-
-      if (response?.data) {
-      }
 
       if (response?.success && response?.data) {
         const detail = response.data;
@@ -2721,14 +2476,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
         if (shouldShowImplementationDetails(normalizedDetail)) {
           setShowImplementationDetails(true);
         }
-
-        const status = (detail.ideaStatus || '').toLowerCase();
-        if (status === 'closed') {
-          setShowClosedPopup(true);
-          setTimeout(() => {
-            setShowClosedPopup(false);
-          }, 3000);
-        }
       } else {
         Alert.alert("Error", response?.message || "Idea details not found.");
       }
@@ -2747,12 +2494,10 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
     setIdeaInfoExpanded(true);
     setShowImplementationDetails(false);
     setImageLoadError({});
-    setShowClosedPopup(false);
   };
 
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
-
 
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
       Alert.alert(
@@ -2779,7 +2524,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
   };
 
   const handleImageError = (error) => {
-
     if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
       setCurrentImageUrl(imageRetryUrl);
       setImageRetryUrl(null);
@@ -2800,7 +2544,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
           {
             text: 'Copy URL for Backend Team',
             onPress: () => {
-              Alert.alert('URL Logged', 'Check your development console for the failed URL');
+              Alert.alert('URL Copied to Console', 'Check your development console for the URL');
             }
           },
           { text: 'Close' }
@@ -2830,6 +2574,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       closeModal();
     }
   };
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -2921,20 +2666,6 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
       {/* Idea Details Modal */}
       <Modal visible={!!selectedIdea && !showImplementationForm} animationType="slide">
         <View style={styles.fullModal}>
-          {/* Confetti Effect */}
-          {showClosedPopup && <ConfettiEffect />}
-
-          {/* Closed Status Popup */}
-          {showClosedPopup && (
-            <View style={styles.closedPopupContainer}>
-              <View style={styles.closedPopup}>
-                <Text style={styles.closedPopupEmoji}>🎉</Text>
-                <Text style={styles.closedPopupText}>Idea Closed Successfully!</Text>
-                <Text style={styles.closedPopupEmoji}>🎉</Text>
-              </View>
-            </View>
-          )}
-
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <Text style={styles.modalHeaderTitle}>Idea Details</Text>
@@ -3066,6 +2797,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                               onError={(e) => {
                                 const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
                                 if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
+
                                   setIdeaDetail(prev => ({
                                     ...prev,
                                     beforeImplementationImagePath: altUrl
@@ -3102,22 +2834,18 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                         {ideaDetail.ideaStatus || "N/A"}
                       </Text>
                     </View>
-
-                    <View style={styles.rowDetailVertical}>
-                      <Text style={styles.labelDetailVertical}>Idea Description:</Text>
-                      <Text style={styles.valueDetailVertical}>{ideaDetail.ideaDescription || "N/A"}</Text>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Idea Description:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || "N/A"}</Text>
                     </View>
-
-                    <View style={styles.rowDetailVertical}>
-                      <Text style={styles.labelDetailVertical}>Proposed Solution:</Text>
-                      <Text style={styles.valueDetailVertical}>{ideaDetail.proposedSolution || "N/A"}</Text>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Proposed Solution:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text>
                     </View>
-
-                    <View style={styles.rowDetailVertical}>
-                      <Text style={styles.labelDetailVertical}>Process Improvement/Cost Benefit:</Text>
-                      <Text style={styles.valueDetailVertical}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
+                    <View style={styles.rowDetailWithBorder}>
+                      <Text style={styles.labelDetail}>Process Improvement/Cost Benefit:</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
                     </View>
-
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Team Members:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
@@ -3141,7 +2869,7 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                     <View style={styles.rowDetail}>
                       <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
                       <Text style={styles.valueDetail}>
-                        {ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}
+                        {ideaDetail.canBeImplementedToOtherLocation ? "Yes" : "No"}
                       </Text>
                     </View>
                   </View>
@@ -3178,9 +2906,9 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                           </Text>
                         </View>
 
-                        <View style={styles.rowDetailVertical}>
-                          <Text style={styles.labelDetailVertical}>Implementation Details:</Text>
-                          <Text style={styles.valueDetailVertical}>
+                        <View style={styles.rowDetailWithBorder}>
+                          <Text style={styles.labelDetail}>Implementation Details:</Text>
+                          <Text style={styles.valueDetail}>
                             {ideaDetail.implementationCycle?.implementation ||
                               ideaDetail.implementationDetail ||
                               ideaDetail.implementation ||
@@ -3188,9 +2916,9 @@ function IdeasList({ ideas, editIdea, deleteIdea, refreshIdeas }) {
                           </Text>
                         </View>
 
-                        <View style={styles.rowDetailVertical}>
-                          <Text style={styles.labelDetailVertical}>Outcome/Benefits:</Text>
-                          <Text style={styles.valueDetailVertical}>
+                        <View style={styles.rowDetailWithBorder}>
+                          <Text style={styles.labelDetail}>Outcome/Benefits:</Text>
+                          <Text style={styles.valueDetail}>
                             {ideaDetail.implementationCycle?.outcome ||
                               ideaDetail.implementationOutcome ||
                               ideaDetail.outcome ||
@@ -3459,12 +3187,10 @@ export default function MyIdeasScreen() {
       if (response.data && response.data.data && Array.isArray(response.data.data.ideas)) {
         const normalizedIdeas = response.data.data.ideas.map(idea => {
           const imagePath = idea.beforeImplementationImagePath || idea.imagePath || idea.beforeImplementationImage;
-          const normalized = normalizeImagePath(imagePath);
-
           return {
             ...idea,
-            beforeImplementationImagePath: normalized,
-            imagePath: normalized,
+            beforeImplementationImagePath: normalizeImagePath(imagePath),
+            imagePath: normalizeImagePath(imagePath),
           };
         });
         setIdeas(normalizedIdeas);
@@ -3472,7 +3198,6 @@ export default function MyIdeasScreen() {
         setIdeas([]);
       }
     } catch (error) {
-      console.error('❌ Error fetching ideas:', error);
       Alert.alert("Error", "Failed to load ideas from server.");
     }
   };
@@ -3659,7 +3384,7 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
         setIsSubmitting(true);
         try {
           const token = await AsyncStorage.getItem('token');
-          const url = `${EDIT_IMPLEMENTATION_URL}/${ideaDetail.id}`;
+          const url = `https://ideabank-api.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}`;
           const response = await axios.get(url, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -3801,9 +3526,8 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
           name: cleanName
         });
       }
-      const url = isEditing
-        ? `${EDIT_IMPLEMENTATION_URL}/${ideaDetail.id}`
-        : SUBMIT_URL;
+
+      const url = isEditing ? `https://ideabank-api.abisaio.com/api/Approval/implementation/edit/${ideaDetail.id}` : SUBMIT_URL;
 
       const axiosConfig = {
         headers: {
@@ -3958,22 +3682,18 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
               {ideaDetail.ideaStatus || "N/A"}
             </Text>
           </View>
-
-          <View style={styles.rowDetailVertical}>
-            <Text style={styles.labelDetailVertical}>Idea Description:</Text>
-            <Text style={styles.valueDetailVertical}>{ideaDetail.ideaDescription || "N/A"}</Text>
+          <View style={styles.rowDetailWithBorder}>
+            <Text style={styles.labelDetail}>Idea Description:</Text>
+            <Text style={styles.valueDetail}>{ideaDetail.ideaDescription || "N/A"}</Text>
           </View>
-
-          <View style={styles.rowDetailVertical}>
-            <Text style={styles.labelDetailVertical}>Proposed Solution:</Text>
-            <Text style={styles.valueDetailVertical}>{ideaDetail.proposedSolution || "N/A"}</Text>
+          <View style={styles.rowDetailWithBorder}>
+            <Text style={styles.labelDetail}>Proposed Solution:</Text>
+            <Text style={styles.valueDetail}>{ideaDetail.proposedSolution || "N/A"}</Text>
           </View>
-
-          <View style={styles.rowDetailVertical}>
-            <Text style={styles.labelDetailVertical}>Process Improvement:</Text>
-            <Text style={styles.valueDetailVertical}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
+          <View style={styles.rowDetailWithBorder}>
+            <Text style={styles.labelDetail}>Process Improvement:</Text>
+            <Text style={styles.valueDetail}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
           </View>
-
           <View style={styles.rowDetailWithBorder}>
             <Text style={styles.labelDetail}>Team Members:</Text>
             <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
@@ -4152,11 +3872,13 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
         <View style={styles.fullModal}>
           <View style={styles.timelineModalHeader}>
             <Text style={styles.timelineModalTitle}>Progress Timeline</Text>
-            <TouchableOpacity style={styles.closeButtonTimeline} onPress={() => setShowTimelineModal(false)}>
+            <TouchableOpacity
+              style={styles.closeButtonTimeline}
+              onPress={() => setShowTimelineModal(false)}
+            >
               <Ionicons name="close" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
-
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             <View style={styles.timelineCardContainer}>
               <View style={styles.timelineContainer}>
@@ -4164,17 +3886,16 @@ function ImplementationForm({ ideaDetail, onClose, refreshIdeas, isEditing }) {
                   ideaDetail.timeline.map((item, idx) => (
                     <TimelineItem
                       key={idx}
-                      status={item.status || item.approvalStage || item.approvalstage || "N/A"}
+                      status={item.status || item.approvalStage || "N/A"}
                       date={item.date || item.approvalDate}
                       description={item.description || item.comments}
                       isLast={idx === ideaDetail.timeline.length - 1}
-                      isFirst={idx === 0}
                     />
                   ))
                 ) : (
-                  <View style={styles.noTimelineContainer}>
-                    <Ionicons name="time-outline" size={48} color="#ccc" />
-                    <Text style={styles.noTimelineText}>No timeline data available</Text>
+                  <View style={styles.noDataContainer}>
+                    <Ionicons name="time-outline" size={40} color="#ccc" />
+                    <Text style={styles.noDataText}>No timeline data available</Text>
                   </View>
                 )}
               </View>
@@ -4279,18 +4000,11 @@ const styles = StyleSheet.create({
   rowDetailWithBorder: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingBottom: 12,
-    marginBottom: 12,
+    paddingBottom: 10,
+    marginBottom: 10,
     alignItems: 'flex-start',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0'
-  },
-  rowDetailVertical: {
-    flexDirection: "column",
-    paddingBottom: 12,
-    marginBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   label: {
     color: '#555',
@@ -4409,39 +4123,24 @@ const styles = StyleSheet.create({
   },
   labelDetail: {
     fontWeight: "600",
-    color: "#444",
-    width: "48%",
-    fontSize: 15,
-    lineHeight: 22
+    color: "#555",
+    width: "45%",
+    fontSize: 14
   },
   valueDetail: {
     color: "#222",
     width: "50%",
     textAlign: "right",
-    fontSize: 15,
-    lineHeight: 22
-  },
-  labelDetailVertical: {
-    fontWeight: "600",
-    color: "#444",
-    fontSize: 15,
-    marginBottom: 8,
-    lineHeight: 22,
-  },
-  valueDetailVertical: {
-    color: "#222",
-    fontSize: 15,
-    lineHeight: 24,
-    textAlign: "left",
+    fontSize: 14
   },
   statusBadgeDetail: {
     color: "#fff",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    maxWidth: 170,
+    maxWidth: 200,
     textAlign: 'center'
   },
   imagePreviewContainer: {
@@ -4507,9 +4206,9 @@ const styles = StyleSheet.create({
   },
   remarkCard: {
     backgroundColor: '#f8f9fa',
-    padding: 14,
+    padding: 12,
     borderRadius: 8,
-    marginBottom: 12,
+    marginBottom: 10,
     borderLeftWidth: 3,
     borderLeftColor: '#2c5aa0'
   },
@@ -4838,7 +4537,6 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 15
   },
-
   zoomControls: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -4866,51 +4564,5 @@ const styles = StyleSheet.create({
   fullImagePreview: {
     width: 350,
     height: 500
-  },
-  confettiContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 9999,
-    pointerEvents: 'none',
-  },
-  confettiPiece: {
-    position: 'absolute',
-    width: 10,
-    height: 10,
-    top: -50,
-  },
-  closedPopupContainer: {
-    position: 'absolute',
-    top: 80,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
-    zIndex: 10000
-  },
-  closedPopup: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6
-  },
-  closedPopupEmoji: {
-    fontSize: 24,
-    marginHorizontal: 6
-  },
-  closedPopupText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center'
   },
 });
