@@ -921,22 +921,22 @@ export default function AllTeamIdeasScreen() {
                         {ideaDetail.ideaStatus || ideaDetail.status || "N/A"}
                       </Text>
                     </View>
-                    
+
                     <View style={styles.rowDetailVertical}>
                       <Text style={styles.labelDetailVertical}>Idea Description:</Text>
                       <Text style={styles.valueDetailVertical}>{ideaDetail.ideaDescription || ideaDetail.description || "N/A"}</Text>
                     </View>
-                    
+
                     <View style={styles.rowDetailVertical}>
                       <Text style={styles.labelDetailVertical}>Proposed Solution:</Text>
                       <Text style={styles.valueDetailVertical}>{ideaDetail.proposedSolution || "N/A"}</Text>
                     </View>
-                    
+
                     <View style={styles.rowDetailVertical}>
                       <Text style={styles.labelDetailVertical}>Process Improvement/Cost Benefit:</Text>
                       <Text style={styles.valueDetailVertical}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
                     </View>
-                    
+
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Team Members:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
@@ -992,7 +992,7 @@ export default function AllTeamIdeasScreen() {
                             {ideaDetail.implementationCycle?.status || "N/A"}
                           </Text>
                         </View>
-                        
+
                         <View style={styles.rowDetailVertical}>
                           <Text style={styles.labelDetailVertical}>Implementation Details:</Text>
                           <Text style={styles.valueDetailVertical}>
@@ -1002,7 +1002,7 @@ export default function AllTeamIdeasScreen() {
                               "Not provided"}
                           </Text>
                         </View>
-                        
+
                         <View style={styles.rowDetailVertical}>
                           <Text style={styles.labelDetailVertical}>Outcome/Benefits:</Text>
                           <Text style={styles.valueDetailVertical}>
@@ -1012,7 +1012,7 @@ export default function AllTeamIdeasScreen() {
                               "Not provided"}
                           </Text>
                         </View>
-                        
+
                         {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>Completed On:</Text>
@@ -1091,7 +1091,7 @@ export default function AllTeamIdeasScreen() {
                                 </TouchableOpacity>
                               ) : !imageLoadError[`after_${ideaDetail.id}`] ? (
                                 <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
-                                  <Image
+                                  {/* <Image
                                     source={{ uri: imagePath }}
                                     style={styles.thumbnailSmall}
                                     contentFit="cover"
@@ -1107,7 +1107,44 @@ export default function AllTeamIdeasScreen() {
                                         setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
                                       }
                                     }}
+                                  /> */}
+
+
+
+                                  <Image
+                                    source={{ uri: imagePath }}
+                                    style={styles.thumbnailSmall}
+                                    contentFit="cover"
+                                    cachePolicy="none"
+
+                                    onLoad={() => {
+                                      
+                                      setImageLoadError(prev => ({
+                                        ...prev,
+                                        [`after_${ideaDetail.id}`]: false
+                                      }));
+                                    }}
+
+                                    onError={() => {
+                                      const altUrl = getAlternateImageUrl(imagePath);
+
+                                      if (altUrl && imagePath !== altUrl) {
+                                        setIdeaDetail(prev => ({
+                                          ...prev,
+                                          afterImplementationImagePath: altUrl
+                                        }));
+                                      } else {
+                                        setImageLoadError(prev => ({
+                                          ...prev,
+                                          [`after_${ideaDetail.id}`]: true
+                                        }));
+                                      }
+                                    }}
                                   />
+
+
+
+
                                 </TouchableOpacity>
                               ) : (
                                 <View style={styles.imageErrorContainer}>

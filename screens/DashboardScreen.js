@@ -1106,7 +1106,7 @@ const DashboardScreen = () => {
 
         {shouldShowGraph() ? (
           <View style={styles.graphCard}>
-            <Text style={styles.graphTitle}>Ideas Statistics</Text>
+            <Text style={styles.graphTitle}>Ideas Overview</Text>
             <SimpleBarChart data={getGraphData()} />
           </View>
         ) : (
