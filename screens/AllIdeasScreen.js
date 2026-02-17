@@ -22,25 +22,12 @@ import { ALL_TEAM_IDEAS_URL, IDEA_DETAIL_URL, BASE_URL } from "../src/context/ap
 
 const normalizeImagePath = (path) => {
   if (!path) return null;
-
   const trimmedPath = String(path).trim();
-
   const doubledPattern = /^(https?:\/\/[^\/]+)(https?:\/\/.+)$/;
   const match = trimmedPath.match(doubledPattern);
-
-  if (match) {
-    const correctUrl = match[2];
-    return correctUrl;
-  }
-
-  if (trimmedPath.match(/^https?:\/\//)) {
-    return trimmedPath;
-  }
-
-  if (!BASE_URL) {
-    return trimmedPath;
-  }
-
+  if (match) return match[2];
+  if (trimmedPath.match(/^https?:\/\//)) return trimmedPath;
+  if (!BASE_URL) return trimmedPath;
   const formattedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
   return `${BASE_URL}${formattedPath}`;
 };
@@ -48,6 +35,17 @@ const normalizeImagePath = (path) => {
 const getAlternateImageUrl = (url) => {
   if (!url) return null;
   return url.replace('ideabank-api.abisaio.com', 'ideabank.abisaio.com');
+};
+
+const statusMatches = (ideaStatus, selectedStatus) => {
+  if (!selectedStatus || selectedStatus === "" || selectedStatus === "All Status") return true;
+  if (!ideaStatus) return false;
+  const ideaStatusLower = ideaStatus.toLowerCase().trim();
+  const selectedLower = selectedStatus.toLowerCase().trim();
+  if (ideaStatusLower === selectedLower) return true;
+  if (ideaStatusLower.includes(selectedLower)) return true;
+  if (selectedLower.includes(ideaStatusLower)) return true;
+  return false;
 };
 
 // Confetti Component
@@ -58,18 +56,8 @@ function ConfettiPiece({ delay, duration, color }) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 800,
-        duration: duration,
-        delay: delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(rotate, {
-        toValue: Math.random() > 0.5 ? 360 : -360,
-        duration: duration,
-        delay: delay,
-        useNativeDriver: true,
-      }),
+      Animated.timing(translateY, { toValue: 800, duration, delay, useNativeDriver: true }),
+      Animated.timing(rotate, { toValue: Math.random() > 0.5 ? 360 : -360, duration, delay, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -92,11 +80,9 @@ function ConfettiPiece({ delay, duration, color }) {
 
 function ConfettiEffect() {
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
-  const confettiCount = 50;
-
   return (
     <View style={styles.confettiContainer}>
-      {Array.from({ length: confettiCount }).map((_, index) => (
+      {Array.from({ length: 50 }).map((_, index) => (
         <ConfettiPiece
           key={index}
           delay={Math.random() * 200}
@@ -108,7 +94,7 @@ function ConfettiEffect() {
   );
 }
 
-function TimelineItem({ status, date, description, isLast, isFirst }) {
+function TimelineItem({ status, date, description, isLast }) {
   const getCircleColor = (status) => {
     const s = status?.toLowerCase() || '';
     if (s.includes('created')) return "#2196F3";
@@ -118,9 +104,9 @@ function TimelineItem({ status, date, description, isLast, isFirst }) {
     if (s.includes('implementation')) return "#3F51B5";
     if (s.includes('rejected')) return "#F44336";
     if (s.includes('closed')) return "#FF3B30";
+    if (s.includes('cancel')) return "#9E9E9E";
     return "#9E9E9E";
   };
-
   return (
     <View style={styles.timelineItem}>
       <View style={styles.timelineLeft}>
@@ -129,14 +115,8 @@ function TimelineItem({ status, date, description, isLast, isFirst }) {
       </View>
       <View style={styles.timelineContent}>
         <Text style={styles.timelineStatus}>{status}</Text>
-        {description && (
-          <Text style={styles.timelineDescription}>{description}</Text>
-        )}
-        {date && (
-          <Text style={styles.timelineDate}>
-            {formatDateTime(date)}
-          </Text>
-        )}
+        {description && <Text style={styles.timelineDescription}>{description}</Text>}
+        {date && <Text style={styles.timelineDate}>{formatDateTime(date)}</Text>}
       </View>
     </View>
   );
@@ -157,8 +137,7 @@ const formatDate = (dateString) => {
   const date = new Date(dateString);
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}-${month}-${year}`;
+  return `${day}-${month}-${date.getFullYear()}`;
 };
 
 const formatDateTime = (dateString) => {
@@ -166,10 +145,9 @@ const formatDateTime = (dateString) => {
   const date = new Date(dateString);
   const day = String(date.getDate()).padStart(2, '0');
   const month = date.toLocaleString('en-IN', { month: 'short' });
-  const year = date.getFullYear();
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${day} ${month} ${year}, ${hours}:${minutes}`;
+  return `${day} ${month} ${date.getFullYear()}, ${hours}:${minutes}`;
 };
 
 const getStatusColor = (status) => {
@@ -181,14 +159,13 @@ const getStatusColor = (status) => {
   if (s === "approved" || s === "closed") return "#00ACC1";
   if (s === "rejected") return "#F44336";
   if (s === "hold" || s === "on hold") return "#FFC107";
+  if (s === "cancelled" || s === "canceled") return "#9E9E9E";
   return "#9E9E9E";
 };
 
 const shouldShowImplementationDetails = (ideaDetail) => {
   if (!ideaDetail) return false;
-  if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) {
-    return true;
-  }
+  if (ideaDetail.implementationCycle && Object.keys(ideaDetail.implementationCycle).length > 0) return true;
   const type = (ideaDetail.ideaType || ideaDetail.type || '').toLowerCase().trim();
   return type === "implementation" || type === "implement";
 };
@@ -198,12 +175,20 @@ const parseRemarks = (remarkData) => {
   if (Array.isArray(remarkData)) return remarkData;
   if (typeof remarkData === "object") {
     const keys = Object.keys(remarkData);
-    if (keys.length > 0 && keys.every(k => !isNaN(k))) {
-      return Object.values(remarkData);
-    }
+    if (keys.length > 0 && keys.every(k => !isNaN(k))) return Object.values(remarkData);
     return [remarkData];
   }
   return [];
+};
+
+const getTimelineWithCancelledStatus = (timeline, ideaStatus) => {
+  if (!timeline || !Array.isArray(timeline)) return [];
+  const status = (ideaStatus || '').toLowerCase();
+  const hasCancelled = timeline.some(item => (item.status || '').toLowerCase().includes('cancel'));
+  if ((status === 'cancelled' || status === 'canceled') && !hasCancelled) {
+    return [...timeline, { status: 'Cancelled', date: new Date().toISOString(), description: 'Idea cancelled by user' }];
+  }
+  return timeline;
 };
 
 export default function AllTeamIdeasScreen() {
@@ -230,7 +215,6 @@ export default function AllTeamIdeasScreen() {
   const [showImplementationDetails, setShowImplementationDetails] = useState(false);
   const [imageRetryUrl, setImageRetryUrl] = useState(null);
   const [imageLoadError, setImageLoadError] = useState({});
-
   const [allIdeasOriginal, setAllIdeasOriginal] = useState([]);
   const [showClosedPopup, setShowClosedPopup] = useState(false);
 
@@ -240,30 +224,16 @@ export default function AllTeamIdeasScreen() {
 
   useEffect(() => {
     applyFiltersRealTime();
-  }, [searchIdeaNumber]);
+  }, [searchIdeaNumber, selectedStatus, fromDate, toDate, allIdeasOriginal]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (showStatusDropdown) {
-        setShowStatusDropdown(false);
-        return true;
-      }
-      if (showImage) {
-        setShowImage(false);
-        setCurrentImageUrl(null);
-        return true;
-      }
-      if (showTimelineModal) {
-        setShowTimelineModal(false);
-        return true;
-      }
-      if (selectedIdea) {
-        closeModal();
-        return true;
-      }
+      if (showStatusDropdown) { setShowStatusDropdown(false); return true; }
+      if (showImage) { setShowImage(false); setCurrentImageUrl(null); return true; }
+      if (showTimelineModal) { setShowTimelineModal(false); return true; }
+      if (selectedIdea) { closeModal(); return true; }
       return false;
     });
-
     return () => backHandler.remove();
   }, [selectedIdea, showTimelineModal, showImage, showStatusDropdown]);
 
@@ -280,39 +250,24 @@ export default function AllTeamIdeasScreen() {
 
       while (hasMorePages) {
         const baseUrl = ALL_TEAM_IDEAS_URL.split('?')[0];
-        let url = `${baseUrl}?page=${currentPage}&pageSize=10`;
-
+        const url = `${baseUrl}?page=${currentPage}&pageSize=10`;
         const response = await axios.get(url, { headers: authHeaders });
 
-        if (response.data && response.data.data && Array.isArray(response.data.data.items)) {
+        if (response.data?.data && Array.isArray(response.data.data.items)) {
           const { items, totalPages, totalItems, hasNextPage } = response.data.data;
-
-          if (currentPage === 1 && totalItems !== undefined) {
-            apiTotalItems = totalItems;
-          }
-
-          if (items.length > 0) {
-            allIdeas = [...allIdeas, ...items];
-          }
-
-          if (hasNextPage === false || items.length === 0 || (totalPages && currentPage >= totalPages)) {
-            hasMorePages = false;
-          }
+          if (currentPage === 1 && totalItems !== undefined) apiTotalItems = totalItems;
+          if (items.length > 0) allIdeas = [...allIdeas, ...items];
+          if (hasNextPage === false || items.length === 0 || (totalPages && currentPage >= totalPages)) hasMorePages = false;
         } else {
           hasMorePages = false;
         }
-
         currentPage++;
-
-        if (currentPage > 100) {
-          hasMorePages = false;
-        }
+        if (currentPage > 100) hasMorePages = false;
       }
 
       setAllIdeasOriginal(allIdeas);
       setIdeas(allIdeas);
       setTotalItems(apiTotalItems || allIdeas.length);
-
     } catch (error) {
       console.error("Error fetching all team ideas:", error);
       setIdeas([]);
@@ -324,60 +279,48 @@ export default function AllTeamIdeasScreen() {
   };
 
   const applyFiltersRealTime = () => {
-    let filteredIdeas = [...allIdeasOriginal];
+    if (!allIdeasOriginal || allIdeasOriginal.length === 0) return;
+
+    let filtered = [...allIdeasOriginal];
 
     if (searchIdeaNumber.trim()) {
-      const searchTerm = searchIdeaNumber.trim().toLowerCase();
-      filteredIdeas = filteredIdeas.filter(idea => {
-        const ideaNum = (idea.ideaNumber || '').toLowerCase();
-        const ownerName = (idea.ownerName || '').toLowerCase();
-        const description = (idea.description || '').toLowerCase();
-
-        return ideaNum.includes(searchTerm) ||
-          ownerName.includes(searchTerm) ||
-          description.includes(searchTerm);
-      });
+      const term = searchIdeaNumber.trim().toLowerCase();
+      filtered = filtered.filter(idea =>
+        (idea.ideaNumber || '').toLowerCase().includes(term) ||
+        (idea.ownerName || '').toLowerCase().includes(term) ||
+        (idea.description || '').toLowerCase().includes(term)
+      );
     }
 
-    if (selectedStatus && selectedStatus !== "") {
-      filteredIdeas = filteredIdeas.filter(idea => {
-        if (!idea.status) return false;
-        return idea.status.toLowerCase() === selectedStatus.toLowerCase();
-      });
+    if (selectedStatus && selectedStatus !== "" && selectedStatus !== "All Status") {
+      filtered = filtered.filter(idea => statusMatches(idea.status, selectedStatus));
     }
 
     if (fromDate || toDate) {
-      filteredIdeas = filteredIdeas.filter(idea => {
+      filtered = filtered.filter(idea => {
         if (!idea.creationDate) return false;
-
         const ideaDate = new Date(idea.creationDate);
         ideaDate.setHours(0, 0, 0, 0);
-
         if (fromDate && toDate) {
-          const from = new Date(fromDate);
-          from.setHours(0, 0, 0, 0);
-          const to = new Date(toDate);
-          to.setHours(23, 59, 59, 999);
+          const from = new Date(fromDate); from.setHours(0, 0, 0, 0);
+          const to = new Date(toDate); to.setHours(23, 59, 59, 999);
           return ideaDate >= from && ideaDate <= to;
         } else if (fromDate) {
-          const from = new Date(fromDate);
-          from.setHours(0, 0, 0, 0);
+          const from = new Date(fromDate); from.setHours(0, 0, 0, 0);
           return ideaDate >= from;
         } else if (toDate) {
-          const to = new Date(toDate);
-          to.setHours(23, 59, 59, 999);
+          const to = new Date(toDate); to.setHours(23, 59, 59, 999);
           return ideaDate <= to;
         }
         return true;
       });
     }
 
-    setIdeas(filteredIdeas);
-    setTotalItems(filteredIdeas.length);
+    setIdeas(filtered);
+    setTotalItems(filtered.length);
   };
 
   const applyFilters = () => {
-    applyFiltersRealTime();
     setShowFilters(false);
   };
 
@@ -387,16 +330,10 @@ export default function AllTeamIdeasScreen() {
     setToDate(null);
     setSelectedStatus("");
     setShowStatusDropdown(false);
-
-    setIdeas(allIdeasOriginal);
-    setTotalItems(allIdeasOriginal.length);
   };
 
   const fetchIdeaDetail = async (ideaId) => {
-    if (!ideaId) {
-      Alert.alert("Error", "Invalid idea ID");
-      return;
-    }
+    if (!ideaId) { Alert.alert("Error", "Invalid idea ID"); return; }
     try {
       setLoadingDetail(true);
       const token = await AsyncStorage.getItem('token');
@@ -413,9 +350,9 @@ export default function AllTeamIdeasScreen() {
         }
       }
 
-      if (response?.data?.success && response?.data?.data) {
-        const detail = response.data.data;
+      const detail = response?.data?.success ? response.data.data : response?.data;
 
+      if (detail) {
         const normalizedDetail = {
           ...detail,
           beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
@@ -430,46 +367,12 @@ export default function AllTeamIdeasScreen() {
 
         setIdeaDetail(normalizedDetail);
         setSelectedIdea(normalizedDetail);
-
-        if (shouldShowImplementationDetails(normalizedDetail)) {
-          setShowImplementationDetails(true);
-        }
+        if (shouldShowImplementationDetails(normalizedDetail)) setShowImplementationDetails(true);
 
         const status = (detail.ideaStatus || detail.status || '').toLowerCase();
         if (status === 'closed') {
           setShowClosedPopup(true);
-          setTimeout(() => {
-            setShowClosedPopup(false);
-          }, 3000);
-        }
-      } else if (response?.data) {
-        const detail = response.data;
-
-        const normalizedDetail = {
-          ...detail,
-          beforeImplementationImagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
-          imagePath: normalizeImagePath(detail.beforeImplementationImagePath || detail.imagePath),
-          afterImplementationImagePath: normalizeImagePath(detail.afterImplementationImagePath),
-          implementationCycle: detail.implementationCycle ? {
-            ...detail.implementationCycle,
-            beforeImplementationImagePath: normalizeImagePath(detail.implementationCycle.beforeImplementationImagePath),
-            afterImplementationImagePath: normalizeImagePath(detail.implementationCycle.afterImplementationImagePath)
-          } : null
-        };
-
-        setIdeaDetail(normalizedDetail);
-        setSelectedIdea(normalizedDetail);
-
-        if (shouldShowImplementationDetails(normalizedDetail)) {
-          setShowImplementationDetails(true);
-        }
-
-        const status = (detail.ideaStatus || detail.status || '').toLowerCase();
-        if (status === 'closed') {
-          setShowClosedPopup(true);
-          setTimeout(() => {
-            setShowClosedPopup(false);
-          }, 3000);
+          setTimeout(() => setShowClosedPopup(false), 3000);
         }
       } else {
         Alert.alert("Error", "Idea details not found.");
@@ -482,19 +385,17 @@ export default function AllTeamIdeasScreen() {
     }
   };
 
+  // ✅ FIXED: Removed "Pending" and "Approved by BE Team" from status options
   const statusOptions = [
     "All Status",
-    "Draft",
     "Published",
-    "Pending",
     "RM Approval Pending",
     "Under Review by BE Team",
-    "Approved by BE Team",
     "Ready for Implementation",
     "Closed",
     "Hold",
     "Rejected",
-    "Cancelled"
+    "Cancelled",
   ];
 
   const closeModal = () => {
@@ -509,32 +410,19 @@ export default function AllTeamIdeasScreen() {
 
   const openImagePreview = (imageUrl) => {
     const finalUrl = normalizeImagePath(imageUrl);
-
     if (finalUrl && (finalUrl.toLowerCase().endsWith('.pdf') || finalUrl.includes('.pdf'))) {
-      Alert.alert(
-        'PDF Document',
-        'This is a PDF document. Would you like to open it?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Open',
-            onPress: () => {
-              Linking.openURL(finalUrl).catch(err => {
-                Alert.alert('Error', 'Unable to open PDF. Please try accessing it from a web browser.');
-              });
-            }
-          }
-        ]
-      );
+      Alert.alert('PDF Document', 'This is a PDF document. Would you like to open it?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open', onPress: () => Linking.openURL(finalUrl).catch(() => Alert.alert('Error', 'Unable to open PDF.')) }
+      ]);
       return;
     }
-
     setCurrentImageUrl(finalUrl);
     setImageRetryUrl(getAlternateImageUrl(finalUrl));
     setShowImage(true);
   };
 
-  const handleImageError = (error) => {
+  const handleImageError = () => {
     if (imageRetryUrl && currentImageUrl !== imageRetryUrl) {
       setCurrentImageUrl(imageRetryUrl);
       setImageRetryUrl(null);
@@ -542,6 +430,8 @@ export default function AllTeamIdeasScreen() {
       Alert.alert('Error', 'Failed to load image');
     }
   };
+
+  const hasActiveFilters = searchIdeaNumber || selectedStatus || fromDate || toDate;
 
   return (
     <View style={styles.container}>
@@ -554,7 +444,7 @@ export default function AllTeamIdeasScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Search Section */}
+      {/* Search */}
       <View style={styles.searchSection}>
         <View style={styles.searchContainer}>
           <Text style={styles.searchLabel}>Search:</Text>
@@ -562,13 +452,24 @@ export default function AllTeamIdeasScreen() {
             placeholder="Idea Number / Owner / Description"
             style={styles.searchInput}
             value={searchIdeaNumber}
-            onChangeText={(text) => setSearchIdeaNumber(text)}
+            onChangeText={setSearchIdeaNumber}
             placeholderTextColor="#999"
           />
         </View>
       </View>
 
-      {/* Filters Section */}
+      {/* Active filter badge visible outside filter panel */}
+      {!showFilters && selectedStatus && (
+        <View style={styles.activeFilterBanner}>
+          <Ionicons name="filter" size={14} color="#2c5aa0" />
+          <Text style={styles.activeFilterBannerText}>Status: {selectedStatus}</Text>
+          <TouchableOpacity onPress={() => setSelectedStatus("")}>
+            <Ionicons name="close-circle" size={16} color="#2c5aa0" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Filters Panel */}
       {showFilters && (
         <View style={styles.filtersContainer}>
           <Text style={styles.filterLabel}>Create Date Range</Text>
@@ -583,12 +484,7 @@ export default function AllTeamIdeasScreen() {
               display="default"
               onChange={(e, date) => {
                 setShowFromPicker(false);
-                if (date) {
-                  setFromDate(date);
-                  if (toDate && date > toDate) {
-                    setToDate(null)
-                  }
-                }
+                if (date) { setFromDate(date); if (toDate && date > toDate) setToDate(null); }
               }}
               maximumDate={toDate || new Date()}
             />
@@ -602,12 +498,7 @@ export default function AllTeamIdeasScreen() {
               value={toDate || (fromDate || new Date())}
               mode="date"
               display="default"
-              onChange={(e, date) => {
-                setShowToPicker(false);
-                if (date) {
-                  setToDate(date)
-                }
-              }}
+              onChange={(e, date) => { setShowToPicker(false); if (date) setToDate(date); }}
               minimumDate={fromDate || undefined}
               maximumDate={new Date()}
             />
@@ -615,10 +506,10 @@ export default function AllTeamIdeasScreen() {
 
           <Text style={[styles.filterLabel, { marginTop: 16, marginBottom: 10 }]}>Status</Text>
           <TouchableOpacity
-            style={styles.statusDropdown}
+            style={[styles.statusDropdown, selectedStatus && { borderColor: '#2c5aa0', borderWidth: 2 }]}
             onPress={() => setShowStatusDropdown(!showStatusDropdown)}
           >
-            <Text style={styles.statusDropdownText}>
+            <Text style={[styles.statusDropdownText, selectedStatus && { color: '#2c5aa0', fontWeight: '600' }]}>
               {selectedStatus || "All Status"}
             </Text>
             <Ionicons name={showStatusDropdown ? "chevron-up" : "chevron-down"} size={20} color="#666" />
@@ -630,25 +521,16 @@ export default function AllTeamIdeasScreen() {
                 {statusOptions.map((status, index) => {
                   const isAllStatus = status === "All Status";
                   const isSelected = isAllStatus ? selectedStatus === "" : selectedStatus === status;
-
                   return (
                     <TouchableOpacity
                       key={index}
-                      style={[
-                        styles.statusDropdownItem,
-                        isSelected && styles.statusDropdownItemActive
-                      ]}
-                      onPress={() => {
-                        setSelectedStatus(isAllStatus ? "" : status);
-                        setShowStatusDropdown(false);
-                      }}
+                      style={[styles.statusDropdownItem, isSelected && styles.statusDropdownItemActive]}
+                      onPress={() => { setSelectedStatus(isAllStatus ? "" : status); setShowStatusDropdown(false); }}
                     >
-                      <Text style={[
-                        styles.statusDropdownItemText,
-                        isSelected && styles.statusDropdownItemTextActive
-                      ]}>
+                      <Text style={[styles.statusDropdownItemText, isSelected && styles.statusDropdownItemTextActive]}>
                         {status}
                       </Text>
+                      {isSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
                     </TouchableOpacity>
                   );
                 })}
@@ -661,19 +543,29 @@ export default function AllTeamIdeasScreen() {
               <Text style={styles.btnText}>Apply</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.resetBtn} onPress={clearFilters}>
-              <Text style={styles.btnText}>Reset</Text>
+              <Text style={styles.btnText}>Reset All</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* Cards List */}
+      {/* Ideas List */}
       {loading ? (
         <ActivityIndicator size="large" color="#2c5aa0" style={{ marginTop: 20 }} />
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           {ideas.length === 0 ? (
-            <Text style={styles.noDataText}>No ideas found.</Text>
+            <View style={styles.noDataContainer}>
+              <Ionicons name="search-outline" size={48} color="#ccc" />
+              <Text style={styles.noDataText}>
+                {hasActiveFilters ? "No ideas match the selected filters." : "No ideas found."}
+              </Text>
+              {hasActiveFilters && (
+                <TouchableOpacity style={styles.clearFiltersBtn} onPress={clearFilters}>
+                  <Text style={styles.clearFiltersBtnText}>Clear All Filters</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           ) : (
             <>
               {ideas.map((idea, index) => (
@@ -683,10 +575,7 @@ export default function AllTeamIdeasScreen() {
                   style={styles.cardContainer}
                   onPress={() => {
                     const ideaId = idea?.id ?? idea?.ideaId;
-                    if (!ideaId) {
-                      Alert.alert("Error", "Idea ID not found");
-                      return;
-                    }
+                    if (!ideaId) { Alert.alert("Error", "Idea ID not found"); return; }
                     fetchIdeaDetail(ideaId);
                   }}
                 >
@@ -696,23 +585,19 @@ export default function AllTeamIdeasScreen() {
                       <Text style={styles.typeText}>{idea.type || "N/A"}</Text>
                     </View>
                   </View>
-
                   <View style={styles.cardContent}>
                     <View style={styles.rowDetail}>
                       <Text style={styles.label}>Description:</Text>
                       <Text style={styles.value} numberOfLines={2}>{idea.description || "N/A"}</Text>
                     </View>
-
                     <View style={styles.row}>
                       <Text style={styles.label}>Owner:</Text>
                       <Text style={styles.value}>{idea.ownerName || "N/A"}</Text>
                     </View>
-
                     <View style={styles.row}>
                       <Text style={styles.label}>Created:</Text>
                       <Text style={styles.value}>{formatDate(idea.creationDate)}</Text>
                     </View>
-
                     <View style={styles.rowDetail}>
                       <Text style={styles.label}>Status:</Text>
                       <View style={{ flex: 1, alignItems: 'flex-end' }}>
@@ -724,7 +609,6 @@ export default function AllTeamIdeasScreen() {
                   </View>
                 </TouchableOpacity>
               ))}
-
               <View style={styles.totalContainer}>
                 <Text style={styles.totalText}>Total Ideas: {totalItems}</Text>
               </View>
@@ -739,12 +623,10 @@ export default function AllTeamIdeasScreen() {
         </View>
       )}
 
+      {/* Idea Detail Modal */}
       <Modal visible={!!selectedIdea} animationType="slide">
         <View style={styles.fullModal}>
-          {/* Confetti Effect */}
           {showClosedPopup && <ConfettiEffect />}
-
-          {/* Closed Status Popup */}
           {showClosedPopup && (
             <View style={styles.closedPopupContainer}>
               <View style={styles.closedPopup}>
@@ -771,54 +653,28 @@ export default function AllTeamIdeasScreen() {
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             {selectedIdea && ideaDetail && (
               <>
-                {/* Employee Information - Collapsible */}
-                <TouchableOpacity
-                  style={styles.collapsibleHeader}
-                  onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)}
-                  activeOpacity={0.7}
-                >
+                {/* Employee Information */}
+                <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setEmployeeInfoExpanded(!employeeInfoExpanded)} activeOpacity={0.7}>
                   <Text style={styles.collapsibleHeaderText}>Employee Information</Text>
-                  <Ionicons
-                    name={employeeInfoExpanded ? "chevron-up" : "chevron-down"}
-                    size={24}
-                    color="#2c5aa0"
-                  />
+                  <Ionicons name={employeeInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                 </TouchableOpacity>
-
                 {employeeInfoExpanded && (
                   <View style={styles.cardDetail}>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Employee Name:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerName || ideaDetail.ownerName || "N/A"}</Text>
-                    </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Employee Number:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmployeeNo || "N/A"}</Text>
-                    </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Employee Email:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerEmail || "N/A"}</Text>
-                    </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Department:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerDepartment || ideaDetail.department || "N/A"}</Text>
-                    </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Mobile:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
-                    </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Reporting Manager:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.reportingManagerName || "N/A"}</Text>
-                    </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Manager Email:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.managerEmail || "N/A"}</Text>
-                    </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Employee Location:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.location || "N/A"}</Text>
-                    </View>
+                    {[
+                      ['Employee Name', ideaDetail.ideaOwnerName || ideaDetail.ownerName],
+                      ['Employee Number', ideaDetail.ideaOwnerEmployeeNo],
+                      ['Employee Email', ideaDetail.ideaOwnerEmail],
+                      ['Department', ideaDetail.ideaOwnerDepartment || ideaDetail.department],
+                      ['Mobile', ideaDetail.mobileNumber],
+                      ['Reporting Manager', ideaDetail.reportingManagerName],
+                      ['Manager Email', ideaDetail.managerEmail],
+                      ['Employee Location', ideaDetail.location],
+                    ].map(([label, value], i) => (
+                      <View key={i} style={styles.rowDetailWithBorder}>
+                        <Text style={styles.labelDetail}>{label}:</Text>
+                        <Text style={styles.valueDetail}>{value || "N/A"}</Text>
+                      </View>
+                    ))}
                     <View style={styles.rowDetail}>
                       <Text style={styles.labelDetail}>Sub Department:</Text>
                       <Text style={styles.valueDetail}>{ideaDetail.ideaOwnerSubDepartment || "N/A"}</Text>
@@ -826,20 +682,11 @@ export default function AllTeamIdeasScreen() {
                   </View>
                 )}
 
-                {/* Idea Information - Collapsible */}
-                <TouchableOpacity
-                  style={styles.collapsibleHeader}
-                  onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)}
-                  activeOpacity={0.7}
-                >
+                {/* Idea Information */}
+                <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setIdeaInfoExpanded(!ideaInfoExpanded)} activeOpacity={0.7}>
                   <Text style={styles.collapsibleHeaderText}>Idea Information</Text>
-                  <Ionicons
-                    name={ideaInfoExpanded ? "chevron-up" : "chevron-down"}
-                    size={24}
-                    color="#2c5aa0"
-                  />
+                  <Ionicons name={ideaInfoExpanded ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                 </TouchableOpacity>
-
                 {ideaInfoExpanded && (
                   <View style={styles.cardDetail}>
                     <View style={styles.rowDetailWithBorder}>
@@ -852,35 +699,25 @@ export default function AllTeamIdeasScreen() {
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Creation Date:</Text>
-                      <Text style={styles.valueDetail}>
-                        {ideaDetail.ideaCreationDate || ideaDetail.creationDate ?
-                          formatDate(ideaDetail.ideaCreationDate || ideaDetail.creationDate) : "N/A"}
-                      </Text>
+                      <Text style={styles.valueDetail}>{formatDate(ideaDetail.ideaCreationDate || ideaDetail.creationDate)}</Text>
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Planned Completion:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.plannedImplementationDuration
-                        ? formatDate(ideaDetail.plannedImplementationDuration)
-                        : "N/A"}</Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.plannedImplementationDuration ? formatDate(ideaDetail.plannedImplementationDuration) : "N/A"}</Text>
                     </View>
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>Before Implementation:</Text>
                       <View style={{ flex: 1, alignItems: 'flex-end' }}>
                         {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
-                          ideaDetail.beforeImplementationImagePath?.toLowerCase().includes('.pdf') || ideaDetail.imagePath?.toLowerCase().includes('.pdf') ? (
-                            <TouchableOpacity
-                              onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
-                            >
+                          (ideaDetail.beforeImplementationImagePath?.toLowerCase().includes('.pdf') || ideaDetail.imagePath?.toLowerCase().includes('.pdf')) ? (
+                            <TouchableOpacity onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
                               <View style={styles.pdfThumbnailContainer}>
                                 <Ionicons name="document-text" size={30} color="#FF5722" />
                                 <Text style={styles.pdfThumbnailText}>PDF</Text>
                               </View>
                             </TouchableOpacity>
                           ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
-                            <TouchableOpacity
-                              style={styles.imagePreviewContainer}
-                              onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
-                            >
+                            <TouchableOpacity style={styles.imagePreviewContainer} onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}>
                               <Image
                                 source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }}
                                 style={styles.thumbnailSmall}
@@ -888,18 +725,12 @@ export default function AllTeamIdeasScreen() {
                                 cachePolicy="none"
                                 placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
                                 transition={1000}
-                                onError={(e) => {
+                                onError={() => {
                                   const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
                                   if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
-                                    setIdeaDetail(prev => ({
-                                      ...prev,
-                                      beforeImplementationImagePath: altUrl
-                                    }));
+                                    setIdeaDetail(prev => ({ ...prev, beforeImplementationImagePath: altUrl }));
                                   } else {
-                                    setImageLoadError(prev => ({
-                                      ...prev,
-                                      [`before_${ideaDetail.id}`]: true
-                                    }));
+                                    setImageLoadError(prev => ({ ...prev, [`before_${ideaDetail.id}`]: true }));
                                   }
                                 }}
                               />
@@ -921,69 +752,47 @@ export default function AllTeamIdeasScreen() {
                         {ideaDetail.ideaStatus || ideaDetail.status || "N/A"}
                       </Text>
                     </View>
-
                     <View style={styles.rowDetailVertical}>
                       <Text style={styles.labelDetailVertical}>Idea Description:</Text>
                       <Text style={styles.valueDetailVertical}>{ideaDetail.ideaDescription || ideaDetail.description || "N/A"}</Text>
                     </View>
-
                     <View style={styles.rowDetailVertical}>
                       <Text style={styles.labelDetailVertical}>Proposed Solution:</Text>
                       <Text style={styles.valueDetailVertical}>{ideaDetail.proposedSolution || "N/A"}</Text>
                     </View>
-
                     <View style={styles.rowDetailVertical}>
                       <Text style={styles.labelDetailVertical}>Process Improvement/Cost Benefit:</Text>
                       <Text style={styles.valueDetailVertical}>{ideaDetail.tentativeBenefit || "N/A"}</Text>
                     </View>
-
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Team Members:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.teamMembers || "N/A"}</Text>
-                    </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Mobile Number:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.mobileNumber || "N/A"}</Text>
-                    </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Idea Theme:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.ideaTheme || "N/A"}</Text>
-                    </View>
-                    <View style={styles.rowDetailWithBorder}>
-                      <Text style={styles.labelDetail}>Type:</Text>
-                      <Text style={styles.valueDetail}>{ideaDetail.type || ideaDetail.ideaType || "N/A"}</Text>
-                    </View>
+                    {[
+                      ['Team Members', ideaDetail.teamMembers],
+                      ['Mobile Number', ideaDetail.mobileNumber],
+                      ['Idea Theme', ideaDetail.ideaTheme],
+                      ['Type', ideaDetail.type || ideaDetail.ideaType],
+                    ].map(([label, value], i) => (
+                      <View key={i} style={styles.rowDetailWithBorder}>
+                        <Text style={styles.labelDetail}>{label}:</Text>
+                        <Text style={styles.valueDetail}>{value || "N/A"}</Text>
+                      </View>
+                    ))}
                     <View style={styles.rowDetailWithBorder}>
                       <Text style={styles.labelDetail}>BE Team Support Needed:</Text>
-                      <Text style={styles.valueDetail}>
-                        {ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}
-                      </Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.isBETeamSupportNeeded ? "Yes" : "No"}</Text>
                     </View>
                     <View style={styles.rowDetail}>
                       <Text style={styles.labelDetail}>Can Be Implemented To Other Locations:</Text>
-                      <Text style={styles.valueDetail}>
-                        {ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}
-                      </Text>
+                      <Text style={styles.valueDetail}>{ideaDetail.canBeImplementedToOtherLocations ? "Yes" : "No"}</Text>
                     </View>
                   </View>
                 )}
 
-                {/* Implementation Details - Show if available */}
+                {/* Implementation Details */}
                 {shouldShowImplementationDetails(ideaDetail) && (
                   <>
-                    <TouchableOpacity
-                      style={styles.collapsibleHeader}
-                      onPress={() => setShowImplementationDetails(!showImplementationDetails)}
-                      activeOpacity={0.7}
-                    >
+                    <TouchableOpacity style={styles.collapsibleHeader} onPress={() => setShowImplementationDetails(!showImplementationDetails)} activeOpacity={0.7}>
                       <Text style={styles.collapsibleHeaderText}>Implementation Details</Text>
-                      <Ionicons
-                        name={showImplementationDetails ? "chevron-up" : "chevron-down"}
-                        size={24}
-                        color="#2c5aa0"
-                      />
+                      <Ionicons name={showImplementationDetails ? "chevron-up" : "chevron-down"} size={24} color="#2c5aa0" />
                     </TouchableOpacity>
-
                     {showImplementationDetails && (
                       <View style={styles.cardDetail}>
                         <View style={styles.rowDetailWithBorder}>
@@ -992,91 +801,24 @@ export default function AllTeamIdeasScreen() {
                             {ideaDetail.implementationCycle?.status || "N/A"}
                           </Text>
                         </View>
-
                         <View style={styles.rowDetailVertical}>
                           <Text style={styles.labelDetailVertical}>Implementation Details:</Text>
                           <Text style={styles.valueDetailVertical}>
-                            {ideaDetail.implementationCycle?.implementation ||
-                              ideaDetail.implementationDetail ||
-                              ideaDetail.implementation ||
-                              "Not provided"}
+                            {ideaDetail.implementationCycle?.implementation || ideaDetail.implementationDetail || ideaDetail.implementation || "Not provided"}
                           </Text>
                         </View>
-
                         <View style={styles.rowDetailVertical}>
                           <Text style={styles.labelDetailVertical}>Outcome/Benefits:</Text>
                           <Text style={styles.valueDetailVertical}>
-                            {ideaDetail.implementationCycle?.outcome ||
-                              ideaDetail.implementationOutcome ||
-                              ideaDetail.outcome ||
-                              "Not provided"}
+                            {ideaDetail.implementationCycle?.outcome || ideaDetail.implementationOutcome || ideaDetail.outcome || "Not provided"}
                           </Text>
                         </View>
-
                         {(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate) && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>Completed On:</Text>
-                            <Text style={styles.valueDetail}>
-                              {formatDate(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate)}
-                            </Text>
+                            <Text style={styles.valueDetail}>{formatDate(ideaDetail.implementationCycle?.startDate || ideaDetail.implementationDate)}</Text>
                           </View>
                         )}
-
-                        {/* Before Implementation with PDF Support */}
-                        {(ideaDetail.implementationCycle?.beforeImplementationImagePath || ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) && (
-                          <View style={styles.rowDetailWithBorder}>
-                            <Text style={styles.labelDetail}>Before Implementation:</Text>
-                            {(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath) ? (
-                              ideaDetail.beforeImplementationImagePath?.toLowerCase().includes('.pdf') || ideaDetail.imagePath?.toLowerCase().includes('.pdf') ? (
-                                <TouchableOpacity
-                                  onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
-                                >
-                                  <View style={styles.pdfThumbnailContainer}>
-                                    <Ionicons name="document-text" size={30} color="#FF5722" />
-                                    <Text style={styles.pdfThumbnailText}>PDF</Text>
-                                  </View>
-                                </TouchableOpacity>
-                              ) : !imageLoadError[`before_${ideaDetail.id}`] ? (
-                                <TouchableOpacity
-                                  style={styles.imagePreviewContainer}
-                                  onPress={() => openImagePreview(ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath)}
-                                >
-                                  <Image
-                                    source={{ uri: ideaDetail.beforeImplementationImagePath || ideaDetail.imagePath }}
-                                    style={styles.thumbnailSmall}
-                                    contentFit="cover"
-                                    cachePolicy="none"
-                                    placeholder="L6Pj0^jE.AyE_3t7t7R**0o#DgR4"
-                                    transition={1000}
-                                    onError={(e) => {
-                                      const altUrl = getAlternateImageUrl(ideaDetail.beforeImplementationImagePath);
-                                      if (altUrl && ideaDetail.beforeImplementationImagePath !== altUrl) {
-                                        setIdeaDetail(prev => ({
-                                          ...prev,
-                                          beforeImplementationImagePath: altUrl
-                                        }));
-                                      } else {
-                                        setImageLoadError(prev => ({
-                                          ...prev,
-                                          [`before_${ideaDetail.id}`]: true
-                                        }));
-                                      }
-                                    }}
-                                  />
-                                </TouchableOpacity>
-                              ) : (
-                                <View style={styles.imageErrorContainer}>
-                                  <Ionicons name="image-outline" size={24} color="#999" />
-                                  <Text style={styles.imageErrorText}>Image unavailable</Text>
-                                </View>
-                              )
-                            ) : (
-                              <Text style={styles.valueDetail}>N/A</Text>
-                            )}
-                          </View>
-                        )}
-
-                        {/* After Implementation with PDF Support */}
                         {(ideaDetail.implementationCycle?.afterImplementationImagePath || ideaDetail.afterImplementationImagePath) && (
                           <View style={styles.rowDetailWithBorder}>
                             <Text style={styles.labelDetail}>After Implementation:</Text>
@@ -1091,60 +833,20 @@ export default function AllTeamIdeasScreen() {
                                 </TouchableOpacity>
                               ) : !imageLoadError[`after_${ideaDetail.id}`] ? (
                                 <TouchableOpacity onPress={() => openImagePreview(imagePath)}>
-                                  {/* <Image
-                                    source={{ uri: imagePath }}
-                                    style={styles.thumbnailSmall}
-                                    contentFit="cover"
-                                    cachePolicy="none"
-                                    onError={() => {
-                                      const altUrl = getAlternateImageUrl(imagePath);
-                                      if (altUrl && imagePath !== altUrl) {
-                                        setIdeaDetail(prev => ({
-                                          ...prev,
-                                          afterImplementationImagePath: altUrl
-                                        }));
-                                      } else {
-                                        setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
-                                      }
-                                    }}
-                                  /> */}
-
-
-
                                   <Image
                                     source={{ uri: imagePath }}
                                     style={styles.thumbnailSmall}
                                     contentFit="cover"
                                     cachePolicy="none"
-
-                                    onLoad={() => {
-                                      
-                                      setImageLoadError(prev => ({
-                                        ...prev,
-                                        [`after_${ideaDetail.id}`]: false
-                                      }));
-                                    }}
-
                                     onError={() => {
                                       const altUrl = getAlternateImageUrl(imagePath);
-
                                       if (altUrl && imagePath !== altUrl) {
-                                        setIdeaDetail(prev => ({
-                                          ...prev,
-                                          afterImplementationImagePath: altUrl
-                                        }));
+                                        setIdeaDetail(prev => ({ ...prev, afterImplementationImagePath: altUrl }));
                                       } else {
-                                        setImageLoadError(prev => ({
-                                          ...prev,
-                                          [`after_${ideaDetail.id}`]: true
-                                        }));
+                                        setImageLoadError(prev => ({ ...prev, [`after_${ideaDetail.id}`]: true }));
                                       }
                                     }}
                                   />
-
-
-
-
                                 </TouchableOpacity>
                               ) : (
                                 <View style={styles.imageErrorContainer}>
@@ -1160,14 +862,12 @@ export default function AllTeamIdeasScreen() {
                   </>
                 )}
 
-                {/* Remarks Section */}
+                {/* Remarks */}
                 <View style={styles.cardDetail}>
                   <Text style={styles.cardHeading}>Remarks</Text>
                   {(() => {
                     const remarks = parseRemarks(ideaDetail.remark || ideaDetail.remarks);
-                    if (remarks.length === 0) {
-                      return <Text style={styles.noRemarksText}>No remarks available</Text>;
-                    }
+                    if (remarks.length === 0) return <Text style={styles.noRemarksText}>No remarks available</Text>;
                     return remarks.map((remark, index) => (
                       <RemarksCard
                         key={index}
@@ -1193,27 +893,29 @@ export default function AllTeamIdeasScreen() {
               <Ionicons name="close" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
-
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             <View style={styles.timelineCardContainer}>
               <View style={styles.timelineContainer}>
-                {ideaDetail?.timeline && Array.isArray(ideaDetail.timeline) && ideaDetail.timeline.length > 0 ? (
-                  ideaDetail.timeline.map((item, idx) => (
-                    <TimelineItem
-                      key={idx}
-                      status={item.status || item.approvalStage || item.approvalstage || "N/A"}
-                      date={item.date || item.approvalDate}
-                      description={item.description || item.comments}
-                      isLast={idx === ideaDetail.timeline.length - 1}
-                      isFirst={idx === 0}
-                    />
-                  ))
-                ) : (
-                  <View style={styles.noTimelineContainer}>
-                    <Ionicons name="time-outline" size={48} color="#ccc" />
-                    <Text style={styles.noTimelineText}>No timeline data available</Text>
-                  </View>
-                )}
+                {(() => {
+                  const timelineData = getTimelineWithCancelledStatus(ideaDetail?.timeline, ideaDetail?.ideaStatus || ideaDetail?.status);
+                  return timelineData?.length > 0 ? (
+                    timelineData.map((item, idx) => (
+                      <TimelineItem
+                        key={idx}
+                        status={item.status || item.approvalStage || item.approvalstage || "N/A"}
+                        date={item.date || item.approvalDate}
+                        description={item.description || item.comments}
+                        isLast={idx === timelineData.length - 1}
+                        isFirst={idx === 0}
+                      />
+                    ))
+                  ) : (
+                    <View style={styles.noTimelineContainer}>
+                      <Ionicons name="time-outline" size={48} color="#ccc" />
+                      <Text style={styles.noTimelineText}>No timeline data available</Text>
+                    </View>
+                  );
+                })()}
               </View>
             </View>
           </ScrollView>
@@ -1227,13 +929,7 @@ export default function AllTeamIdeasScreen() {
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           {currentImageUrl ? (
-            <Image
-              source={{ uri: currentImageUrl }}
-              style={styles.fullImage}
-              contentFit="contain"
-              cachePolicy="none"
-              onError={handleImageError}
-            />
+            <Image source={{ uri: currentImageUrl }} style={styles.fullImage} contentFit="contain" cachePolicy="none" onError={handleImageError} />
           ) : (
             <Text style={{ color: '#fff' }}>No image available</Text>
           )}
@@ -1254,6 +950,8 @@ const styles = StyleSheet.create({
   searchContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', marginRight: 12 },
   searchLabel: { fontSize: 16, color: '#333', marginRight: 8, fontWeight: '500' },
   searchInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 4, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, backgroundColor: '#fff' },
+  activeFilterBanner: { backgroundColor: '#e3f2fd', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, gap: 6, borderBottomWidth: 1, borderBottomColor: '#c8dfff' },
+  activeFilterBannerText: { flex: 1, fontSize: 13, color: '#2c5aa0', fontWeight: '500' },
   filtersContainer: { backgroundColor: '#fff', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
   filterLabel: { fontSize: 16, fontWeight: '500', marginBottom: 8, color: '#333' },
   dateInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 12, backgroundColor: '#f9f9f9', marginBottom: 10 },
@@ -1262,7 +960,7 @@ const styles = StyleSheet.create({
   statusDropdownText: { fontSize: 14, color: '#333', flex: 1 },
   statusDropdownList: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, backgroundColor: '#fff', marginBottom: 10, maxHeight: 250, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
   statusDropdownScroll: { maxHeight: 250 },
-  statusDropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  statusDropdownItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   statusDropdownItemActive: { backgroundColor: '#2c5aa0' },
   statusDropdownItemText: { fontSize: 14, color: '#333' },
   statusDropdownItemTextActive: { color: '#fff', fontWeight: '600' },
@@ -1271,6 +969,10 @@ const styles = StyleSheet.create({
   resetBtn: { flex: 1, backgroundColor: '#6c757d', padding: 12, borderRadius: 6, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '600' },
   scrollContainer: { padding: 16, paddingBottom: 30 },
+  noDataContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  noDataText: { textAlign: "center", marginTop: 12, color: "#777", fontSize: 16 },
+  clearFiltersBtn: { marginTop: 16, backgroundColor: '#2c5aa0', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 },
+  clearFiltersBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
   cardContainer: { backgroundColor: '#fff', borderRadius: 8, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   cardHeader: { backgroundColor: '#2c5aa0', padding: 12, borderTopLeftRadius: 8, borderTopRightRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   ideaNumber: { color: '#fff', fontSize: 14, fontWeight: 'bold', flex: 1, marginRight: 8 },
@@ -1285,7 +987,6 @@ const styles = StyleSheet.create({
   statusBadge: { color: "#fff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 11, fontWeight: '600', maxWidth: 200, textAlign: 'center' },
   totalContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' },
   totalText: { fontSize: 16, fontWeight: 'bold', color: '#2c5aa0' },
-  noDataText: { textAlign: "center", marginTop: 20, color: "#777", fontSize: 16 },
   loadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(255,255,255,0.6)" },
   fullModal: { flex: 1, backgroundColor: "#f5f5f5" },
   modalHeader: { backgroundColor: '#fff', paddingTop: 24, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', elevation: 4 },
@@ -1304,22 +1005,8 @@ const styles = StyleSheet.create({
   thumbnailSmall: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
   imageErrorContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' },
   imageErrorText: { fontSize: 9, color: '#999', marginTop: 2, textAlign: 'center' },
-  pdfThumbnailContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#FF5722',
-    backgroundColor: '#FFF3E0',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  pdfThumbnailText: {
-    fontSize: 10,
-    color: '#FF5722',
-    fontWeight: 'bold',
-    marginTop: 2
-  },
+  pdfThumbnailContainer: { width: 60, height: 60, borderRadius: 6, borderWidth: 1, borderColor: '#FF5722', backgroundColor: '#FFF3E0', justifyContent: 'center', alignItems: 'center' },
+  pdfThumbnailText: { fontSize: 10, color: '#FF5722', fontWeight: 'bold', marginTop: 2 },
   remarkCard: { backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#2c5aa0' },
   remarkTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c5aa0', marginBottom: 6 },
   remarkComment: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 6 },
@@ -1343,72 +1030,15 @@ const styles = StyleSheet.create({
   imageModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
   closeButtonImage: { position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
   fullImage: { width: "80%", height: "60%" },
-  collapsibleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#e0e0e0', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+  collapsibleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#e0e0e0', elevation: 1 },
   collapsibleHeaderText: { fontSize: 16, fontWeight: '600', color: '#2c5aa0' },
-  confettiContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 9999,
-    pointerEvents: 'none',
-  },
-  confettiPiece: {
-    position: 'absolute',
-    width: 10,
-    height: 10,
-    top: -50,
-  },
-  closedPopupContainer: {
-    position: 'absolute',
-    top: 80,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
-    zIndex: 10000
-  },
-  closedPopup: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6
-  },
-  closedPopupEmoji: {
-    fontSize: 24,
-    marginHorizontal: 6
-  },
-  closedPopupText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center'
-  },
-  rowDetailVertical: {
-    flexDirection: "column",
-    paddingBottom: 12,
-    marginBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  labelDetailVertical: {
-    fontWeight: "600",
-    color: "#444",
-    fontSize: 15,
-    marginBottom: 8,
-    lineHeight: 22,
-  },
-  valueDetailVertical: {
-    color: "#222",
-    fontSize: 15,
-    lineHeight: 24,
-    textAlign: "left",
-  },
+  confettiContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, pointerEvents: 'none' },
+  confettiPiece: { position: 'absolute', width: 10, height: 10, top: -50 },
+  closedPopupContainer: { position: 'absolute', top: 80, left: 20, right: 20, alignItems: 'center', zIndex: 10000 },
+  closedPopup: { backgroundColor: '#4CAF50', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 6 },
+  closedPopupEmoji: { fontSize: 24, marginHorizontal: 6 },
+  closedPopupText: { fontSize: 16, fontWeight: 'bold', color: '#fff', textAlign: 'center' },
+  rowDetailVertical: { flexDirection: "column", paddingBottom: 12, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  labelDetailVertical: { fontWeight: "600", color: "#444", fontSize: 15, marginBottom: 8, lineHeight: 22 },
+  valueDetailVertical: { color: "#222", fontSize: 15, lineHeight: 24, textAlign: "left" },
 });
